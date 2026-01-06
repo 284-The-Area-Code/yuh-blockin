@@ -1,67 +1,274 @@
-You are a senior product designer and creative director tasked with producing the public-facing launch surface for a funded technology product.
+\# CLAUDE CODE — META PROMPT (YuhBlockin Premium Website)
 
-The product is called "YuhBlockin'."
+You are Claude Code acting as a senior product designer + front-end engineer. Build a hyper-premium marketing site using ONLY the visual language from the provided reference images (teal + coral + dark slate, calm premium depth, clean sans-serif). Do NOT reuse any prior “government” concepts. No old artifacts.
 
-Context:
-- YuhBlockin' is a mobile application built for the British Virgin Islands.
-- It solves blocked parking situations through calm, private driver notification.
-- It eliminates confrontation, escalation, and inefficiency.
-- It is designed as public infrastructure, not a novelty app.
-- Early access is distributed via TestFlight during rollout.
 
-Positioning:
-- This product is credible, serious, and thoughtfully designed.
-- It should feel locally rooted but globally competent.
-- It should feel calm, confident, and assured — never loud or promotional.
-- The tone should suggest long-term presence, not experimentation.
-- Write as if the company behind this has significant backing and patience.
 
-Design Philosophy:
-- Minimal, restrained, and intentional.
-- Every word must earn its place.
-- White space is a feature, not an absence.
-- Avoid marketing language, hype, urgency tactics, or gimmicks.
-- Avoid anything that would signal "startup," "hack," or "MVP."
-- This must not read or feel AI-generated under any circumstance.
+\## GOAL
 
-Framework:
-- WordPress using Gutenberg with Kadence Blocks.
-- Astra theme is active.
-- Kadence Row Layouts, Advanced Headings, Buttons, and Accordions are available.
-- This page will serve as the public homepage.
+Create a production-ready, responsive landing website for the YuhBlockin mobile app. Deliver:
 
-Page Objectives:
-- Establish legitimacy and trust.
-- Explain the problem and solution clearly.
-- Communicate restraint, privacy, and respect.
-- Invite early access without pressure.
-- Set expectations calmly.
+1\) Clean, modern UI (desktop + mobile) with premium spacing and restrained motion
 
-Page Structure:
-1. Hero section: understated value proposition, no slogans.
-2. Problem statement rooted in real-world context.
-3. How the system works (clear, neutral, factual).
-4. Privacy and data stewardship explanation.
-5. Early access invitation (measured, non-promotional).
-6. Short, factual FAQ.
+2\) Reusable components and a small design system (tokens)
 
-Instructions:
-- Generate the FULL page as paste-ready Gutenberg / Kadence block markup.
-- Use Kadence Row Layouts to create generous spacing and structure.
-- Use Advanced Headings sparingly and with restraint.
-- Use Paragraph blocks for body copy.
-- Use Buttons only where necessary.
-- Use Accordions for the FAQ.
-- Do not over-style.
-- Assume this page will be read by skeptical, intelligent users.
+3\) Accessible, fast, SEO-friendly build
 
-Output Rules:
-- Output ONLY valid Gutenberg block markup (HTML with block comments).
-- Do NOT include explanations, annotations, or commentary.
-- Do NOT include markdown.
-- Do NOT include emojis.
-- Do NOT reference AI, automation, or language models.
-- Do NOT use hype language or calls to urgency.
-- Maintain a calm, confident, institutional tone.
+4\) No stock photos. Use brand-led geometry, device mock frames, and minimal iconography.
 
-Begin.
+
+
+\## STACK (choose one and commit)
+
+\- Preferred: Next.js (App Router) + TypeScript + Tailwind CSS
+
+\- Alt: Vite + React + TypeScript + Tailwind CSS
+
+Use lucide-react icons only. No heavy UI libraries. No external image dependencies.
+
+
+
+\## REFERENCE-DRIVEN BRAND RULES (MANDATORY)
+
+Use these brand colors (derived from refs):
+
+\- Teal (primary): #21819B
+
+\- Coral (accent): #DE5E59
+
+\- Slate (dark surface): #3A424B
+
+\- Off-white (background): #F7F8FA
+
+\- Border grey: #D3D7DE
+
+\- Text grey: #4D5660
+
+
+
+Usage rules:
+
+\- Teal = primary CTAs, links, key UI surfaces
+
+\- Coral = very restrained: small highlights, alert indicator, badge, emphasis only
+
+\- Slate = hero/background sections + footer
+
+\- No loud gradients; if used, ultra-subtle tonal shift only
+
+\- Shadows are soft + premium (material feel), not “glowy neon”
+
+\- Typography is clean sans-serif only
+
+
+
+Typography:
+
+\- Use system font stack or install Inter (body) + a geometric sans for headings (e.g., Poppins). Keep it minimal.
+
+\- Headings: confident, geometric, bold
+
+\- Body: calm, readable, neutral
+
+
+
+Tone:
+
+\- Calm. Respectful. Utility-forward. No hype marketing language. No emojis.
+
+
+
+\## SITE STRUCTURE (REQUIRED SECTIONS)
+
+\### 1) Header / Nav
+
+\- Left: YuhBlockin logo lockup (use inline SVG placeholder if needed)
+
+\- Right: How it works, Why it matters, For properties, FAQ
+
+\- CTA button: “Get YuhBlockin”
+
+
+
+\### 2) Hero
+
+\- Background: Slate surface with subtle texture/gradient (very restrained)
+
+\- Headline: “Don’t argue in the lot. Just send a respectful ping.”
+
+\- Subcopy: “YuhBlockin helps drivers resolve blocked parking quietly and quickly—right from their phones.”
+
+\- CTAs: Primary “Get YuhBlockin” (teal), Secondary “See how it works” (outline)
+
+\- Right: premium device mock (vector/HTML) showing a simple in-app message UI (no car imagery; use chat bubbles + “You’re blocking me” + “On my way — give me 2 mins”)
+
+
+
+\### 3) How it works (3 steps)
+
+Cards with minimal icons:
+
+1\. Register your vehicle
+
+2\. Get a respectful alert
+
+3\. Move and done
+
+Cards on off-white with soft shadow and teal accents.
+
+
+
+\### 4) Why it matters
+
+3–4 benefit tiles:
+
+\- Less conflict
+
+\- Safer spaces
+
+\- Respect built in
+
+\- Faster resolution
+
+Use subtle coral accent only as small dots/badges.
+
+
+
+\### 5) For properties / businesses
+
+A clean feature panel:
+
+\- “Give your car parks a better way to communicate”
+
+Bullets:
+
+\- Digital signage templates
+
+\- QR onboarding
+
+\- No personal phone numbers posted on walls/windshields
+
+CTA: “Talk to us about your property”
+
+
+
+\### 6) Product preview strip
+
+Dark slate band with 3 device frames (HTML/CSS) showing:
+
+\- Register screen
+
+\- Alert received
+
+\- Quick reply options
+
+Keep text crisp. No placeholder gibberish.
+
+
+
+\### 7) FAQ
+
+Accordion component (accessible)
+
+At least 5 questions (privacy, notifications, misuse reporting, availability, costs)
+
+
+
+\### 8) Final CTA + Footer
+
+CTA: “Move with respect.”
+
+Footer: Product, For Sites, Legal (Privacy, Terms), Contact.
+
+
+
+\## COMPONENTS (MUST IMPLEMENT)
+
+\- Button (primary/secondary)
+
+\- Card
+
+\- Badge (coral/teal)
+
+\- Accordion
+
+\- Section container
+
+\- Device mock component (reusable)
+
+\- Simple icon system (lucide)
+
+
+
+\## DESIGN SYSTEM TOKENS (EXPORT)
+
+Create a `tokens.ts` (or `theme.ts`) with:
+
+\- colors
+
+\- spacing scale
+
+\- radius
+
+\- shadow presets
+
+\- typography sizes
+
+
+
+\## ACCESSIBILITY + QUALITY
+
+\- Semantic HTML, proper headings order
+
+\- 4.5:1 contrast where applicable
+
+\- Keyboard accessible nav + accordion
+
+\- Lighthouse-minded: optimize images (use SVG/HTML for mock devices)
+
+\- Motion: subtle (opacity/translate), reduced-motion support
+
+
+
+\## OUTPUT REQUIREMENTS
+
+\- Generate the full project scaffold with all files.
+
+\- Include `README.md` with:
+
+&nbsp; - how to run
+
+&nbsp; - how to deploy
+
+&nbsp; - where to swap logo SVG
+
+\- Provide clean, final code only. No long explanations.
+
+
+
+\## HARD CONSTRAINTS
+
+\- No car icons, parking signs, or literal car visuals.
+
+\- No old “government grade” styling—follow the provided brand references only.
+
+\- No external image URLs.
+
+\- No trendy neon gradients, no playful shapes.
+
+
+
+\## START NOW
+
+1\) Create the folder structure
+
+2\) Add Tailwind setup
+
+3\) Build the page with components
+
+4\) Verify responsive layout
+
+5\) Ensure text matches the tone rules
+
+
+
