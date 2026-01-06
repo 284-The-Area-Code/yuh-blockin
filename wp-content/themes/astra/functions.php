@@ -225,17 +225,17 @@ function yuhblockin_enqueue_landing_assets() {
 		// Main landing page styles
 		wp_enqueue_style(
 			'yuhblockin-landing',
-			get_template_directory_uri() . '/css/yuhblockin-landing.css',
+			get_template_directory_uri() . '/assets/css/yuhblockin.css',
 			array( 'yuhblockin-fonts' ),
-			'1.0.0'
+			'2.3.0'
 		);
 
-		// Landing page scripts (accordion)
+		// Landing page scripts
 		wp_enqueue_script(
 			'yuhblockin-landing',
-			get_template_directory_uri() . '/js/yuhblockin-landing.js',
+			get_template_directory_uri() . '/assets/js/yuhblockin.js',
 			array(),
-			'1.0.0',
+			'2.2.0',
 			true
 		);
 	}
@@ -250,6 +250,29 @@ function yuhblockin_remove_theme_elements() {
 	if ( is_page_template( 'page-yuhblockin-home.php' ) ) {
 		remove_action( 'astra_header', 'astra_header_markup' );
 		remove_action( 'astra_footer', 'astra_footer_markup' );
+		remove_action( 'astra_footer_content', 'astra_footer_small_footer_markup' );
+		remove_action( 'astra_footer_content', 'astra_footer_copyright_markup' );
+		add_filter( 'astra_footer_copyright_text', '__return_empty_string' );
 	}
 }
 add_action( 'wp', 'yuhblockin_remove_theme_elements' );
+
+/**
+ * Add inline CSS to hide Astra footer on landing page
+ */
+function yuhblockin_hide_astra_footer_css() {
+	if ( is_page_template( 'page-yuhblockin-home.php' ) ) {
+		echo '<style>
+			.site-footer,
+			.ast-footer-overlay,
+			.ast-small-footer,
+			.ast-footer-copyright,
+			footer.site-footer,
+			.site-below-footer-wrap,
+			#colophon {
+				display: none !important;
+			}
+		</style>';
+	}
+}
+add_action( 'wp_head', 'yuhblockin_hide_astra_footer_css' );

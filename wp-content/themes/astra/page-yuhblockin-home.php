@@ -13,14 +13,6 @@ get_header();
   <header class="yb-header">
     <div class="yb-container">
       <div class="yb-header__inner">
-        <a href="<?php echo esc_url(home_url('/')); ?>" class="yb-header__logo">
-          <img
-            src="<?php echo esc_url(get_site_url() . '/wp-content/uploads/2026/01/yuhblockin-logo.png'); ?>"
-            alt="YuhBlockin"
-            class="yb-header__logo-img"
-          >
-        </a>
-
         <nav class="yb-header__nav" aria-label="Main navigation">
           <a href="#how-it-works" class="yb-header__nav-link">How it works</a>
           <a href="#why-it-matters" class="yb-header__nav-link">Why it matters</a>
@@ -28,29 +20,89 @@ get_header();
           <a href="#faq" class="yb-header__nav-link">FAQ</a>
         </nav>
 
-        <a href="#get-app" class="yb-btn yb-btn--primary yb-header__cta">Get YuhBlockin</a>
+        <a href="#get-app" class="yb-btn yb-btn--primary yb-btn--sm yb-header__cta">
+          <span>Get the App</span>
+        </a>
       </div>
     </div>
   </header>
 
   <!-- Hero Section -->
   <section class="yb-hero">
+    <!-- SVG Background Pattern -->
+    <div class="yb-hero__bg-pattern" aria-hidden="true"></div>
+
+    <!-- Scattered Decorative Icons -->
+    <div class="yb-hero__icons" aria-hidden="true">
+      <!-- Car top-left -->
+      <svg class="yb-icon yb-icon--car-1" viewBox="0 0 80 80" fill="none">
+        <rect x="10" y="35" width="60" height="24" rx="5" fill="#21819B"/>
+        <path d="M20 35V25C20 22 23 17 30 17H50C57 17 60 22 60 25V35" stroke="#21819B" stroke-width="4" fill="none"/>
+        <circle cx="24" cy="52" r="7" fill="#4dd4ff"/>
+        <circle cx="56" cy="52" r="7" fill="#4dd4ff"/>
+      </svg>
+      <!-- Bell top-right -->
+      <svg class="yb-icon yb-icon--bell" viewBox="0 0 64 64" fill="none">
+        <path d="M32 6C32 6 16 8 16 28V40L8 50H56L48 40V28C48 8 32 6 32 6Z" fill="#DE5E59"/>
+        <circle cx="32" cy="56" r="6" fill="#DE5E59"/>
+      </svg>
+      <!-- Parking sign left-center -->
+      <svg class="yb-icon yb-icon--parking" viewBox="0 0 64 64" fill="none">
+        <rect x="8" y="8" width="48" height="48" rx="8" fill="#21819B"/>
+        <path d="M24 44V20H36C42 20 46 24 46 30C46 36 42 40 36 40H32V44H24Z" fill="#fff"/>
+        <path d="M32 26V34H36C38.5 34 40 32.5 40 30C40 27.5 38.5 26 36 26H32Z" fill="#21819B"/>
+      </svg>
+      <!-- Traffic light right-center -->
+      <svg class="yb-icon yb-icon--light" viewBox="0 0 64 80" fill="none">
+        <rect x="16" y="4" width="32" height="60" rx="6" fill="#3A424B"/>
+        <circle cx="32" cy="18" r="8" fill="#DE5E59"/>
+        <circle cx="32" cy="36" r="8" fill="#f0c54d" opacity="0.5"/>
+        <circle cx="32" cy="54" r="8" fill="#4ade80" opacity="0.5"/>
+      </svg>
+      <!-- Keys bottom-left -->
+      <svg class="yb-icon yb-icon--keys" viewBox="0 0 64 64" fill="none">
+        <circle cx="20" cy="20" r="14" stroke="#21819B" stroke-width="4" fill="none"/>
+        <circle cx="20" cy="20" r="6" fill="#21819B"/>
+        <rect x="30" y="17" width="28" height="6" rx="2" fill="#21819B"/>
+        <rect x="48" y="23" width="4" height="10" rx="1" fill="#21819B"/>
+        <rect x="40" y="23" width="4" height="8" rx="1" fill="#21819B"/>
+      </svg>
+      <!-- Car 2 bottom-right -->
+      <svg class="yb-icon yb-icon--car-2" viewBox="0 0 80 80" fill="none">
+        <rect x="10" y="35" width="60" height="24" rx="5" fill="#DE5E59"/>
+        <path d="M20 35V25C20 22 23 17 30 17H50C57 17 60 22 60 25V35" stroke="#DE5E59" stroke-width="4" fill="none"/>
+        <circle cx="24" cy="52" r="7" fill="#fff"/>
+        <circle cx="56" cy="52" r="7" fill="#fff"/>
+      </svg>
+    </div>
+
+    <!-- Bottom Wave -->
+    <div class="yb-hero__wave" aria-hidden="true">
+      <svg viewBox="0 0 1440 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,60 C360,120 1080,0 1440,60 L1440,120 L0,120 Z" fill="#F7F8FA"/>
+      </svg>
+    </div>
+
     <div class="yb-container">
       <div class="yb-hero__inner">
         <div class="yb-hero__content">
-          <h1 class="yb-hero__headline">Don't argue in the lot. Just send a respectful ping.</h1>
+          <h1 class="yb-hero__headline">Don't argue in the lot.<br>Just send a respectful ping.</h1>
           <p class="yb-hero__subcopy">YuhBlockin helps drivers resolve blocked parking quietly and quickly—right from their phones.</p>
           <div class="yb-hero__actions">
-            <a href="#get-app" class="yb-btn yb-btn--primary">Get YuhBlockin</a>
-            <a href="#how-it-works" class="yb-btn yb-btn--outline">See how it works</a>
+            <a href="#get-app" class="yb-btn yb-btn--primary yb-btn--lg">
+              <span>Get YuhBlockin</span>
+            </a>
+            <a href="#how-it-works" class="yb-btn yb-btn--outline yb-btn--lg">
+              <span>See how it works</span>
+            </a>
           </div>
         </div>
 
         <div class="yb-hero__visual">
           <img
             src="<?php echo esc_url(get_site_url() . '/wp-content/uploads/2026/01/premium-user-splash.png'); ?>"
-            alt="YuhBlockin app interface showing the premium user experience"
-            class="yb-hero__image"
+            alt="YuhBlockin - Move with respect"
+            class="yb-hero__brand-card"
           >
         </div>
       </div>
@@ -62,44 +114,24 @@ get_header();
     <div class="yb-container">
       <header class="yb-section-header">
         <h2 class="yb-section-header__title">How it works</h2>
-        <p class="yb-section-header__subtitle">Three simple steps to resolve blocked parking without the drama.</p>
+        <p class="yb-section-header__subtitle" style="text-align: center;">Three simple steps to resolve blocked parking without the drama.</p>
       </header>
 
       <div class="yb-how__grid">
         <article class="yb-step-card">
-          <div class="yb-step-card__icon">
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="11" width="18" height="8" rx="2"/>
-              <path d="M6 11V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5"/>
-              <circle cx="7.5" cy="15.5" r="1.5"/>
-              <circle cx="16.5" cy="15.5" r="1.5"/>
-            </svg>
-          </div>
-          <p class="yb-step-card__label">Step 1</p>
+          <div class="yb-step-card__number">1</div>
           <h3 class="yb-step-card__title">Register your vehicle</h3>
           <p class="yb-step-card__text">Sign up and receive a unique code. Display it on your dashboard so others can reach you.</p>
         </article>
 
         <article class="yb-step-card">
-          <div class="yb-step-card__icon yb-step-card__icon--coral">
-            <svg viewBox="0 0 24 24">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-          </div>
-          <p class="yb-step-card__label">Step 2</p>
+          <div class="yb-step-card__number">2</div>
           <h3 class="yb-step-card__title">Get a respectful alert</h3>
           <p class="yb-step-card__text">When someone's blocked, they enter your code. You get a private, polite notification.</p>
         </article>
 
         <article class="yb-step-card">
-          <div class="yb-step-card__icon yb-step-card__icon--green">
-            <svg viewBox="0 0 24 24">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-              <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-          </div>
-          <p class="yb-step-card__label">Step 3</p>
+          <div class="yb-step-card__number">3</div>
           <h3 class="yb-step-card__title">Move and done</h3>
           <p class="yb-step-card__text">You move your car, they're on their way. No drama, no confrontation, no stress.</p>
         </article>
@@ -116,25 +148,46 @@ get_header();
 
       <div class="yb-why__grid">
         <article class="yb-benefit">
-          <div class="yb-benefit__dot"></div>
+          <div class="yb-benefit__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
           <h3 class="yb-benefit__title">Less conflict</h3>
           <p class="yb-benefit__text">No honking, no yelling, no awkward confrontations in public spaces.</p>
         </article>
 
         <article class="yb-benefit">
-          <div class="yb-benefit__dot"></div>
+          <div class="yb-benefit__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
           <h3 class="yb-benefit__title">Safer spaces</h3>
           <p class="yb-benefit__text">Remove tension from parking lots. Everyone stays calm and moves on.</p>
         </article>
 
         <article class="yb-benefit">
-          <div class="yb-benefit__dot"></div>
+          <div class="yb-benefit__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
           <h3 class="yb-benefit__title">Respect built in</h3>
           <p class="yb-benefit__text">The system encourages courtesy. Quick, polite communication by design.</p>
         </article>
 
         <article class="yb-benefit">
-          <div class="yb-benefit__dot"></div>
+          <div class="yb-benefit__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
           <h3 class="yb-benefit__title">Faster resolution</h3>
           <p class="yb-benefit__text">Get unblocked in minutes instead of waiting around or hunting someone down.</p>
         </article>
@@ -147,68 +200,24 @@ get_header();
     <div class="yb-container">
       <div class="yb-properties__inner">
         <div class="yb-properties__content">
-          <p class="yb-properties__label">For Properties</p>
-          <h2 class="yb-properties__title">Give your car parks a better way to communicate</h2>
+          <span class="yb-properties__label">For Properties</span>
+          <h2 class="yb-properties__title">Give your parking areas a better way to communicate</h2>
           <p class="yb-properties__text">Whether you manage a shopping center, office building, or residential complex—YuhBlockin offers a modern alternative to paper notes and PA announcements.</p>
           <ul class="yb-properties__list">
-            <li class="yb-properties__list-item">Digital signage templates ready to deploy</li>
-            <li class="yb-properties__list-item">QR-based onboarding for visitors</li>
-            <li class="yb-properties__list-item">No personal phone numbers posted on walls</li>
+            <li>Digital signage templates ready to deploy</li>
+            <li>Anonymous alerts reduce parking confrontations</li>
+            <li>No personal phone numbers posted on walls</li>
           </ul>
-          <a href="#contact" class="yb-btn yb-btn--primary">Talk to us about your property</a>
+          <a href="#contact" class="yb-btn yb-btn--primary">
+            <span>Talk to us about your property</span>
+          </a>
         </div>
 
         <div class="yb-properties__visual">
           <div class="yb-stat-card">
             <p class="yb-stat-card__number">87%</p>
-            <p class="yb-stat-card__label">of blocked situations resolved<br>within 3 minutes</p>
+            <p class="yb-stat-card__label">of blocked situations resolved within 3 minutes</p>
           </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Product Preview Section -->
-  <section class="yb-preview">
-    <div class="yb-container">
-      <header class="yb-section-header">
-        <h2 class="yb-section-header__title">See it in action</h2>
-        <p class="yb-section-header__subtitle">Clean, intuitive screens designed for quick resolution.</p>
-      </header>
-
-      <div class="yb-preview__grid">
-        <div class="yb-preview-device">
-          <div class="yb-preview-device__frame">
-            <div class="yb-preview-device__screen">
-              <p class="yb-preview-device__header">Register</p>
-              <div style="background: #21819B; color: #fff; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px;">Your Code</div>
-              <div class="yb-preview-code">YB-7294</div>
-            </div>
-          </div>
-          <p class="yb-preview-device__label">Register</p>
-        </div>
-
-        <div class="yb-preview-device">
-          <div class="yb-preview-device__frame">
-            <div class="yb-preview-device__screen">
-              <p class="yb-preview-device__header">Alert</p>
-              <div class="yb-preview-alert">You're blocking someone</div>
-              <p class="yb-preview-meta">at Main Street Plaza<br>2 minutes ago</p>
-            </div>
-          </div>
-          <p class="yb-preview-device__label">Alert received</p>
-        </div>
-
-        <div class="yb-preview-device">
-          <div class="yb-preview-device__frame">
-            <div class="yb-preview-device__screen">
-              <p class="yb-preview-device__header">Reply</p>
-              <div class="yb-preview-reply">On my way now</div>
-              <div class="yb-preview-reply">Give me 5 mins</div>
-              <div class="yb-preview-reply yb-preview-reply--active">Already moved</div>
-            </div>
-          </div>
-          <p class="yb-preview-device__label">Quick reply</p>
         </div>
       </div>
     </div>
@@ -225,60 +234,56 @@ get_header();
         <div class="yb-accordion" data-open="false">
           <button class="yb-accordion__trigger" type="button">
             <span>How does YuhBlockin protect my privacy?</span>
-            <span class="yb-accordion__icon">
-              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            <span class="yb-accordion__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </span>
           </button>
           <div class="yb-accordion__content" id="faq-1">
-            <p class="yb-accordion__text">Your vehicle plate is converted to a secure hash that even we cannot reverse. Notifications are anonymous and one-way. The person alerting you cannot see your personal details, and you cannot see theirs. We collect only what's necessary: a device token for notifications and the hashed identifier.</p>
+            <p class="yb-accordion__text">Your vehicle plate is converted to a secure hash that even we cannot reverse. Notifications are anonymous and one-way. The person alerting you cannot see your personal details, and you cannot see theirs.</p>
           </div>
         </div>
 
         <div class="yb-accordion" data-open="false">
           <button class="yb-accordion__trigger" type="button">
             <span>What notifications will I receive?</span>
-            <span class="yb-accordion__icon">
-              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            <span class="yb-accordion__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </span>
           </button>
           <div class="yb-accordion__content" id="faq-2">
-            <p class="yb-accordion__text">You'll receive a single push notification when someone reports that you're blocking them. That's it. No marketing messages, no reminders, no spam. The app does one thing and does it quietly.</p>
-          </div>
-        </div>
-
-        <div class="yb-accordion" data-open="false">
-          <button class="yb-accordion__trigger" type="button">
-            <span>How do I report misuse?</span>
-            <span class="yb-accordion__icon">
-              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-            </span>
-          </button>
-          <div class="yb-accordion__content" id="faq-3">
-            <p class="yb-accordion__text">If you receive false or harassing notifications, you can report them directly in the app. We rate-limit notifications and restrict accounts that show patterns of abuse. The minimal design discourages spam by default.</p>
+            <p class="yb-accordion__text">You'll receive a single push notification when someone reports that you're blocking them. That's it. No marketing messages, no reminders, no spam.</p>
           </div>
         </div>
 
         <div class="yb-accordion" data-open="false">
           <button class="yb-accordion__trigger" type="button">
             <span>Where is YuhBlockin available?</span>
-            <span class="yb-accordion__icon">
-              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            <span class="yb-accordion__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </span>
           </button>
-          <div class="yb-accordion__content" id="faq-4">
-            <p class="yb-accordion__text">We're starting in the British Virgin Islands via Apple TestFlight. We're adding users gradually as we refine the experience. Android and broader availability will follow based on demand and readiness.</p>
+          <div class="yb-accordion__content" id="faq-3">
+            <p class="yb-accordion__text">We're starting in the British Virgin Islands via Apple TestFlight. Android and broader availability will follow based on demand and readiness.</p>
           </div>
         </div>
 
         <div class="yb-accordion" data-open="false">
           <button class="yb-accordion__trigger" type="button">
             <span>Is there a cost?</span>
-            <span class="yb-accordion__icon">
-              <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            <span class="yb-accordion__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </span>
           </button>
-          <div class="yb-accordion__content" id="faq-5">
-            <p class="yb-accordion__text">The core service is free during early access. If that changes in the future, we'll communicate clearly and in advance. Our goal is to build useful public infrastructure, not extract value from a captive audience.</p>
+          <div class="yb-accordion__content" id="faq-4">
+            <p class="yb-accordion__text">The core service is free during early access. Our goal is to build useful public infrastructure, not extract value from a captive audience.</p>
           </div>
         </div>
       </div>
@@ -287,10 +292,44 @@ get_header();
 
   <!-- Final CTA Section -->
   <section id="get-app" class="yb-cta">
+    <!-- Scattered Decorative Icons -->
+    <div class="yb-cta__icons" aria-hidden="true">
+      <!-- Car -->
+      <svg class="yb-cta-icon yb-cta-icon--car" viewBox="0 0 80 80" fill="none">
+        <rect x="10" y="35" width="60" height="24" rx="5" fill="#21819B"/>
+        <path d="M20 35V25C20 22 23 17 30 17H50C57 17 60 22 60 25V35" stroke="#21819B" stroke-width="4" fill="none"/>
+        <circle cx="24" cy="52" r="7" fill="#4dd4ff"/>
+        <circle cx="56" cy="52" r="7" fill="#4dd4ff"/>
+      </svg>
+      <!-- Bell -->
+      <svg class="yb-cta-icon yb-cta-icon--bell" viewBox="0 0 64 64" fill="none">
+        <path d="M32 6C32 6 16 8 16 28V40L8 50H56L48 40V28C48 8 32 6 32 6Z" fill="#DE5E59"/>
+        <circle cx="32" cy="56" r="6" fill="#DE5E59"/>
+      </svg>
+      <!-- Parking -->
+      <svg class="yb-cta-icon yb-cta-icon--parking" viewBox="0 0 64 64" fill="none">
+        <rect x="8" y="8" width="48" height="48" rx="8" fill="#21819B"/>
+        <path d="M24 44V20H36C42 20 46 24 46 30C46 36 42 40 36 40H32V44H24Z" fill="#fff"/>
+        <path d="M32 26V34H36C38.5 34 40 32.5 40 30C40 27.5 38.5 26 36 26H32Z" fill="#21819B"/>
+      </svg>
+      <!-- Keys -->
+      <svg class="yb-cta-icon yb-cta-icon--keys" viewBox="0 0 64 64" fill="none">
+        <circle cx="20" cy="20" r="14" stroke="#21819B" stroke-width="4" fill="none"/>
+        <circle cx="20" cy="20" r="6" fill="#21819B"/>
+        <rect x="30" y="17" width="28" height="6" rx="2" fill="#21819B"/>
+        <rect x="48" y="23" width="4" height="10" rx="1" fill="#21819B"/>
+        <rect x="40" y="23" width="4" height="8" rx="1" fill="#21819B"/>
+      </svg>
+    </div>
+
     <div class="yb-container">
-      <h2 class="yb-cta__title">Move with respect.</h2>
-      <p class="yb-cta__text">Join the community making parking less stressful in the BVI.</p>
-      <a href="#" class="yb-btn yb-btn--primary">Get YuhBlockin</a>
+      <div class="yb-cta__inner">
+        <h2 class="yb-cta__title">Move with respect.</h2>
+        <p class="yb-cta__text">Join the community making parking less stressful in the BVI.</p>
+        <a href="#" class="yb-btn yb-btn--primary yb-btn--lg yb-btn--on-dark">
+          <span>Get YuhBlockin</span>
+        </a>
+      </div>
     </div>
   </section>
 
@@ -301,41 +340,43 @@ get_header();
         <div class="yb-footer__column">
           <h4 class="yb-footer__heading">Product</h4>
           <ul class="yb-footer__list">
-            <li class="yb-footer__list-item"><a href="#how-it-works" class="yb-footer__link">How it works</a></li>
-            <li class="yb-footer__list-item"><a href="#" class="yb-footer__link">Download</a></li>
-            <li class="yb-footer__list-item"><a href="#" class="yb-footer__link">For drivers</a></li>
+            <li><a href="#how-it-works" class="yb-footer__link">How it works</a></li>
+            <li><a href="#" class="yb-footer__link">Download</a></li>
+            <li><a href="#" class="yb-footer__link">For drivers</a></li>
           </ul>
         </div>
 
         <div class="yb-footer__column">
           <h4 class="yb-footer__heading">For Sites</h4>
           <ul class="yb-footer__list">
-            <li class="yb-footer__list-item"><a href="#for-properties" class="yb-footer__link">Property managers</a></li>
-            <li class="yb-footer__list-item"><a href="#" class="yb-footer__link">Signage templates</a></li>
-            <li class="yb-footer__list-item"><a href="#contact" class="yb-footer__link">Contact sales</a></li>
+            <li><a href="#for-properties" class="yb-footer__link">Property managers</a></li>
+            <li><a href="#" class="yb-footer__link">Signage templates</a></li>
+            <li><a href="#contact" class="yb-footer__link">Contact sales</a></li>
           </ul>
         </div>
 
         <div class="yb-footer__column">
           <h4 class="yb-footer__heading">Legal</h4>
           <ul class="yb-footer__list">
-            <li class="yb-footer__list-item"><a href="#" class="yb-footer__link">Privacy policy</a></li>
-            <li class="yb-footer__list-item"><a href="#" class="yb-footer__link">Terms of service</a></li>
+            <li><a href="#" class="yb-footer__link">Privacy policy</a></li>
+            <li><a href="#" class="yb-footer__link">Terms of service</a></li>
           </ul>
         </div>
 
         <div class="yb-footer__column">
           <h4 class="yb-footer__heading">Contact</h4>
           <ul class="yb-footer__list">
-            <li class="yb-footer__list-item"><a href="mailto:hello@yuhblockin.com" class="yb-footer__link">hello@yuhblockin.com</a></li>
-            <li class="yb-footer__list-item"><span class="yb-footer__link">Road Town, Tortola</span></li>
-            <li class="yb-footer__list-item"><span class="yb-footer__link">British Virgin Islands</span></li>
+            <li><a href="mailto:dev@dezetingz.ai" class="yb-footer__link">dev@dezetingz.ai</a></li>
+            <li><span class="yb-footer__text">Road Town, Tortola</span></li>
+            <li><span class="yb-footer__text">British Virgin Islands</span></li>
           </ul>
         </div>
       </div>
 
       <div class="yb-footer__bottom">
-        <p class="yb-footer__copyright">YuhBlockin. Built for the BVI.</p>
+        <p class="yb-footer__copyright">YuhBlockin</p>
+        <p class="yb-footer__tagline">Built for the BVI.</p>
+        <p class="yb-footer__legal">2026 &copy; DezeTingz</p>
       </div>
     </div>
   </footer>
