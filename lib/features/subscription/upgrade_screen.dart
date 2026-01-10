@@ -81,108 +81,67 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PremiumTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Go Premium',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: PremiumTheme.primaryTextColor,
-          ),
-        ),
-        backgroundColor: PremiumTheme.backgroundColor,
-        elevation: 0,
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _restorePurchases,
-            child: Text(
-              'Restore',
-              style: TextStyle(color: PremiumTheme.accentColor),
-            ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
+            // Custom App Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: PremiumTheme.surfaceColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: PremiumTheme.dividerColor),
+                      ),
+                      child: Icon(
+                        CupertinoIcons.xmark,
+                        size: 18,
+                        color: PremiumTheme.secondaryTextColor,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  CupertinoButton(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    onPressed: _isLoading ? null : _restorePurchases,
+                    child: Text(
+                      'Restore',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: PremiumTheme.accentColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Column(
                   children: [
-                    // Hero icon + Title row
-                    Row(
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            gradient: PremiumTheme.heroGradient,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: PremiumTheme.accentColor.withAlpha(77),
-                                blurRadius: 16,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            CupertinoIcons.star_fill,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Go Premium',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w600,
-                                  color: PremiumTheme.primaryTextColor,
-                                ),
-                              ),
-                              Text(
-                                'Unlock unlimited alerts',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: PremiumTheme.secondaryTextColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
+                    // Premium Hero Section
+                    _buildPremiumHero(),
+                    const SizedBox(height: 28),
                     // Benefits
                     _buildBenefitsSection(),
-                    const SizedBox(height: 16),
-                    // Payment method toggle
-                    _buildPaymentMethodToggle(),
-                    // ATH Móvil input section (phone or QR)
-                    if (_paymentMethod == 'ath_movil') ...[
-                      const SizedBox(height: 16),
-                      _buildAthInputTabs(),
-                      const SizedBox(height: 12),
-                      if (_athInputMethod == 'phone')
-                        _buildPhoneInput()
-                      else
-                        _buildQrCodeSection(),
-                    ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     // Pricing cards
                     _buildPricingCards(),
                     const SizedBox(height: 24),
                     // Purchase button
                     _buildPurchaseButton(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     // Terms
                     _buildTermsText(),
                   ],
@@ -195,55 +154,124 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     );
   }
 
-  Widget _buildBenefitsSection() {
-    final benefits = [
-      (CupertinoIcons.infinite, 'Unlimited Alerts'),
-      (CupertinoIcons.time_solid, 'No Daily Limits'),
-      (CupertinoIcons.heart_fill, 'Support Development'),
-      (CupertinoIcons.sparkles, 'Priority Features'),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: PremiumTheme.surfaceColor,
-        borderRadius: PremiumTheme.mediumRadius,
-        border: Border.all(
-          color: PremiumTheme.dividerColor,
-          width: 1,
-        ),
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: benefits.map((benefit) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                benefit.$1,
-                color: PremiumTheme.accentColor,
-                size: 16,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                benefit.$2,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: PremiumTheme.primaryTextColor,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                CupertinoIcons.check_mark,
-                color: CupertinoColors.systemGreen,
-                size: 14,
+  Widget _buildPremiumHero() {
+    return Column(
+      children: [
+        // Hero icon with theme gradient
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            gradient: PremiumTheme.heroGradient,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: PremiumTheme.accentColor.withAlpha(60),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
               ),
             ],
-          );
-        }).toList(),
-      ),
+          ),
+          child: const Icon(
+            CupertinoIcons.star_fill,
+            color: Colors.white,
+            size: 36,
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Title with theme accent
+        Text(
+          'Go Premium',
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: PremiumTheme.primaryTextColor,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Unlock the full power of Yuh Blockin\'',
+          style: TextStyle(
+            fontSize: 16,
+            color: PremiumTheme.secondaryTextColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBenefitsSection() {
+    final benefits = [
+      (CupertinoIcons.infinite, 'Unlimited Alerts', 'Send as many as you need'),
+      (CupertinoIcons.bell_fill, 'Priority Notifications', 'Never miss an alert'),
+      (CupertinoIcons.car_detailed, 'Multiple Vehicles', 'Track up to 10 plates'),
+      (CupertinoIcons.heart_fill, 'Support Development', 'Help us grow'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'What you\'ll get',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: PremiumTheme.primaryTextColor,
+            ),
+          ),
+        ),
+        ...benefits.map((benefit) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: PremiumTheme.accentColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  benefit.$1,
+                  color: PremiumTheme.accentColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      benefit.$2,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: PremiumTheme.primaryTextColor,
+                      ),
+                    ),
+                    Text(
+                      benefit.$3,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: PremiumTheme.secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                CupertinoIcons.checkmark_circle_fill,
+                color: PremiumTheme.accentColor,
+                size: 22,
+              ),
+            ],
+          ),
+        )),
+      ],
     );
   }
 
@@ -627,129 +655,266 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   Widget _buildPricingCards() {
-    return Row(
+    return Column(
       children: [
-        // Monthly plan
-        Expanded(
-          child: _buildPlanCard(
-            planId: 'monthly',
-            title: 'Monthly',
-            price: '\$2.99',
-            period: '/month',
-            isPopular: false,
-          ),
+        // Lifetime plan - Featured
+        _buildPremiumPlanCard(
+          planId: 'lifetime',
+          icon: CupertinoIcons.star_fill,
+          title: 'Lifetime Access',
+          subtitle: 'Pay once, own forever',
+          price: '\$19.99',
+          period: 'one-time payment',
+          badge: 'BEST VALUE',
+          savingsText: 'Save \$16+ vs monthly',
+          isRecommended: true,
         ),
-        const SizedBox(width: 10),
-        // Lifetime plan
-        Expanded(
-          child: _buildPlanCard(
-            planId: 'lifetime',
-            title: 'Lifetime',
-            price: '\$19.99',
-            period: 'one-time',
-            isPopular: true,
-            badge: 'Best Value',
-          ),
+        const SizedBox(height: 12),
+        // Monthly plan
+        _buildPremiumPlanCard(
+          planId: 'monthly',
+          icon: CupertinoIcons.calendar,
+          title: 'Monthly',
+          subtitle: 'Flexible subscription',
+          price: '\$2.99',
+          period: 'per month',
+          isRecommended: false,
         ),
       ],
     );
   }
 
-  Widget _buildPlanCard({
+  Widget _buildPremiumPlanCard({
     required String planId,
+    required IconData icon,
     required String title,
+    required String subtitle,
     required String price,
     required String period,
-    bool isPopular = false,
     String? badge,
+    String? savingsText,
+    bool isRecommended = false,
   }) {
     final isSelected = _selectedPlan == planId;
+
+    // Use theme accent color for gradient
+    final gradientColors = [
+      PremiumTheme.accentColor,
+      PremiumTheme.accentColor.withAlpha(200),
+    ];
 
     return GestureDetector(
       onTap: () => setState(() => _selectedPlan = planId),
       child: AnimatedContainer(
-        duration: PremiumTheme.fastDuration,
-        padding: const EdgeInsets.all(12),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? PremiumTheme.accentColor.withAlpha(20)
+              ? PremiumTheme.accentColor.withAlpha(15)
               : PremiumTheme.surfaceColor,
-          borderRadius: PremiumTheme.mediumRadius,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
                 ? PremiumTheme.accentColor
                 : PremiumTheme.dividerColor,
             width: isSelected ? 2 : 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: PremiumTheme.accentColor.withAlpha(30),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Column(
           children: [
+            // Badge row
             if (badge != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: PremiumTheme.accentColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  badge,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: gradientColors),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: gradientColors[0].withAlpha(50),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          CupertinoIcons.sparkles,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          badge,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Main content row
+            Row(
+              children: [
+                // Icon container
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: isSelected
+                        ? LinearGradient(colors: gradientColors)
+                        : null,
+                    color: isSelected ? null : PremiumTheme.dividerColor.withAlpha(100),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? Colors.white : PremiumTheme.secondaryTextColor,
+                    size: 24,
                   ),
                 ),
-              ),
-              const SizedBox(height: 6),
-            ] else
-              const SizedBox(height: 18),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: PremiumTheme.secondaryTextColor,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              price,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: PremiumTheme.primaryTextColor,
-              ),
-            ),
-            Text(
-              period,
-              style: TextStyle(
-                fontSize: 11,
-                color: PremiumTheme.secondaryTextColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Selection indicator
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected
-                      ? PremiumTheme.accentColor
-                      : PremiumTheme.dividerColor,
-                  width: 2,
+                const SizedBox(width: 14),
+
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: PremiumTheme.primaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: PremiumTheme.secondaryTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                color: isSelected ? PremiumTheme.accentColor : Colors.transparent,
-              ),
-              child: isSelected
-                  ? const Icon(
-                      CupertinoIcons.check_mark,
-                      color: Colors.white,
-                      size: 12,
-                    )
-                  : null,
+
+                // Price column
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      price,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? PremiumTheme.accentColor
+                            : PremiumTheme.primaryTextColor,
+                      ),
+                    ),
+                    Text(
+                      period,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: PremiumTheme.secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(width: 12),
+
+                // Selection indicator
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isSelected
+                        ? LinearGradient(colors: gradientColors)
+                        : null,
+                    border: isSelected
+                        ? null
+                        : Border.all(
+                            color: PremiumTheme.dividerColor,
+                            width: 2,
+                          ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: gradientColors[0].withAlpha(50),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: isSelected
+                      ? const Icon(
+                          CupertinoIcons.check_mark,
+                          color: Colors.white,
+                          size: 14,
+                        )
+                      : null,
+                ),
+              ],
             ),
+
+            // Savings text
+            if (savingsText != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.systemGreen.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      CupertinoIcons.tag_fill,
+                      color: CupertinoColors.systemGreen,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      savingsText,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: CupertinoColors.systemGreen,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -757,29 +922,62 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   Widget _buildPurchaseButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: CupertinoButton.filled(
-        onPressed: _selectedPlan == null || _isLoading ? null : _purchase,
-        borderRadius: BorderRadius.circular(14),
+    final isEnabled = _selectedPlan != null && !_isLoading;
+    final isLifetime = _selectedPlan == 'lifetime';
+
+    return GestureDetector(
+      onTap: isEnabled ? _purchase : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18),
-        child: _isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CupertinoActivityIndicator(color: Colors.white),
-              )
-            : Text(
-                _selectedPlan == null
-                    ? 'Select a Plan'
-                    : _selectedPlan == 'monthly'
-                        ? 'Subscribe for \$2.99/month'
-                        : 'Get Lifetime Access - \$19.99',
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
+        decoration: BoxDecoration(
+          gradient: isEnabled ? PremiumTheme.heroGradient : null,
+          color: isEnabled ? null : PremiumTheme.dividerColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isEnabled
+              ? [
+                  BoxShadow(
+                    color: PremiumTheme.accentColor.withAlpha(50),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: _isLoading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CupertinoActivityIndicator(color: Colors.white),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_selectedPlan != null) ...[
+                      Icon(
+                        isLifetime ? CupertinoIcons.star_fill : CupertinoIcons.calendar,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Text(
+                      _selectedPlan == null
+                          ? 'Select a Plan'
+                          : isLifetime
+                              ? 'Get Lifetime Access - \$19.99'
+                              : 'Subscribe for \$2.99/month',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: isEnabled ? Colors.white : PremiumTheme.tertiaryTextColor,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+        ),
       ),
     );
   }
