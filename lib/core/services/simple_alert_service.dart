@@ -549,6 +549,39 @@ class SimpleAlertService {
     }
   }
 
+  /// Delete user account and all associated data
+  /// Required by App Store Review Guidelines 5.1.1(v)
+  /// Returns true if deletion was successful
+  Future<bool> deleteUserAccount(String userId) async {
+    _ensureInitialized();
+
+    try {
+      if (kDebugMode) {
+        debugPrint('🗑️ Starting account deletion for user: $userId');
+      }
+
+      // Delete user from the database
+      // CASCADE DELETE will automatically remove:
+      // - plates
+      // - alerts (sent and received)
+      // - user_stats
+      // - subscriptions
+      // - daily_alert_usage
+      await _supabase.from('users').delete().eq('id', userId);
+
+      if (kDebugMode) {
+        debugPrint('✅ User account deleted successfully: $userId');
+      }
+
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to delete user account: $e');
+      }
+      return false;
+    }
+  }
+
   // Private helpers
 
   String _hashPlate(String plateNumber) {

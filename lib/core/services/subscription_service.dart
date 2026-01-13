@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -305,7 +306,13 @@ class SubscriptionService {
 
       final offerings = await Purchases.getOfferings();
       if (offerings.current == null) {
-        return PurchaseResult(success: false, error: 'No offerings available');
+        if (kDebugMode) {
+          debugPrint('❌ No offerings available from RevenueCat');
+        }
+        return PurchaseResult(
+          success: false,
+          error: 'Products are temporarily unavailable. Please try again later.',
+        );
       }
 
       Package? package;
@@ -316,7 +323,14 @@ class SubscriptionService {
       }
 
       if (package == null) {
-        return PurchaseResult(success: false, error: 'Product not found');
+        if (kDebugMode) {
+          debugPrint('❌ Product not found in offerings: $productId');
+          debugPrint('Available packages: monthly=${offerings.current!.monthly != null}, lifetime=${offerings.current!.lifetime != null}');
+        }
+        return PurchaseResult(
+          success: false,
+          error: 'This product is temporarily unavailable. Please try again later.',
+        );
       }
 
       final customerInfo = await Purchases.purchasePackage(package);
@@ -325,18 +339,60 @@ class SubscriptionService {
       if (_isPremium) {
         return PurchaseResult(success: true, message: 'Purchase successful!');
       } else {
-        return PurchaseResult(success: false, error: 'Purchase not activated');
+        return PurchaseResult(success: false, error: 'Purchase not activated. Please try again or contact support.');
       }
-    } on PurchasesErrorCode catch (e) {
-      if (e == PurchasesErrorCode.purchaseCancelledError) {
-        return PurchaseResult(success: false, error: 'Purchase cancelled');
+    } on PlatformException catch (e) {
+      // Handle RevenueCat platform exceptions
+      final errorCode = PurchasesErrorHelper.getErrorCode(e);
+      if (kDebugMode) {
+        debugPrint('❌ Purchase PlatformException: $errorCode - ${e.message}');
       }
-      return PurchaseResult(success: false, error: 'Purchase failed: $e');
+      return PurchaseResult(
+        success: false,
+        error: _getReadableErrorMessage(errorCode),
+      );
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Purchase failed: $e');
       }
-      return PurchaseResult(success: false, error: e.toString());
+      // Provide user-friendly message instead of raw exception
+      return PurchaseResult(
+        success: false,
+        error: 'Unable to complete purchase. Please check your internet connection and try again.',
+      );
+    }
+  }
+
+  /// Convert RevenueCat error codes to user-friendly messages
+  String _getReadableErrorMessage(PurchasesErrorCode errorCode) {
+    switch (errorCode) {
+      case PurchasesErrorCode.purchaseCancelledError:
+        return 'Purchase cancelled';
+      case PurchasesErrorCode.storeProblemError:
+        return 'App Store is temporarily unavailable. Please try again later.';
+      case PurchasesErrorCode.purchaseNotAllowedError:
+        return 'Purchases are not allowed on this device. Please check your device settings.';
+      case PurchasesErrorCode.purchaseInvalidError:
+        return 'This purchase is invalid. Please try again.';
+      case PurchasesErrorCode.productNotAvailableForPurchaseError:
+        return 'This product is currently unavailable. Please try again later.';
+      case PurchasesErrorCode.productAlreadyPurchasedError:
+        return 'You already own this product. Try restoring your purchases.';
+      case PurchasesErrorCode.networkError:
+        return 'Network error. Please check your internet connection and try again.';
+      case PurchasesErrorCode.receiptAlreadyInUseError:
+        return 'This purchase is already linked to another account.';
+      case PurchasesErrorCode.invalidReceiptError:
+        return 'Receipt validation failed. Please try again.';
+      case PurchasesErrorCode.missingReceiptFileError:
+        return 'Receipt not found. Please try again.';
+      case PurchasesErrorCode.invalidCredentialsError:
+      case PurchasesErrorCode.invalidAppleSubscriptionKeyError:
+        return 'Configuration error. Please contact support.';
+      case PurchasesErrorCode.paymentPendingError:
+        return 'Your payment is pending. It will be processed shortly.';
+      default:
+        return 'Purchase could not be completed. Please try again or contact support.';
     }
   }
 

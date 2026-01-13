@@ -35,6 +35,7 @@ import 'core/services/account_recovery_service.dart';
 import 'core/services/push_notification_service.dart';
 import 'features/alert_sound_settings/alert_sound_settings_screen.dart';
 import 'features/account_recovery/view_my_keys_screen.dart';
+import 'features/account/account_settings_screen.dart';
 
 /// Premium flagship-quality Yuh Blockin' app
 /// Inspired by Uber, Airbnb, Apple Human Interface guidelines
@@ -1988,6 +1989,23 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     transitionDuration: PremiumTheme.mediumDuration,
                   ),
                 );
+              } else if (value == 'account') {
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: PremiumTheme.standardCurve,
+                      )),
+                      child: const AccountSettingsScreen(),
+                    ),
+                    transitionDuration: PremiumTheme.mediumDuration,
+                  ),
+                );
               }
             },
             itemBuilder: (context) => [
@@ -2063,6 +2081,26 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     const SizedBox(width: 12),
                     Text(
                       'My Secret Keys',
+                      style: TextStyle(
+                        color: PremiumTheme.primaryTextColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'account',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.manage_accounts_outlined,
+                      color: PremiumTheme.accentColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Account Settings',
                       style: TextStyle(
                         color: PremiumTheme.primaryTextColor,
                         fontWeight: FontWeight.w500,
