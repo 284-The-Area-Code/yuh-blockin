@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/simple_alert_service.dart';
+import '../../core/services/subscription_service.dart';
 import '../onboarding/onboarding_flow.dart';
 
 /// Account Settings Screen
@@ -99,7 +100,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       final success = await SimpleAlertService().deleteUserAccount(_userId!);
 
       if (success) {
-        // Clear local data
+        // Reset subscription service and logout from RevenueCat
+        await SubscriptionService().logout();
+
+        // Clear all local data (settings, theme, etc.)
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
 

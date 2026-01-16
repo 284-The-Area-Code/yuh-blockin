@@ -95,6 +95,48 @@ class SubscriptionService {
     }
   }
 
+  /// Reset subscription state (call on account deletion)
+  /// Logs out of RevenueCat and clears all local subscription data
+  Future<void> logout() async {
+    try {
+      // Logout from RevenueCat
+      if (_revenueCatApiKey.isNotEmpty) {
+        await Purchases.logOut();
+        if (kDebugMode) {
+          debugPrint('✅ RevenueCat logged out');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ RevenueCat logout error: $e');
+      }
+    }
+
+    // Reset local state
+    _isPremium = false;
+    _subscriptionStatus = 'free';
+    _dailyAlertsUsed = 0;
+    _lastUsageDate = null;
+    _currentUserId = null;
+    _isInitialized = false;
+    _lastEntitlementRefresh = null;
+
+    // Clear cached status from SharedPreferences
+    try {
+      final prefs = await _getPrefs();
+      await prefs.remove('yuh_subscription_status');
+      await prefs.remove('yuh_daily_alerts_used');
+      await prefs.remove('yuh_last_usage_date');
+      if (kDebugMode) {
+        debugPrint('✅ Subscription cache cleared');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Failed to clear subscription prefs: $e');
+      }
+    }
+  }
+
   /// Check if user can send an alert (client-side check)
   Future<bool> canSendAlert() async {
     if (_isPremium) return true;
