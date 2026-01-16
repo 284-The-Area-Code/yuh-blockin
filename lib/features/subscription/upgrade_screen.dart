@@ -32,10 +32,16 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   String _athPath = ''; // Loaded from Supabase
   bool _athPathLoaded = false;
 
+  // Dynamic prices from StoreKit/RevenueCat
+  String? _monthlyPrice;
+  String? _lifetimePrice;
+  bool _pricesLoaded = false;
+
   @override
   void initState() {
     super.initState();
     _loadAthPath();
+    _loadPrices();
   }
 
   @override
@@ -51,6 +57,18 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
       setState(() {
         _athPath = path;
         _athPathLoaded = true;
+      });
+    }
+  }
+
+  /// Load dynamic prices from RevenueCat/StoreKit
+  Future<void> _loadPrices() async {
+    final offerings = await _subscriptionService.getOfferings();
+    if (offerings?.current != null && mounted) {
+      setState(() {
+        _monthlyPrice = offerings!.current!.monthly?.storeProduct.priceString;
+        _lifetimePrice = offerings.current!.lifetime?.storeProduct.priceString;
+        _pricesLoaded = true;
       });
     }
   }
@@ -663,10 +681,9 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           icon: CupertinoIcons.star_fill,
           title: 'Lifetime Access',
           subtitle: 'Pay once, own forever',
-          price: '\$19.99',
+          price: _lifetimePrice ?? '...',
           period: 'one-time payment',
           badge: 'BEST VALUE',
-          savingsText: 'Save \$16+ vs monthly',
           isRecommended: true,
         ),
         const SizedBox(height: 12),
@@ -676,7 +693,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           icon: CupertinoIcons.calendar,
           title: 'Monthly',
           subtitle: 'Flexible subscription',
-          price: '\$2.99',
+          price: _monthlyPrice ?? '...',
           period: 'per month',
           isRecommended: false,
         ),
@@ -922,7 +939,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   Widget _buildPurchaseButton() {
-    final isEnabled = _selectedPlan != null && !_isLoading;
+    final isEnabled = _selectedPlan != null && !_isLoading && _pricesLoaded;
     final isLifetime = _selectedPlan == 'lifetime';
 
     return GestureDetector(
@@ -967,8 +984,8 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                       _selectedPlan == null
                           ? 'Select a Plan'
                           : isLifetime
-                              ? 'Get Lifetime Access - \$19.99'
-                              : 'Subscribe for \$2.99/month',
+                              ? 'Get Lifetime Access${_lifetimePrice != null ? ' - $_lifetimePrice' : ''}'
+                              : 'Subscribe${_monthlyPrice != null ? ' for $_monthlyPrice/month' : ''}',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,

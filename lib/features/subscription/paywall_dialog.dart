@@ -137,7 +137,7 @@ class PaywallDialog extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Text(
-                'Starting at \$2.99/month or \$19.99 lifetime',
+                'Flexible plans available',
                 style: TextStyle(
                   fontSize: 13,
                   color: PremiumTheme.accentColor,
