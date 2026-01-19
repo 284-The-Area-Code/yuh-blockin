@@ -1053,3 +1053,291 @@
   outline: 2px solid var(--yb-teal);
   outline-offset: 2px;
 }
+
+/* ==========================================================================
+   Waitlist Section - Premium Minimal Design
+   ========================================================================== */
+
+.yb-waitlist {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Form layout */
+.yb-waitlist__form {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Input group - stacks input and counter */
+.yb-waitlist__input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Counter - Status feedback under input */
+.yb-waitlist__counter {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+
+.yb-waitlist__counter::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto 8px;
+}
+
+.yb-waitlist__counter #waitlist-count {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Email input - elegant underline-only style */
+.yb-waitlist__input,
+input.yb-waitlist__input,
+.yb-landing .yb-waitlist__input,
+.yb-hero .yb-waitlist__input,
+input[type="email"].yb-waitlist__input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 0 !important;
+  padding: 14px 2px 10px 2px !important;
+  width: 220px;
+  max-width: 220px;
+  min-width: 180px;
+  font-family: var(--yb-font-body);
+  font-size: 15px;
+  font-weight: 400;
+  color: #ffffff !important;
+  transition: all 0.25s ease;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  letter-spacing: 0.01em;
+}
+
+.yb-waitlist__input::placeholder,
+input.yb-waitlist__input::placeholder,
+input[type="email"].yb-waitlist__input::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+  font-weight: 400;
+  font-style: normal;
+  opacity: 1;
+  letter-spacing: 0.01em;
+}
+
+.yb-waitlist__input:focus,
+input.yb-waitlist__input:focus,
+input[type="email"].yb-waitlist__input:focus {
+  border-bottom-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 16px -4px rgba(255, 255, 255, 0.1) !important;
+  background: transparent !important;
+}
+
+/* Join button - matches primary CTA style */
+.yb-waitlist__form .yb-btn--primary,
+#join-waitlist-btn {
+  padding: 14px 28px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+}
+
+/* Success message - centered under hero buttons */
+.yb-waitlist__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  width: 100%;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.yb-waitlist__success svg {
+  color: #4ade80;
+  width: 32px;
+  height: 32px;
+}
+
+.yb-waitlist__success span {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive - tablet center */
+@media (max-width: 1024px) {
+  .yb-waitlist {
+    align-items: center;
+  }
+}
+
+/* Responsive - mobile stack */
+@media (max-width: 640px) {
+  .yb-waitlist {
+    margin-top: 44px;
+    gap: 24px;
+  }
+
+  .yb-waitlist__form {
+    flex-direction: column;
+    width: 100%;
+    max-width: 260px;
+    gap: 16px;
+  }
+
+  .yb-waitlist__input,
+  input.yb-waitlist__input,
+  input[type="email"].yb-waitlist__input {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center;
+  }
+
+  .yb-waitlist__input::placeholder,
+  input.yb-waitlist__input::placeholder {
+    text-align: center;
+  }
+
+  .yb-waitlist__form .yb-btn {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   Hero Entrance Animations
+   Premium fade-in sequence for initial page load
+   Easing: cubic-bezier(0.4, 0, 0.2, 1) — smooth deceleration
+   ========================================================================== */
+
+/* Animation timing variable */
+:root {
+  --yb-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Keyframe: Fade up (standard — 8px rise) */
+@keyframes yb-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keyframe: Fade up soft (6px rise — subtler) */
+@keyframes yb-fade-up-soft {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Keyframe: Fade scale (CTAs — subtle depth) */
+@keyframes yb-fade-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Keyframe: Fade only (no movement) */
+@keyframes yb-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Keyframe: Fade up slow (hero visual — 12px rise, dramatic) */
+@keyframes yb-fade-up-slow {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Initial state: hide elements before animation */
+.yb-hero__headline,
+.yb-hero__subcopy,
+.yb-hero__actions,
+.yb-waitlist,
+.yb-waitlist__counter,
+.yb-hero__visual {
+  opacity: 0;
+}
+
+/* Animation sequence — staggered entrance */
+.yb-hero__headline {
+  animation: yb-fade-up 600ms var(--yb-ease-out) 0ms both;
+}
+
+.yb-hero__subcopy {
+  animation: yb-fade-up-soft 550ms var(--yb-ease-out) 120ms both;
+}
+
+.yb-hero__actions {
+  animation: yb-fade-scale 500ms var(--yb-ease-out) 220ms both;
+}
+
+.yb-waitlist {
+  animation: yb-fade-scale 500ms var(--yb-ease-out) 320ms both;
+}
+
+.yb-waitlist__counter {
+  animation: yb-fade-in 450ms var(--yb-ease-out) 420ms both;
+}
+
+.yb-hero__visual {
+  animation: yb-fade-up-slow 700ms var(--yb-ease-out) 480ms both;
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .yb-hero__headline,
+  .yb-hero__subcopy,
+  .yb-hero__actions,
+  .yb-waitlist,
+  .yb-waitlist__counter,
+  .yb-hero__visual {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

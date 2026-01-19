@@ -227,7 +227,7 @@ function yuhblockin_enqueue_landing_assets() {
 			'yuhblockin-landing',
 			get_template_directory_uri() . '/assets/css/yuhblockin.css',
 			array( 'yuhblockin-fonts' ),
-			'2.3.0'
+			'3.1.0'
 		);
 
 		// Landing page scripts
@@ -276,3 +276,26 @@ function yuhblockin_hide_astra_footer_css() {
 	}
 }
 add_action( 'wp_head', 'yuhblockin_hide_astra_footer_css' );
+
+/**
+ * YuhBlockin - Premium page title
+ */
+function yuhblockin_custom_title( $title ) {
+	if ( is_page_template( 'page-yuhblockin-home.php' ) ) {
+		return 'YuhBlockin — Move with Respect';
+	}
+	return $title;
+}
+add_filter( 'pre_get_document_title', 'yuhblockin_custom_title' );
+
+/**
+ * YuhBlockin - Favicon
+ */
+function yuhblockin_add_favicon() {
+	if ( is_page_template( 'page-yuhblockin-home.php' ) ) {
+		$favicon_url = get_site_url() . '/wp-content/uploads/yuhblockin-favicon.png';
+		echo '<link rel="icon" type="image/png" sizes="192x192" href="' . esc_url( $favicon_url ) . '">' . "\n";
+		echo '<link rel="apple-touch-icon" sizes="180x180" href="' . esc_url( $favicon_url ) . '">' . "\n";
+	}
+}
+add_action( 'wp_head', 'yuhblockin_add_favicon', 1 );
