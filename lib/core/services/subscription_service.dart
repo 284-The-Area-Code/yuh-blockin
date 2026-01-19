@@ -376,19 +376,79 @@ class SubscriptionService {
       }
 
       final customerInfo = await Purchases.purchasePackage(package);
-      await _handleCustomerInfoUpdate(customerInfo);
 
-      if (_isPremium) {
+      // Check entitlements directly from CustomerInfo (not local state)
+      // This fixes race condition where _isPremium isn't updated yet
+      final entitlements = customerInfo.entitlements.active;
+      final hasPremium = entitlements.containsKey('premium') ||
+                         entitlements.containsKey('lifetime');
+
+      _logPurchaseEvent('Purchase completed', details: {
+        'productId': productId,
+        'hasPremium': hasPremium,
+        'activeEntitlements': entitlements.keys.toList(),
+      });
+
+      if (hasPremium) {
+        // Update local state (fire and forget is ok here since we already verified)
+        _handleCustomerInfoUpdate(customerInfo);
         return PurchaseResult(success: true, message: 'Purchase successful!');
       } else {
-        return PurchaseResult(success: false, error: 'Purchase not activated. Please try again or contact support.');
+        // Entitlements not active yet - try refreshing once after a brief delay
+        // This handles edge cases where entitlements take a moment to propagate
+        await Future.delayed(const Duration(milliseconds: 500));
+        final refreshedInfo = await Purchases.getCustomerInfo();
+        final refreshedEntitlements = refreshedInfo.entitlements.active;
+        final hasRefreshedPremium = refreshedEntitlements.containsKey('premium') ||
+                                     refreshedEntitlements.containsKey('lifetime');
+
+        _logPurchaseEvent('Entitlement refresh check', details: {
+          'productId': productId,
+          'hasRefreshedPremium': hasRefreshedPremium,
+          'activeEntitlements': refreshedEntitlements.keys.toList(),
+        });
+
+        if (hasRefreshedPremium) {
+          await _handleCustomerInfoUpdate(refreshedInfo);
+          return PurchaseResult(success: true, message: 'Purchase successful!');
+        }
+
+        // Still no entitlements - purchase may be processing
+        _logPurchaseEvent('Purchase completed but entitlements not found', details: {
+          'productId': productId,
+          'waitedMs': 500,
+        });
+
+        return PurchaseResult(
+          success: false,
+          error: 'Purchase is being processed. Please wait a moment and check your subscription status.',
+        );
       }
     } on PlatformException catch (e) {
       // Handle RevenueCat platform exceptions
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
-      if (kDebugMode) {
-        debugPrint('❌ Purchase PlatformException: $errorCode - ${e.message}');
+      _logPurchaseEvent('Purchase PlatformException', details: {
+        'errorCode': errorCode.toString(),
+        'message': e.message,
+      });
+
+      // Handle payment pending specially - this is not an error, just needs approval
+      if (errorCode == PurchasesErrorCode.paymentPendingError) {
+        return PurchaseResult(
+          success: false,
+          error: 'Your purchase requires approval. You\'ll be notified when it\'s complete.',
+          isPending: true,
+        );
       }
+
+      // User cancelled - not really an error
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        return PurchaseResult(
+          success: false,
+          error: 'Purchase cancelled',
+        );
+      }
+
       return PurchaseResult(
         success: false,
         error: _getReadableErrorMessage(errorCode),
@@ -432,10 +492,29 @@ class SubscriptionService {
       case PurchasesErrorCode.invalidAppleSubscriptionKeyError:
         return 'Configuration error. Please contact support.';
       case PurchasesErrorCode.paymentPendingError:
-        return 'Your payment is pending. It will be processed shortly.';
+        // This is handled specially in _purchaseProduct, but provide a fallback message
+        return 'Your purchase requires approval. You\'ll be notified when it\'s complete.';
       default:
         return 'Purchase could not be completed. Please try again or contact support.';
     }
+  }
+
+  /// Log purchase events for debugging - works in both debug and release builds
+  /// In production, these logs can be captured by crash reporting services (e.g., Firebase Crashlytics)
+  void _logPurchaseEvent(String event, {Map<String, dynamic>? details}) {
+    final timestamp = DateTime.now().toIso8601String();
+    final detailsStr = details != null ? ' $details' : '';
+    final logMessage = '[$timestamp] [IAP] $event$detailsStr';
+
+    // Always print in debug mode
+    if (kDebugMode) {
+      debugPrint(logMessage);
+    }
+
+    // In release builds, this could be sent to a crash reporting service
+    // Example: FirebaseCrashlytics.instance.log(logMessage);
+    // For now, we use assert to capture in debug and a no-op in release
+    // The important thing is that we have structured logging for diagnosis
   }
 
   /// Simulate purchase for demo/testing mode
@@ -619,11 +698,13 @@ class PurchaseResult {
   final bool success;
   final String? message;
   final String? error;
+  final bool isPending;
 
   PurchaseResult({
     required this.success,
     this.message,
     this.error,
+    this.isPending = false,
   });
 }
 

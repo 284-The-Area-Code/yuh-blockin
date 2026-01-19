@@ -36,6 +36,8 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   String? _monthlyPrice;
   String? _lifetimePrice;
   bool _pricesLoaded = false;
+  bool _pricesError = false;
+  String? _pricesErrorMessage;
 
   @override
   void initState() {
@@ -63,13 +65,60 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
   /// Load dynamic prices from RevenueCat/StoreKit
   Future<void> _loadPrices() async {
-    final offerings = await _subscriptionService.getOfferings();
-    if (offerings?.current != null && mounted) {
+    // Reset error state when retrying
+    if (mounted) {
       setState(() {
-        _monthlyPrice = offerings!.current!.monthly?.storeProduct.priceString;
-        _lifetimePrice = offerings.current!.lifetime?.storeProduct.priceString;
-        _pricesLoaded = true;
+        _pricesError = false;
+        _pricesErrorMessage = null;
       });
+    }
+
+    try {
+      final offerings = await _subscriptionService.getOfferings();
+      if (!mounted) return;
+
+      if (offerings?.current != null) {
+        final monthly = offerings!.current!.monthly;
+        final lifetime = offerings.current!.lifetime;
+
+        // Check if at least one product is available
+        if (monthly != null || lifetime != null) {
+          setState(() {
+            _monthlyPrice = monthly?.storeProduct.priceString;
+            _lifetimePrice = lifetime?.storeProduct.priceString;
+            _pricesLoaded = true;
+            _pricesError = false;
+          });
+        } else {
+          // Products not configured in RevenueCat/App Store
+          setState(() {
+            _pricesError = true;
+            _pricesErrorMessage = 'Products are temporarily unavailable. Tap to retry.';
+          });
+          if (kDebugMode) {
+            debugPrint('⚠️ No products found in offerings');
+          }
+        }
+      } else {
+        // No offerings available
+        setState(() {
+          _pricesError = true;
+          _pricesErrorMessage = 'Unable to load prices. Tap to retry.';
+        });
+        if (kDebugMode) {
+          debugPrint('⚠️ No offerings available from RevenueCat');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load prices: $e');
+      }
+      if (mounted) {
+        setState(() {
+          _pricesError = true;
+          _pricesErrorMessage = 'Connection error. Tap to retry.';
+        });
+      }
     }
   }
 
@@ -673,6 +722,11 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   Widget _buildPricingCards() {
+    // Show error state with retry if prices failed to load
+    if (_pricesError) {
+      return _buildPricesErrorCard();
+    }
+
     return Column(
       children: [
         // Lifetime plan - Featured
@@ -698,6 +752,67 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           isRecommended: false,
         ),
       ],
+    );
+  }
+
+  /// Build error card when prices fail to load
+  Widget _buildPricesErrorCard() {
+    return GestureDetector(
+      onTap: _loadPrices,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: PremiumTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: CupertinoColors.systemRed.withAlpha(100)),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              CupertinoIcons.exclamationmark_triangle_fill,
+              color: CupertinoColors.systemOrange,
+              size: 40,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _pricesErrorMessage ?? 'Unable to load products',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: PremiumTheme.primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: PremiumTheme.accentColor.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.refresh,
+                    size: 18,
+                    color: PremiumTheme.accentColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tap to Retry',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: PremiumTheme.accentColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1077,6 +1192,9 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
       if (result.success) {
         _showSuccessDialog();
+      } else if (result.isPending) {
+        // Payment pending (e.g., "Ask to Buy" approval needed)
+        _showPendingDialog(result.error ?? 'Your purchase is being processed.');
       } else {
         _showErrorSnackbar(result.error ?? 'Purchase failed');
       }
@@ -1213,6 +1331,33 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
             onPressed: () {
               Navigator.of(context).pop(); // Close dialog
               Navigator.of(context).pop(); // Close upgrade screen
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog for pending purchases (e.g., "Ask to Buy" approval)
+  void _showPendingDialog(String message) {
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => CupertinoAlertDialog(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.clock_fill, color: CupertinoColors.systemBlue),
+            SizedBox(width: 8),
+            Text('Purchase Pending'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
             },
           ),
         ],
