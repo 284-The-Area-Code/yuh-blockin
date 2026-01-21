@@ -16,6 +16,33 @@ add_action( 'wp_head', function() {
 	echo '<link rel="apple-touch-icon" sizes="180x180" href="' . esc_url( $favicon ) . '">' . "\n";
 }, 1 );
 
+// Add Open Graph meta tags for social sharing
+add_action( 'wp_head', function() {
+	$site_url = get_site_url();
+	$og_image = $site_url . '/wp-content/uploads/2026/01/premium-splash.png';
+	$og_title = 'YuhBlockin - Move with Respect';
+	$og_description = 'Resolve blocked parking situations quietly and quickly. No drama, no confrontation. Built for Caribbean drivers.';
+	?>
+	<!-- Open Graph / Facebook -->
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="<?php echo esc_url( $site_url ); ?>">
+	<meta property="og:title" content="<?php echo esc_attr( $og_title ); ?>">
+	<meta property="og:description" content="<?php echo esc_attr( $og_description ); ?>">
+	<meta property="og:image" content="<?php echo esc_url( $og_image ); ?>">
+	<meta property="og:site_name" content="YuhBlockin">
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:url" content="<?php echo esc_url( $site_url ); ?>">
+	<meta name="twitter:title" content="<?php echo esc_attr( $og_title ); ?>">
+	<meta name="twitter:description" content="<?php echo esc_attr( $og_description ); ?>">
+	<meta name="twitter:image" content="<?php echo esc_url( $og_image ); ?>">
+
+	<!-- General meta -->
+	<meta name="description" content="<?php echo esc_attr( $og_description ); ?>">
+	<?php
+}, 2 );
+
 get_header();
 ?>
 
