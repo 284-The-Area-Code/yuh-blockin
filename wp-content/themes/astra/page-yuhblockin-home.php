@@ -25,6 +25,9 @@ get_header();
   <header class="yb-header">
     <div class="yb-container">
       <div class="yb-header__inner">
+        <a href="/" class="yb-header__logo">
+          <img src="/wp-content/uploads/2026/01/app_icon_ios.png" alt="YuhBlockin" class="yb-header__logo-img">
+        </a>
         <nav class="yb-header__nav" aria-label="Main navigation">
           <a href="#how-it-works" class="yb-header__nav-link">How it works</a>
           <a href="#why-it-matters" class="yb-header__nav-link">Why it matters</a>
@@ -99,7 +102,7 @@ get_header();
       <div class="yb-hero__inner">
         <div class="yb-hero__content">
           <h1 class="yb-hero__headline">Don't argue in the lot.<br>Just send a respectful ping.</h1>
-          <p class="yb-hero__subcopy">YuhBlockin helps drivers in the Caribbean resolve being blocked in quietly and quickly right from their phones.</p>
+          <p class="yb-hero__subcopy">YuhBlockin helps drivers in the Caribbean resolve being blocked in quietly and quickly right from their phones. What are "Yuh" waiting for? Join the waitlist!</p>
           <div class="yb-hero__actions">
             <a href="#get-app" class="yb-btn yb-btn--primary yb-btn--lg">
               <span>Get YuhBlockin</span>
@@ -124,13 +127,168 @@ get_header();
         </div>
 
         <div class="yb-hero__visual">
+          <!-- Premium Brand Card -->
           <img
-            src="<?php echo esc_url(get_site_url() . '/wp-content/uploads/2026/01/premium-user-splash.png'); ?>"
-            alt="YuhBlockin - Move with respect"
+            src="<?php echo get_site_url(); ?>/wp-content/uploads/2026/01/premium-splash.png"
+            alt="YuhBlockin App"
             class="yb-hero__brand-card"
-          >
+          />
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo Section -->
+  <section class="yb-demo-section">
+    <div class="yb-container">
+      <header class="yb-section-header">
+        <h2 class="yb-section-header__title">See it in action</h2>
+        <p class="yb-section-header__subtitle">A simple, respectful way to get unblocked.</p>
+      </header>
+
+      <div class="yb-demo-section__content">
+        <!-- Simple Emoji Demo -->
+        <div class="yb-emoji-demo" data-state="blocked">
+
+          <!-- iPhone Frame -->
+          <div class="yb-emoji-demo__phone">
+            <div class="yb-emoji-demo__notch"></div>
+
+            <!-- Screen Content -->
+            <div class="yb-emoji-demo__screen">
+
+              <!-- Parking Scene with Emojis -->
+              <div class="yb-emoji-demo__scene">
+
+                <!-- Cars row: Your car wants to go right, blocker is in the way -->
+                <div class="yb-emoji-demo__road">
+                  <!-- Your car (left side, wants to exit right) -->
+                  <div class="yb-emoji-demo__your-car">
+                    <span class="yb-emoji-demo__car-emoji">🚙</span>
+                    <span class="yb-emoji-demo__blocked-x">✕</span>
+                    <span class="yb-emoji-demo__label yb-emoji-demo__label--you">TAX-789</span>
+                  </div>
+
+                  <!-- Blocker car (in front of you, same direction) -->
+                  <div class="yb-emoji-demo__blocker-car">
+                    <span class="yb-emoji-demo__car-emoji">🚗</span>
+                    <span class="yb-emoji-demo__bubble">Moving now!</span>
+                    <span class="yb-emoji-demo__label yb-emoji-demo__label--blocker"></span>
+                  </div>
+
+                  <!-- Exit arrow -->
+                  <div class="yb-emoji-demo__exit">→</div>
+                </div>
+
+              </div>
+
+              <!-- Status Message with indicator below -->
+              <div class="yb-emoji-demo__status">
+                <span class="yb-emoji-demo__status-text">You're blocked in</span>
+                <span class="yb-emoji-demo__status-icon yb-emoji-demo__status-icon--blocked">⛔</span>
+                <span class="yb-emoji-demo__status-icon yb-emoji-demo__status-icon--free">✅</span>
+              </div>
+
+              <!-- Input UI -->
+              <div class="yb-emoji-demo__input-row">
+                <div class="yb-emoji-demo__input">
+                  <span class="yb-emoji-demo__plate"></span>
+                  <span class="yb-emoji-demo__cursor"></span>
+                </div>
+                <button class="yb-emoji-demo__btn">Send Alert</button>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </div>
+
+      <!-- Animation Controller -->
+      <script>
+      (function() {
+        const el = document.querySelector('.yb-emoji-demo');
+        if (!el) return;
+
+        const statusText = el.querySelector('.yb-emoji-demo__status-text');
+        const plateText = el.querySelector('.yb-emoji-demo__plate');
+        const blockerLabel = el.querySelector('.yb-emoji-demo__label--blocker');
+        const btn = el.querySelector('.yb-emoji-demo__btn');
+
+        const plate = 'PBA-123';
+
+        function setState(state) {
+          el.dataset.state = state;
+        }
+
+        function setStatus(text) {
+          statusText.textContent = text;
+        }
+
+        function typeText(cb) {
+          let i = 0;
+          plateText.textContent = '';
+          const t = setInterval(() => {
+            if (i < plate.length) {
+              plateText.textContent += plate[i];
+              i++;
+            } else {
+              clearInterval(t);
+              if (cb) setTimeout(cb, 400);
+            }
+          }, 100);
+        }
+
+        function runLoop() {
+          // Reset
+          setState('blocked');
+          setStatus("You're blocked in");
+          plateText.textContent = '';
+          blockerLabel.textContent = plate;
+
+          // Type plate
+          setTimeout(() => {
+            setState('typing');
+            setStatus('Enter their plate');
+            setTimeout(() => typeText(() => {
+              btn.classList.add('is-active');
+              setTimeout(() => btn.classList.remove('is-active'), 200);
+              setStatus('Alert sent!');
+            }), 400);
+          }, 2000);
+
+          // Blocker responds with bubble
+          setTimeout(() => {
+            setState('responding');
+            setStatus('They responded!');
+          }, 4800);
+
+          // Blocker moves
+          setTimeout(() => {
+            setState('moving');
+            setStatus("They're moving...");
+          }, 6300);
+
+          // Free
+          setTimeout(() => {
+            setState('free');
+            setStatus("You're free!");
+          }, 8300);
+
+          // Loop
+          setTimeout(runLoop, 11000);
+        }
+
+        // Cursor blink
+        setInterval(() => {
+          const c = el.querySelector('.yb-emoji-demo__cursor');
+          if (c) c.style.opacity = c.style.opacity === '0' ? '1' : '0';
+        }, 500);
+
+        setTimeout(runLoop, 600);
+      })();
+      </script>
     </div>
   </section>
 
@@ -160,6 +318,29 @@ get_header();
           <h3 class="yb-step-card__title">Move and done</h3>
           <p class="yb-step-card__text">You move your car, they're on their way. No drama, no confrontation, no stress.</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Community Value Section -->
+  <section class="yb-community">
+    <div class="yb-container">
+      <div class="yb-community__inner">
+        <div class="yb-community__icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="32" r="28" fill="rgba(33, 129, 155, 0.1)"/>
+            <circle cx="22" cy="26" r="8" stroke="#21819B" stroke-width="2.5" fill="none"/>
+            <circle cx="42" cy="26" r="8" stroke="#21819B" stroke-width="2.5" fill="none"/>
+            <path d="M22 38C22 38 27 48 32 48C37 48 42 38 42 38" stroke="#21819B" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="32" cy="48" r="4" fill="#21819B"/>
+          </svg>
+        </div>
+        <h2 class="yb-community__title">It works better when we're all on it</h2>
+        <p class="yb-community__text">Here's the thing: the more drivers who have YuhBlockin, the faster everyone gets unblocked. When someone blocks you and they're on the app, you can reach them instantly. When you accidentally block someone, they can reach you just as quickly. No notes on windshields, no waiting around, no awkward confrontations.</p>
+        <p class="yb-community__cta">Download the app now. Even if you don't need it today, you'll be glad you have it when you do.</p>
+        <a href="#get-app" class="yb-btn yb-btn--primary">
+          <span>Get YuhBlockin Free</span>
+        </a>
       </div>
     </div>
   </section>
@@ -240,8 +421,8 @@ get_header();
 
         <div class="yb-properties__visual">
           <div class="yb-stat-card">
-            <p class="yb-stat-card__number">87%</p>
-            <p class="yb-stat-card__label">of blocked situations resolved within 3 minutes</p>
+            <p class="yb-stat-card__number">3 min</p>
+            <p class="yb-stat-card__label">Designed to resolve most situations in minutes</p>
           </div>
         </div>
       </div>
@@ -308,7 +489,7 @@ get_header();
             </span>
           </button>
           <div class="yb-accordion__content" id="faq-4">
-            <p class="yb-accordion__text">The core service is free during early access. Our goal is to build useful public infrastructure, not extract value from a captive audience.</p>
+            <p class="yb-accordion__text">You get 3 free alerts per day. For unlimited alerts, it's $2.99/month or $19.99 for lifetime access. No ads, no hidden fees.</p>
           </div>
         </div>
       </div>
