@@ -53,7 +53,7 @@ get_header();
     <div class="yb-container">
       <div class="yb-header__inner">
         <a href="/" class="yb-header__logo">
-          <img src="/wp-content/uploads/2026/01/app_icon_ios.png" alt="YuhBlockin" class="yb-header__logo-img">
+          <span class="yb-header__logo-text">YuhBlockin</span>
         </a>
         <nav class="yb-header__nav" aria-label="Main navigation">
           <a href="#how-it-works" class="yb-header__nav-link">How it works</a>
@@ -154,12 +154,43 @@ get_header();
         </div>
 
         <div class="yb-hero__visual">
-          <!-- Premium Brand Card -->
-          <img
-            src="<?php echo get_site_url(); ?>/wp-content/uploads/2026/01/premium-splash.png"
-            alt="YuhBlockin App"
-            class="yb-hero__brand-card"
-          />
+          <!-- Premium Brand Card with Store Badges -->
+          <div class="yb-hero__card-wrapper">
+            <img
+              src="<?php echo get_site_url(); ?>/wp-content/uploads/2026/01/premium-splash.png"
+              alt="YuhBlockin App"
+              class="yb-hero__brand-card"
+            />
+            <!-- App Store Badges Overlay -->
+            <div class="yb-hero__store-badges">
+              <!-- Apple App Store -->
+              <a href="#" class="yb-store-badge" aria-label="Download on the App Store">
+                <svg viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="120" height="40" rx="6" fill="#000"/>
+                  <g fill="#fff">
+                    <path d="M24.5 20.4c0-2.4 1.3-4.5 3.3-5.6-.9-1.3-2.3-2.1-4-2.2-1.7-.2-3.3 1-4.2 1s-2.2-1-3.6-1c-1.8 0-3.5 1.1-4.5 2.7-1.9 3.3-.5 8.2 1.4 10.9.9 1.3 2 2.8 3.5 2.7 1.4-.1 1.9-.9 3.6-.9s2.2.9 3.6.9c1.5 0 2.4-1.3 3.3-2.6.7-1 1.2-2 1.4-2.1-1.5-.6-2.8-2.1-2.8-3.8z"/>
+                    <path d="M22.3 10.5c.8-1 1.3-2.3 1.2-3.6-1.1.1-2.5.8-3.3 1.7-.7.9-1.4 2.2-1.2 3.5 1.3.1 2.5-.6 3.3-1.6z"/>
+                  </g>
+                  <text x="42" y="14" fill="#fff" font-size="7" font-family="system-ui, sans-serif">Download on the</text>
+                  <text x="42" y="27" fill="#fff" font-size="13" font-weight="600" font-family="system-ui, sans-serif">App Store</text>
+                </svg>
+              </a>
+              <!-- Google Play Store -->
+              <a href="#" class="yb-store-badge" aria-label="Get it on Google Play">
+                <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="135" height="40" rx="6" fill="#000"/>
+                  <g transform="translate(10, 7)">
+                    <path d="M0 24.5V1.5c0-.4.2-.7.5-.9l13.2 12.4L.5 25.4c-.3-.2-.5-.5-.5-.9z" fill="#00d4ff"/>
+                    <path d="M17.6 16.9L4 26.7c-.3.2-.6.2-.9.1l10.5-10.5 4 .6z" fill="#ff3a44"/>
+                    <path d="M17.6 9.1l-4 .6L3.1-.1c.3-.1.6-.1.9.1l13.6 9.1z" fill="#ffce44"/>
+                    <path d="M.5.6c.3-.2.6-.2.9-.1L17.6 9.1l-4 4L.5.6z" fill="#00f076"/>
+                  </g>
+                  <text x="38" y="14" fill="#fff" font-size="7" font-family="system-ui, sans-serif">GET IT ON</text>
+                  <text x="38" y="27" fill="#fff" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Google Play</text>
+                </svg>
+              </a>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -559,37 +590,9 @@ get_header();
       <div class="yb-cta__inner">
         <h2 class="yb-cta__title">Move with respect.</h2>
         <p class="yb-cta__text">Join the community making parking less stressful in the BVI.</p>
-
-        <!-- App Store Badges -->
-        <div class="yb-store-badges">
-          <!-- Apple App Store -->
-          <a href="#" class="yb-store-badge" aria-label="Download on the App Store">
-            <svg viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
-              <rect width="120" height="40" rx="6" fill="#000"/>
-              <g fill="#fff">
-                <path d="M24.5 20.4c0-2.4 1.3-4.5 3.3-5.6-.9-1.3-2.3-2.1-4-2.2-1.7-.2-3.3 1-4.2 1s-2.2-1-3.6-1c-1.8 0-3.5 1.1-4.5 2.7-1.9 3.3-.5 8.2 1.4 10.9.9 1.3 2 2.8 3.5 2.7 1.4-.1 1.9-.9 3.6-.9s2.2.9 3.6.9c1.5 0 2.4-1.3 3.3-2.6.7-1 1.2-2 1.4-2.1-1.5-.6-2.8-2.1-2.8-3.8z"/>
-                <path d="M22.3 10.5c.8-1 1.3-2.3 1.2-3.6-1.1.1-2.5.8-3.3 1.7-.7.9-1.4 2.2-1.2 3.5 1.3.1 2.5-.6 3.3-1.6z"/>
-              </g>
-              <text x="42" y="14" fill="#fff" font-size="7" font-family="system-ui, sans-serif">Download on the</text>
-              <text x="42" y="27" fill="#fff" font-size="13" font-weight="600" font-family="system-ui, sans-serif">App Store</text>
-            </svg>
-          </a>
-
-          <!-- Google Play Store -->
-          <a href="#" class="yb-store-badge" aria-label="Get it on Google Play">
-            <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg">
-              <rect width="135" height="40" rx="6" fill="#000"/>
-              <g transform="translate(10, 7)">
-                <path d="M0 24.5V1.5c0-.4.2-.7.5-.9l13.2 12.4L.5 25.4c-.3-.2-.5-.5-.5-.9z" fill="#00d4ff"/>
-                <path d="M17.6 16.9L4 26.7c-.3.2-.6.2-.9.1l10.5-10.5 4 .6z" fill="#ff3a44"/>
-                <path d="M17.6 9.1l-4 .6L3.1-.1c.3-.1.6-.1.9.1l13.6 9.1z" fill="#ffce44"/>
-                <path d="M.5.6c.3-.2.6-.2.9-.1L17.6 9.1l-4 4L.5.6z" fill="#00f076"/>
-              </g>
-              <text x="38" y="14" fill="#fff" font-size="7" font-family="system-ui, sans-serif">GET IT ON</text>
-              <text x="38" y="27" fill="#fff" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Google Play</text>
-            </svg>
-          </a>
-        </div>
+        <a href="#get-app" class="yb-btn yb-btn--primary yb-btn--lg yb-btn--on-dark">
+          <span>Get YuhBlockin</span>
+        </a>
       </div>
     </div>
   </section>

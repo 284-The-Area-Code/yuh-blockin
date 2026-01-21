@@ -238,6 +238,14 @@
   object-fit: contain;
 }
 
+.yb-header__logo-text {
+  font-family: var(--yb-font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--yb-slate);
+  letter-spacing: -0.01em;
+}
+
 .yb-header__nav {
   display: flex;
   align-items: center;
@@ -394,6 +402,12 @@
   align-items: center;
 }
 
+/* Card wrapper for positioning badges */
+.yb-hero__card-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 /* Brand card in hero */
 .yb-hero__brand-card {
   max-width: 420px;
@@ -403,6 +417,34 @@
   box-shadow:
     0 30px 60px -15px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Store badges overlay on hero image */
+.yb-hero__store-badges {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 3;
+}
+
+.yb-hero__store-badges .yb-store-badge {
+  opacity: 0.95;
+  transition: all var(--yb-transition);
+}
+
+.yb-hero__store-badges .yb-store-badge:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.yb-hero__store-badges .yb-store-badge svg {
+  height: 32px;
+  width: auto;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
+  border-radius: 5px;
 }
 
 /* Bottom wave curve */
@@ -816,48 +858,17 @@
   line-height: 1.6;
 }
 
-/* Store Badges */
-.yb-store-badges {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-top: 32px;
-  flex-wrap: wrap;
-}
-
+/* Store Badges (shared) */
 .yb-store-badge {
   display: inline-block;
   transition: all var(--yb-transition);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-}
-
-.yb-store-badge svg {
-  display: block;
-  height: 44px;
-  width: auto;
-}
-
-.yb-store-badge:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .yb-store-badge:focus {
   outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
-}
-
-@media (max-width: 640px) {
-  .yb-store-badges {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .yb-store-badge svg {
-    height: 40px;
-  }
 }
 
 /* CTA Scattered Icons */
@@ -1093,6 +1104,15 @@
   .yb-hero__brand-card {
     max-width: 280px;
     border-radius: 20px;
+  }
+
+  .yb-hero__store-badges {
+    gap: 6px;
+    bottom: 12px;
+  }
+
+  .yb-hero__store-badges .yb-store-badge svg {
+    height: 26px;
   }
 
   .yb-hero__actions {
@@ -2029,21 +2049,8 @@ input[type="email"].yb-waitlist__input:focus {
     gap: 10px;
   }
   
-  .yb-header__logo-img {
-    height: 36px;
-    width: 36px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(33, 129, 155, 0.15);
-  }
-  
-  /* Add brand text next to logo on mobile */
-  .yb-header__logo::after {
-    content: "YuhBlockin";
-    font-family: var(--yb-font-heading);
+  .yb-header__logo-text {
     font-size: 18px;
-    font-weight: 700;
-    color: var(--yb-slate);
-    letter-spacing: -0.01em;
   }
 }
 
