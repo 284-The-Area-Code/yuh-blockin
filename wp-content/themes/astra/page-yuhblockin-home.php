@@ -161,32 +161,18 @@ get_header();
               alt="YuhBlockin App"
               class="yb-hero__brand-card"
             />
-            <!-- App Store Badges Overlay -->
-            <div class="yb-hero__store-badges">
-              <!-- Apple App Store -->
-              <a href="#" class="yb-store-badge" aria-label="Download on the App Store">
-                <svg viewBox="0 0 120 40" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="120" height="40" rx="6" fill="#000"/>
-                  <g fill="#fff">
-                    <path d="M24.5 20.4c0-2.4 1.3-4.5 3.3-5.6-.9-1.3-2.3-2.1-4-2.2-1.7-.2-3.3 1-4.2 1s-2.2-1-3.6-1c-1.8 0-3.5 1.1-4.5 2.7-1.9 3.3-.5 8.2 1.4 10.9.9 1.3 2 2.8 3.5 2.7 1.4-.1 1.9-.9 3.6-.9s2.2.9 3.6.9c1.5 0 2.4-1.3 3.3-2.6.7-1 1.2-2 1.4-2.1-1.5-.6-2.8-2.1-2.8-3.8z"/>
-                    <path d="M22.3 10.5c.8-1 1.3-2.3 1.2-3.6-1.1.1-2.5.8-3.3 1.7-.7.9-1.4 2.2-1.2 3.5 1.3.1 2.5-.6 3.3-1.6z"/>
-                  </g>
-                  <text x="42" y="14" fill="#fff" font-size="7" font-family="system-ui, sans-serif">Download on the</text>
-                  <text x="42" y="27" fill="#fff" font-size="13" font-weight="600" font-family="system-ui, sans-serif">App Store</text>
+            <!-- Platform Icons Overlay -->
+            <div class="yb-hero__platform-icons">
+              <!-- Apple Icon -->
+              <a href="#" class="yb-platform-icon" aria-label="Available on iOS">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
                 </svg>
               </a>
-              <!-- Google Play Store -->
-              <a href="#" class="yb-store-badge" aria-label="Get it on Google Play">
-                <svg viewBox="0 0 135 40" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="135" height="40" rx="6" fill="#000"/>
-                  <g transform="translate(10, 7)">
-                    <path d="M0 24.5V1.5c0-.4.2-.7.5-.9l13.2 12.4L.5 25.4c-.3-.2-.5-.5-.5-.9z" fill="#00d4ff"/>
-                    <path d="M17.6 16.9L4 26.7c-.3.2-.6.2-.9.1l10.5-10.5 4 .6z" fill="#ff3a44"/>
-                    <path d="M17.6 9.1l-4 .6L3.1-.1c.3-.1.6-.1.9.1l13.6 9.1z" fill="#ffce44"/>
-                    <path d="M.5.6c.3-.2.6-.2.9-.1L17.6 9.1l-4 4L.5.6z" fill="#00f076"/>
-                  </g>
-                  <text x="38" y="14" fill="#fff" font-size="7" font-family="system-ui, sans-serif">GET IT ON</text>
-                  <text x="38" y="27" fill="#fff" font-size="12" font-weight="500" font-family="system-ui, sans-serif">Google Play</text>
+              <!-- Android Icon -->
+              <a href="#" class="yb-platform-icon" aria-label="Available on Android">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24c-1.4-.59-2.94-.92-4.47-.92s-3.07.33-4.47.92L5.65 5.67c-.19-.29-.54-.38-.83-.22-.31.16-.43.54-.26.85L6.4 9.48C3.3 11.25 1.28 14.44 1 18h22c-.28-3.56-2.3-6.75-5.4-8.52zM7 15.25c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm10 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z"/>
                 </svg>
               </a>
             </div>

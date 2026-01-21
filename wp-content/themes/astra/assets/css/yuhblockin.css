@@ -419,32 +419,38 @@
     0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-/* Store badges overlay on hero image */
-.yb-hero__store-badges {
+/* Platform icons overlay on hero image */
+.yb-hero__platform-icons {
   position: absolute;
-  bottom: 16px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 8px;
+  gap: 12px;
   z-index: 3;
 }
 
-.yb-hero__store-badges .yb-store-badge {
-  opacity: 0.95;
+.yb-platform-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 10px;
+  color: #ffffff;
   transition: all var(--yb-transition);
 }
 
-.yb-hero__store-badges .yb-store-badge:hover {
-  opacity: 1;
-  transform: translateY(-1px);
+.yb-platform-icon:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: translateY(-2px);
 }
 
-.yb-hero__store-badges .yb-store-badge svg {
-  height: 32px;
-  width: auto;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
-  border-radius: 5px;
+.yb-platform-icon svg {
+  width: 22px;
+  height: 22px;
 }
 
 /* Bottom wave curve */
@@ -1106,13 +1112,20 @@
     border-radius: 20px;
   }
 
-  .yb-hero__store-badges {
-    gap: 6px;
-    bottom: 12px;
+  .yb-hero__platform-icons {
+    gap: 10px;
+    bottom: 16px;
   }
 
-  .yb-hero__store-badges .yb-store-badge svg {
-    height: 26px;
+  .yb-platform-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  .yb-platform-icon svg {
+    width: 20px;
+    height: 20px;
   }
 
   .yb-hero__actions {
