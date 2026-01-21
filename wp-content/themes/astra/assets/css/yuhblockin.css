@@ -812,8 +812,52 @@
 .yb-cta__text {
   font-size: 19px;
   color: rgba(255, 255, 255, 0.75);
-  margin-bottom: 56px;
+  margin-bottom: 40px;
   line-height: 1.6;
+}
+
+/* Store Badges */
+.yb-store-badges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.yb-store-badge {
+  display: inline-block;
+  transition: all var(--yb-transition);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.yb-store-badge svg {
+  display: block;
+  height: 44px;
+  width: auto;
+}
+
+.yb-store-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.yb-store-badge:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .yb-store-badges {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .yb-store-badge svg {
+    height: 40px;
+  }
 }
 
 /* CTA Scattered Icons */
