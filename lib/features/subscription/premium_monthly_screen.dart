@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/services/subscription_service.dart';
+import '../../core/services/subscription_store_service.dart';
 
 /// iOS-ONLY App Store-compliant Premium Monthly subscription screen.
 /// Designed for App Store Connect screenshot submission.
@@ -30,9 +32,29 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
 
   final SubscriptionService _subscriptionService = SubscriptionService();
   bool _isLoading = false;
+  bool _nativeStoreAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkNativeStoreAvailability();
+  }
+
+  Future<void> _checkNativeStoreAvailability() async {
+    final available = await SubscriptionStoreService.isAvailable();
+    if (mounted) {
+      setState(() => _nativeStoreAvailable = available);
+    }
+  }
 
   Future<void> _onSubscribePressed(BuildContext context) async {
     if (_isLoading) return;
+
+    // Use native SubscriptionStoreView on iOS 17+ for App Store compliance
+    if (_nativeStoreAvailable) {
+      await _purchaseWithNativeStoreView(context);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -53,6 +75,40 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
           context,
           title: 'Purchase Failed',
           message: result.error ?? 'Unable to complete purchase. Please try again.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _purchaseWithNativeStoreView(BuildContext context) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await SubscriptionStoreService.show();
+
+      if (!mounted) return;
+
+      if (result.success) {
+        await _subscriptionService.refreshEntitlements(force: true);
+        _showAlert(
+          context,
+          title: 'Success!',
+          message: 'You are now a Premium member!',
+          onDismiss: () => Navigator.of(context).pop(true),
+        );
+      } else if (result.cancelled) {
+        if (kDebugMode) {
+          debugPrint('User cancelled native subscription store');
+        }
+      } else if (result.error != null) {
+        _showAlert(
+          context,
+          title: 'Purchase Failed',
+          message: result.error!,
         );
       }
     } finally {

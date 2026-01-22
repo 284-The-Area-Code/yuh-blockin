@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/subscription_service.dart';
+import '../../core/services/subscription_store_service.dart';
 import '../../core/services/ath_movil_service.dart';
 import '../../config/payment_config.dart';
 import '../legal/legal_document_screen.dart';
@@ -39,11 +41,28 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   bool _pricesError = false;
   String? _pricesErrorMessage;
 
+  // Native SubscriptionStoreView availability (iOS 17+)
+  bool _nativeStoreAvailable = false;
+
   @override
   void initState() {
     super.initState();
     _loadAthPath();
     _loadPrices();
+    _checkNativeStoreAvailability();
+  }
+
+  /// Check if native SubscriptionStoreView is available (iOS 17+)
+  Future<void> _checkNativeStoreAvailability() async {
+    if (Platform.isIOS) {
+      final available = await SubscriptionStoreService.isAvailable();
+      if (mounted) {
+        setState(() => _nativeStoreAvailable = available);
+        if (kDebugMode) {
+          debugPrint('Native SubscriptionStoreView available: $available');
+        }
+      }
+    }
   }
 
   @override
@@ -1178,6 +1197,13 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   Future<void> _purchaseWithNativeBilling() async {
+    // Use native SubscriptionStoreView on iOS 17+ for App Store compliance
+    if (_nativeStoreAvailable) {
+      await _purchaseWithNativeStoreView();
+      return;
+    }
+
+    // Fall back to RevenueCat purchase flow for iOS < 17 and Android
     setState(() => _isLoading = true);
 
     try {
@@ -1201,6 +1227,42 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     } catch (e) {
       if (kDebugMode) {
         print('Purchase error: $e');
+      }
+      if (mounted) {
+        _showErrorSnackbar('An error occurred. Please try again.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Purchase using Apple's native SubscriptionStoreView (iOS 17+)
+  /// This provides automatic App Store compliance for subscription disclosures
+  Future<void> _purchaseWithNativeStoreView() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await SubscriptionStoreService.show();
+
+      if (!mounted) return;
+
+      if (result.success) {
+        // Refresh entitlements from RevenueCat to sync state
+        await _subscriptionService.refreshEntitlements(force: true);
+        _showSuccessDialog();
+      } else if (result.cancelled) {
+        // User cancelled - no error message needed
+        if (kDebugMode) {
+          debugPrint('User cancelled native subscription store');
+        }
+      } else if (result.error != null) {
+        _showErrorSnackbar(result.error!);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Native store purchase error: $e');
       }
       if (mounted) {
         _showErrorSnackbar('An error occurred. Please try again.');

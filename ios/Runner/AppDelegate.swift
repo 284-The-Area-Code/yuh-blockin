@@ -5,6 +5,8 @@ import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
+  private let subscriptionStoreChannel = SubscriptionStoreChannel()
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -15,6 +17,12 @@ import FirebaseMessaging
     application.registerForRemoteNotifications()
 
     GeneratedPluginRegistrant.register(with: self)
+
+    // Register SubscriptionStoreView method channel for App Store compliance
+    if let controller = window?.rootViewController as? FlutterViewController {
+      subscriptionStoreChannel.register(with: controller)
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
