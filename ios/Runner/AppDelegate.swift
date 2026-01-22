@@ -191,14 +191,25 @@ struct SubscriptionStoreViewWrapper: View {
             .storeButton(.visible, for: .restorePurchases)
             .onInAppPurchaseCompletion { product, result in
                 switch result {
-                case .success(let verification):
-                    switch verification {
-                    case .verified(let transaction):
-                        print("✅ Purchase verified: \(transaction.productID)")
-                        onPurchaseComplete(true, transaction.productID)
-                        await transaction.finish()
-                    case .unverified(_, let error):
-                        print("❌ Purchase unverified: \(error)")
+                case .success(let purchaseResult):
+                    switch purchaseResult {
+                    case .success(let verification):
+                        switch verification {
+                        case .verified(let transaction):
+                            print("✅ Purchase verified: \(transaction.productID)")
+                            onPurchaseComplete(true, transaction.productID)
+                            await transaction.finish()
+                        case .unverified(_, let error):
+                            print("❌ Purchase unverified: \(error)")
+                            onPurchaseComplete(false, nil)
+                        }
+                    case .pending:
+                        print("⏳ Purchase pending")
+                        onPurchaseComplete(false, nil)
+                    case .userCancelled:
+                        print("🚫 Purchase cancelled by user")
+                        onPurchaseComplete(false, nil)
+                    @unknown default:
                         onPurchaseComplete(false, nil)
                     }
                 case .failure(let error):
