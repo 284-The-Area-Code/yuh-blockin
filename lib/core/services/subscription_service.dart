@@ -99,8 +99,8 @@ class SubscriptionService {
   /// Logs out of RevenueCat and clears all local subscription data
   Future<void> logout() async {
     try {
-      // Logout from RevenueCat
-      if (_revenueCatApiKey.isNotEmpty) {
+      // Logout from RevenueCat (only if initialized)
+      if (_isInitialized && _revenueCatApiKey.isNotEmpty) {
         await Purchases.logOut();
         if (kDebugMode) {
           debugPrint('✅ RevenueCat logged out');
@@ -205,6 +205,15 @@ class SubscriptionService {
   /// Refresh entitlements from RevenueCat
   /// Call this periodically (e.g., on app resume) to ensure status is up-to-date
   Future<void> refreshEntitlements({bool force = false}) async {
+    // CRITICAL: Don't call RevenueCat APIs before SDK is configured
+    // This prevents crash when app resumes before initialize() completes
+    if (!_isInitialized) {
+      if (kDebugMode) {
+        debugPrint('⏳ Skipping entitlement refresh (service not initialized yet)');
+      }
+      return;
+    }
+
     // Don't refresh if recently refreshed (within 5 minutes) unless forced
     if (!force && _lastEntitlementRefresh != null) {
       final timeSinceRefresh = DateTime.now().difference(_lastEntitlementRefresh!);
@@ -286,7 +295,8 @@ class SubscriptionService {
   /// Restore purchases
   Future<PurchaseResult> restorePurchases() async {
     try {
-      if (_revenueCatApiKey.isEmpty) {
+      // Guard against calling before SDK is configured
+      if (!_isInitialized || _revenueCatApiKey.isEmpty) {
         return PurchaseResult(
           success: false,
           error: 'Payment system not configured. Please contact support.',
@@ -315,7 +325,8 @@ class SubscriptionService {
   /// Get available offerings from RevenueCat
   Future<Offerings?> getOfferings() async {
     try {
-      if (_revenueCatApiKey.isEmpty) {
+      // Guard against calling before SDK is configured
+      if (!_isInitialized || _revenueCatApiKey.isEmpty) {
         return null;
       }
       return await Purchases.getOfferings();
@@ -331,8 +342,8 @@ class SubscriptionService {
 
   Future<PurchaseResult> _purchaseProduct(String productId) async {
     try {
-      // Check if payment system is configured
-      if (_revenueCatApiKey.isEmpty) {
+      // Check if payment system is configured and initialized
+      if (!_isInitialized || _revenueCatApiKey.isEmpty) {
         // Only allow demo mode in debug builds AND when explicitly not production
         if (kDebugMode && !PaymentConfig.isConfiguredForProduction) {
           debugPrint('🧪 Demo mode: Simulating purchase of $productId');
