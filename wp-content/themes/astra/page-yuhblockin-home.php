@@ -4,6 +4,18 @@
  * Description: Premium landing page for YuhBlockin app
  */
 
+// Set premium page title before header loads
+add_filter( 'pre_get_document_title', function() {
+	return 'YuhBlockin — Move with Respect';
+}, 999 );
+
+// Add favicon
+add_action( 'wp_head', function() {
+	$favicon = get_template_directory_uri() . '/assets/images/favicon.png';
+	echo '<link rel="icon" type="image/png" sizes="192x192" href="' . esc_url( $favicon ) . '">' . "\n";
+	echo '<link rel="apple-touch-icon" sizes="180x180" href="' . esc_url( $favicon ) . '">' . "\n";
+}, 1 );
+
 get_header();
 ?>
 
@@ -95,6 +107,19 @@ get_header();
             <a href="#how-it-works" class="yb-btn yb-btn--outline yb-btn--lg">
               <span>See how it works</span>
             </a>
+          </div>
+
+          <!-- Waitlist Section -->
+          <div class="yb-waitlist">
+            <form class="yb-waitlist__form" id="waitlist-form">
+              <div class="yb-waitlist__input-group">
+                <input type="email" class="yb-waitlist__input" id="waitlist-email" placeholder="Enter your email" required>
+                <p class="yb-waitlist__counter"><span id="waitlist-count">0</span> joined</p>
+              </div>
+              <button type="submit" class="yb-btn yb-btn--primary" id="join-waitlist-btn">
+                <span>Join Waitlist</span>
+              </button>
+            </form>
           </div>
         </div>
 
