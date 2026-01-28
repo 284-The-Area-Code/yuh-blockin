@@ -1197,10 +1197,21 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   Future<void> _purchaseWithNativeBilling() async {
-    // Use native SubscriptionStoreView on iOS 17+ for App Store compliance
-    if (_nativeStoreAvailable) {
-      await _purchaseWithNativeStoreView();
-      return;
+    final isMonthly = _selectedPlan == 'monthly';
+    final isLifetime = _selectedPlan == 'lifetime';
+
+    // Route based on product type and platform capabilities
+    if (Platform.isIOS && _nativeStoreAvailable) {
+      if (isMonthly) {
+        // Monthly subscription on iOS 17+ -> Use native SubscriptionStoreView
+        await _purchaseWithNativeStoreView();
+        return;
+      } else if (isLifetime) {
+        // Lifetime (non-subscription) on iOS -> Use native StoreKit 2 direct purchase
+        // IMPORTANT: SubscriptionStoreView does NOT support one-time purchases!
+        await _purchaseLifetimeWithNativeStoreKit();
+        return;
+      }
     }
 
     // Fall back to RevenueCat purchase flow for iOS < 17 and Android
@@ -1208,7 +1219,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
     try {
       PurchaseResult result;
-      if (_selectedPlan == 'monthly') {
+      if (isMonthly) {
         result = await _subscriptionService.purchaseMonthly();
       } else {
         result = await _subscriptionService.purchaseLifetime();
@@ -1240,11 +1251,13 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
   /// Purchase using Apple's native SubscriptionStoreView (iOS 17+)
   /// This provides automatic App Store compliance for subscription disclosures
+  /// NOTE: This ONLY works for auto-renewable subscriptions, NOT lifetime purchases
   Future<void> _purchaseWithNativeStoreView() async {
     setState(() => _isLoading = true);
 
     try {
-      final result = await SubscriptionStoreService.show();
+      // Use showForSubscription() which only passes subscription products
+      final result = await SubscriptionStoreService.showForSubscription();
 
       if (!mounted) return;
 
@@ -1263,6 +1276,48 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     } catch (e) {
       if (kDebugMode) {
         print('Native store purchase error: $e');
+      }
+      if (mounted) {
+        _showErrorSnackbar('An error occurred. Please try again.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  /// Purchase lifetime access using native StoreKit 2 direct API
+  /// IMPORTANT: SubscriptionStoreView doesn't support one-time purchases,
+  /// so we use the direct Product.purchase() API for lifetime purchases
+  Future<void> _purchaseLifetimeWithNativeStoreKit() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final result = await SubscriptionStoreService.purchaseNonSubscription(
+        PaymentConfig.lifetimeProductId,
+      );
+
+      if (!mounted) return;
+
+      if (result.success) {
+        // Refresh entitlements from RevenueCat to sync state
+        await _subscriptionService.refreshEntitlements(force: true);
+        _showSuccessDialog();
+      } else if (result.cancelled) {
+        // User cancelled - no error message needed
+        if (kDebugMode) {
+          debugPrint('User cancelled lifetime purchase');
+        }
+      } else if (result.pending) {
+        // Ask to Buy or other pending state
+        _showPendingDialog(result.error ?? 'Your purchase requires approval.');
+      } else if (result.error != null) {
+        _showErrorSnackbar(result.error!);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Native lifetime purchase error: $e');
       }
       if (mounted) {
         _showErrorSnackbar('An error occurred. Please try again.');

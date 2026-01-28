@@ -88,7 +88,9 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await SubscriptionStoreService.show();
+      // Use showForSubscription() which only passes subscription products
+      // IMPORTANT: SubscriptionStoreView does NOT support one-time purchases
+      final result = await SubscriptionStoreService.showForSubscription();
 
       if (!mounted) return;
 
@@ -104,6 +106,13 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
         if (kDebugMode) {
           debugPrint('User cancelled native subscription store');
         }
+      } else if (result.pending) {
+        // Handle Ask to Buy or other pending states
+        _showAlert(
+          context,
+          title: 'Purchase Pending',
+          message: result.error ?? 'Your purchase requires approval. You\'ll be notified when it\'s complete.',
+        );
       } else if (result.error != null) {
         _showAlert(
           context,

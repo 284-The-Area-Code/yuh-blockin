@@ -8,6 +8,7 @@ import FirebaseMessaging
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private let subscriptionStoreChannel = SubscriptionStoreChannel()
+  private var transactionObserverTask: Task<Void, Never>?
 
   override func application(
     _ application: UIApplication,
@@ -25,7 +26,47 @@ import FirebaseMessaging
       subscriptionStoreChannel.register(with: controller)
     }
 
+    // Start listening for StoreKit 2 transaction updates (required by Apple)
+    // This handles transactions that complete while app is backgrounded,
+    // Ask to Buy approvals, and Family Sharing transactions
+    if #available(iOS 15.0, *) {
+      startTransactionObserver()
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  /// Start observing StoreKit 2 transaction updates
+  @available(iOS 15.0, *)
+  private func startTransactionObserver() {
+    transactionObserverTask = Task(priority: .background) {
+      for await result in Transaction.updates {
+        do {
+          let transaction = try checkVerified(result)
+          print("✅ Transaction update received: \(transaction.productID)")
+          // Finish the transaction so it's not delivered again
+          await transaction.finish()
+          // Notify Flutter side to refresh entitlements
+          NotificationCenter.default.post(name: NSNotification.Name("TransactionUpdated"), object: nil)
+        } catch {
+          print("❌ Transaction verification failed: \(error)")
+        }
+      }
+    }
+  }
+
+  @available(iOS 15.0, *)
+  private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+    switch result {
+    case .unverified(_, let error):
+      throw error
+    case .verified(let safe):
+      return safe
+    }
+  }
+
+  deinit {
+    transactionObserverTask?.cancel()
   }
 
   // APNs token received
@@ -51,6 +92,7 @@ class SubscriptionStoreChannel {
     static let channelName = "com.dezetingz.yuhBlockin/subscription_store"
 
     private var flutterResult: FlutterResult?
+    private weak var presentedController: UIViewController?
 
     func register(with controller: FlutterViewController) {
         let channel = FlutterMethodChannel(
@@ -78,17 +120,126 @@ class SubscriptionStoreChannel {
                 return
             }
 
+            // CRITICAL: SubscriptionStoreView ONLY supports auto-renewable subscriptions
+            // Filter out non-subscription products (like lifetime one-time purchases)
+            let subscriptionProductIds = productIds.filter { productId in
+                // Only include products that are subscriptions (monthly/yearly patterns)
+                productId.contains("monthly") || productId.contains("yearly") ||
+                productId.contains("annual") || productId.contains("weekly")
+            }
+
+            if subscriptionProductIds.isEmpty {
+                result(FlutterError(code: "NO_SUBSCRIPTIONS",
+                                   message: "No subscription products provided. SubscriptionStoreView only supports auto-renewable subscriptions.",
+                                   details: nil))
+                return
+            }
+
             if #available(iOS 17.0, *) {
                 self.flutterResult = result
-                showNativeSubscriptionStore(productIds: productIds)
+                showNativeSubscriptionStore(productIds: subscriptionProductIds)
             } else {
                 result(FlutterError(code: "UNAVAILABLE",
                                    message: "SubscriptionStoreView requires iOS 17+",
                                    details: nil))
             }
 
+        case "purchaseProduct":
+            // New method for purchasing non-subscription products (like lifetime)
+            guard let args = call.arguments as? [String: Any],
+                  let productId = args["productId"] as? String else {
+                result(FlutterError(code: "INVALID_ARGS",
+                                   message: "productId required",
+                                   details: nil))
+                return
+            }
+
+            if #available(iOS 15.0, *) {
+                Task {
+                    await self.purchaseNonSubscriptionProduct(productId: productId, result: result)
+                }
+            } else {
+                result(FlutterError(code: "UNAVAILABLE",
+                                   message: "StoreKit 2 requires iOS 15+",
+                                   details: nil))
+            }
+
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+
+    /// Purchase a non-subscription product using StoreKit 2
+    @available(iOS 15.0, *)
+    private func purchaseNonSubscriptionProduct(productId: String, result: @escaping FlutterResult) async {
+        do {
+            // Fetch the product
+            let products = try await Product.products(for: [productId])
+            guard let product = products.first else {
+                DispatchQueue.main.async {
+                    result(FlutterError(code: "PRODUCT_NOT_FOUND",
+                                       message: "Product \(productId) not found in App Store",
+                                       details: nil))
+                }
+                return
+            }
+
+            // Attempt purchase
+            let purchaseResult = try await product.purchase()
+
+            switch purchaseResult {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    print("✅ Non-subscription purchase verified: \(transaction.productID)")
+                    await transaction.finish()
+                    DispatchQueue.main.async {
+                        result([
+                            "success": true,
+                            "productId": transaction.productID
+                        ])
+                    }
+                case .unverified(_, let error):
+                    print("❌ Non-subscription purchase unverified: \(error)")
+                    DispatchQueue.main.async {
+                        result([
+                            "success": false,
+                            "error": "Purchase verification failed: \(error.localizedDescription)"
+                        ])
+                    }
+                }
+            case .pending:
+                print("⏳ Non-subscription purchase pending (Ask to Buy)")
+                DispatchQueue.main.async {
+                    result([
+                        "success": false,
+                        "pending": true,
+                        "error": "Purchase requires approval. You'll be notified when it's complete."
+                    ])
+                }
+            case .userCancelled:
+                print("🚫 Non-subscription purchase cancelled")
+                DispatchQueue.main.async {
+                    result([
+                        "success": false,
+                        "cancelled": true
+                    ])
+                }
+            @unknown default:
+                DispatchQueue.main.async {
+                    result([
+                        "success": false,
+                        "error": "Unknown purchase result"
+                    ])
+                }
+            }
+        } catch {
+            print("❌ Non-subscription purchase error: \(error)")
+            DispatchQueue.main.async {
+                result(FlutterError(code: "PURCHASE_ERROR",
+                                   message: error.localizedDescription,
+                                   details: nil))
+            }
         }
     }
 
@@ -112,23 +263,31 @@ class SubscriptionStoreChannel {
             let subscriptionVC = SubscriptionStoreHostingController(
                 productIds: productIds,
                 onPurchaseComplete: { [weak self] success, productId in
-                    self?.flutterResult?([
-                        "success": success,
-                        "productId": productId as Any
-                    ])
-                    self?.flutterResult = nil
-                },
-                onDismiss: { [weak self] in
-                    if self?.flutterResult != nil {
+                    // Dismiss the view controller first
+                    self?.presentedController?.dismiss(animated: true) {
                         self?.flutterResult?([
-                            "success": false,
-                            "cancelled": true
+                            "success": success,
+                            "productId": productId as Any
                         ])
                         self?.flutterResult = nil
+                        self?.presentedController = nil
+                    }
+                },
+                onDismiss: { [weak self] in
+                    self?.presentedController?.dismiss(animated: true) {
+                        if self?.flutterResult != nil {
+                            self?.flutterResult?([
+                                "success": false,
+                                "cancelled": true
+                            ])
+                            self?.flutterResult = nil
+                        }
+                        self?.presentedController = nil
                     }
                 }
             )
 
+            self?.presentedController = subscriptionVC
             topController.present(subscriptionVC, animated: true)
         }
     }
@@ -190,31 +349,9 @@ struct SubscriptionStoreViewWrapper: View {
             .subscriptionStoreControlStyle(.prominentPicker)
             .storeButton(.visible, for: .restorePurchases)
             .onInAppPurchaseCompletion { product, result in
-                switch result {
-                case .success(let purchaseResult):
-                    switch purchaseResult {
-                    case .success(let verification):
-                        switch verification {
-                        case .verified(let transaction):
-                            print("✅ Purchase verified: \(transaction.productID)")
-                            onPurchaseComplete(true, transaction.productID)
-                            await transaction.finish()
-                        case .unverified(_, let error):
-                            print("❌ Purchase unverified: \(error)")
-                            onPurchaseComplete(false, nil)
-                        }
-                    case .pending:
-                        print("⏳ Purchase pending")
-                        onPurchaseComplete(false, nil)
-                    case .userCancelled:
-                        print("🚫 Purchase cancelled by user")
-                        onPurchaseComplete(false, nil)
-                    @unknown default:
-                        onPurchaseComplete(false, nil)
-                    }
-                case .failure(let error):
-                    print("❌ Purchase failed: \(error)")
-                    onPurchaseComplete(false, nil)
+                // Handle purchase completion in a Task to properly await transaction.finish()
+                Task { @MainActor in
+                    await handlePurchaseResult(result)
                 }
             }
             .toolbar {
@@ -224,6 +361,42 @@ struct SubscriptionStoreViewWrapper: View {
                     }
                 }
             }
+        }
+    }
+
+    /// Handle purchase result with proper async/await for transaction.finish()
+    @MainActor
+    private func handlePurchaseResult(_ result: Result<Product.PurchaseResult, any Error>) async {
+        switch result {
+        case .success(let purchaseResult):
+            switch purchaseResult {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    print("✅ Subscription purchase verified: \(transaction.productID)")
+                    // IMPORTANT: Finish transaction first, then notify
+                    await transaction.finish()
+                    onPurchaseComplete(true, transaction.productID)
+                case .unverified(_, let error):
+                    print("❌ Subscription purchase unverified: \(error)")
+                    onPurchaseComplete(false, nil)
+                }
+            case .pending:
+                print("⏳ Subscription purchase pending (Ask to Buy)")
+                // Don't call onPurchaseComplete for pending - user will be notified later
+                // via Transaction.updates listener
+                onPurchaseComplete(false, nil)
+            case .userCancelled:
+                print("🚫 Subscription purchase cancelled by user")
+                // Don't show error for user cancellation, just close
+                onPurchaseComplete(false, nil)
+            @unknown default:
+                print("⚠️ Unknown purchase result")
+                onPurchaseComplete(false, nil)
+            }
+        case .failure(let error):
+            print("❌ Subscription purchase failed: \(error.localizedDescription)")
+            onPurchaseComplete(false, nil)
         }
     }
 }
