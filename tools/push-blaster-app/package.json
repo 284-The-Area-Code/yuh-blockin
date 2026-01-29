@@ -1,0 +1,38 @@
+{
+  "name": "push-blaster",
+  "version": "1.0.0",
+  "description": "Yuh Blockin' Push Notification Tester",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.yuhblockin.pushblaster",
+    "productName": "Push Blaster",
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico"
+    },
+    "portable": {
+      "artifactName": "PushBlaster.exe"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/firebase-admin/node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../../../Passes/yuh-blockin-firebase-adminsdk-fbsvc-52358afc11.json",
+        "to": "firebase-credentials.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

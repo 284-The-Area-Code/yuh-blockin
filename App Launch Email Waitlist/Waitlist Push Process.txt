@@ -1,0 +1,19 @@
+ Option 1: Supabase Dashboard
+  1. Go to Supabase Dashboard → Table Editor → waitlist
+  2. Click "Export" → Download as CSV
+
+  Option 2: Quick SQL query
+  Run this in Supabase SQL Editor:
+
+  SELECT email, created_at
+  FROM waitlist
+  WHERE notified = false
+  ORDER BY created_at;
+
+  Then copy/paste into Mailchimp, SendGrid, or any email tool.
+
+  After sending, mark them as notified:
+
+  UPDATE waitlist
+  SET notified = true, notified_at = NOW()
+  WHERE notified = false;
