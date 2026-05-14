@@ -1,4 +1,4 @@
-package com.yuhblockin.v1
+package com.yuhblockin.app
 
 import io.flutter.embedding.android.FlutterActivity
 
