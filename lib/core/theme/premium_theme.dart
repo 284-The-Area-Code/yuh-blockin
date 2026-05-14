@@ -1,14 +1,60 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 /// Premium theme system inspired by Apple, Uber, Airbnb design languages
 /// Professional, minimal, with subtle 2025 glow signature
+///
+/// iOS Letter Spacing Fix:
+/// Flutter Issue #150824 - text rendering differs from iOS native.
+/// Solution: Use CupertinoSystemDisplay font + Apple's official letterSpacing values
+/// from Flutter's cupertino/text_theme.dart
 class PremiumTheme {
+  // MARK: - iOS-Native Typography Helpers
+
+  /// Check if running on iOS
+  static bool get isIOS => Platform.isIOS;
+
+  /// iOS font family - uses CupertinoSystemDisplay for proper SF Pro rendering
+  /// This fixes Flutter's default which incorrectly uses SF Pro Text for all sizes
+  /// Reference: https://github.com/flutter/flutter/issues/150824
+  static String? get _iosFontFamily => isIOS ? 'CupertinoSystemDisplay' : null;
+
+  /// Apple's official letter spacing values from Flutter's cupertino/text_theme.dart
+  /// These match iOS native text rendering exactly
+  static double _appleLetterSpacing(double fontSize) {
+    if (!isIOS) return 0.0;
+
+    // Values from Flutter's official Cupertino theme (iOS 14+ specs)
+    if (fontSize >= 34) return 0.38;      // Large title
+    if (fontSize >= 28) return 0.36;      // Title 1
+    if (fontSize >= 22) return -0.26;     // Title 2
+    if (fontSize >= 21) return -0.6;      // Picker text
+    if (fontSize >= 20) return -0.45;     // Title 3
+    if (fontSize >= 17) return -0.41;     // Body/Headline
+    if (fontSize >= 16) return -0.32;     // Callout
+    if (fontSize >= 15) return -0.23;     // Subhead
+    if (fontSize >= 13) return -0.08;     // Footnote
+    if (fontSize >= 12) return 0.0;       // Caption 1
+    if (fontSize >= 11) return 0.07;      // Caption 2
+    if (fontSize >= 10) return -0.24;     // Tab label
+    return 0.0;
+  }
   // MARK: - Premium Theme Modes
 
   /// Theme mode enumeration
   static const String lightMode = 'light';
   static const String darkMode = 'dark';
   static const String sunsetMode = 'caribbean_sunset';
+  static const String pinkMode = 'premium_pink';       // Premium theme
+  static const String cyberpunkMode = 'cyberpunk';     // Premium theme
+  static const String islandGoldMode = 'island_gold';  // Premium theme - Caribbean sunrise
+  static const String bviPrideMode = 'bvi_pride';      // Premium theme - BVI Flag colors
+
+  /// Premium-only themes (require subscription)
+  static const List<String> premiumThemes = [pinkMode, cyberpunkMode, islandGoldMode, bviPrideMode];
+
+  /// Check if a theme requires premium subscription
+  static bool isPremiumTheme(String mode) => premiumThemes.contains(mode);
 
   // MARK: - Light Theme Colors
 
@@ -43,6 +89,67 @@ class PremiumTheme {
   static const Color sunsetTertiaryTextColor = Color(0xFFBF9F7A); // Muted sunset
   static const Color sunsetDividerColor = Color(0xFF4D3426); // Sunset brown divider
 
+  // MARK: - Premium Pink Theme Colors
+
+  /// Premium Pink mode - Elegant rose and blush tones with luxurious feel
+  static const Color pinkBackgroundColor = Color(0xFF1A1218); // Deep rose black
+  static const Color pinkSurfaceColor = Color(0xFF2A1F26); // Rich plum surface
+  static const Color pinkAccentColor = Color(0xFFFF6B9D); // Vibrant hot pink
+  static const Color pinkPrimaryTextColor = Color(0xFFFFF0F5); // Lavender blush
+  static const Color pinkSecondaryTextColor = Color(0xFFE8B4C8); // Muted rose
+  static const Color pinkTertiaryTextColor = Color(0xFFB87D98); // Dusty pink
+  static const Color pinkDividerColor = Color(0xFF3D2A35); // Rose divider
+
+  // MARK: - Cyberpunk Theme Colors
+
+  /// Cyberpunk mode - Neon-infused dark theme with electric accents
+  static const Color cyberpunkBackgroundColor = Color(0xFF0A0A12); // Deep cyber black
+  static const Color cyberpunkSurfaceColor = Color(0xFF12121C); // Dark tech surface
+  static const Color cyberpunkAccentColor = Color(0xFF00F5FF); // Electric cyan
+  static const Color cyberpunkSecondaryAccent = Color(0xFFFF00FF); // Neon magenta
+  static const Color cyberpunkPrimaryTextColor = Color(0xFFE0F7FA); // Ice white
+  static const Color cyberpunkSecondaryTextColor = Color(0xFF7DD3E8); // Cyber blue
+  static const Color cyberpunkTertiaryTextColor = Color(0xFF4A6670); // Muted steel
+  static const Color cyberpunkDividerColor = Color(0xFF1A1A2E); // Neon dark divider
+
+  // MARK: - BVI Sunrise Theme Colors
+
+  /// BVI Sunrise mode - Warm Caribbean sunrise vibes
+  /// Golden sun rising over deep ocean blue waters
+  static const Color bviSunriseBackgroundColor = Color(0xFF0A1628); // Deep ocean blue
+  static const Color bviSunriseSurfaceColor = Color(0xFF142238); // Caribbean sea surface
+  static const Color bviSunriseAccentColor = Color(0xFFF7C700); // Golden Poppy - rising sun
+  static const Color bviSunriseSecondaryAccent = Color(0xFF00A86B); // Tropical jade green
+  static const Color bviSunrisePrimaryTextColor = Color(0xFFFFF8E7); // Warm sunrise white
+  static const Color bviSunriseSecondaryTextColor = Color(0xFFD4AA60); // Golden sand
+  static const Color bviSunriseTertiaryTextColor = Color(0xFF6B8299); // Ocean mist
+  static const Color bviSunriseDividerColor = Color(0xFF1E3350); // Deep sea divider
+
+  // MARK: - BVI Pride Theme Colors (ULTRA PREMIUM)
+
+  /// BVI Pride mode - Official British Virgin Islands Flag & Coat of Arms
+  /// Inspired by Saint Ursula's 12 golden oil lamps on the green shield
+  /// Resolution Blue (#001F7E), Golden Poppy (#F7C700), Cadmium Green (#006124)
+  /// Philippine Red (#D00C27) for highlights - strength & valor
+  /// Motto: "Vigilate" - Be Vigilant
+  ///
+  /// Premium Design Principles Applied:
+  /// - Deep navy base (not pure black) for luxury feel
+  /// - Golden accents represent Saint Ursula's sacred oil lamps
+  /// - Green touches from the coat of arms shield
+  /// - Red for critical alerts (bravery, valor)
+  static const Color bviPrideBackgroundColor = Color(0xFF0A1628); // Deep navy (premium dark, not pure black)
+  static const Color bviPrideSurfaceColor = Color(0xFF122140); // Elevated surface with blue tint
+  static const Color bviPrideElevatedSurface = Color(0xFF1A2D52); // Higher elevation surface
+  static const Color bviPrideAccentColor = Color(0xFFF7C700); // Golden Poppy - Saint Ursula's lamp
+  static const Color bviPrideAccentGlow = Color(0xFFFFE066); // Lighter gold for glow effects
+  static const Color bviPrideSecondaryAccent = Color(0xFF00A86B); // Brightened Cadmium Green (better contrast)
+  static const Color bviPrideTertiaryAccent = Color(0xFFD00C27); // Philippine Red - valor
+  static const Color bviPridePrimaryTextColor = Color(0xFFFFFFFF); // Pure white (flag)
+  static const Color bviPrideSecondaryTextColor = Color(0xFFE8D5A3); // Warm gold-tinted white
+  static const Color bviPrideTertiaryTextColor = Color(0xFF6B8299); // Muted slate blue
+  static const Color bviPrideDividerColor = Color(0xFF1E3A5F); // Deep blue divider with visibility
+
   // MARK: - Dynamic Color System
 
   /// Current theme mode
@@ -55,6 +162,14 @@ class PremiumTheme {
         return darkBackgroundColor;
       case sunsetMode:
         return sunsetBackgroundColor;
+      case pinkMode:
+        return pinkBackgroundColor;
+      case cyberpunkMode:
+        return cyberpunkBackgroundColor;
+      case islandGoldMode:
+        return bviSunriseBackgroundColor;
+      case bviPrideMode:
+        return bviPrideBackgroundColor;
       default:
         return lightBackgroundColor;
     }
@@ -66,6 +181,14 @@ class PremiumTheme {
         return darkSurfaceColor;
       case sunsetMode:
         return sunsetSurfaceColor;
+      case pinkMode:
+        return pinkSurfaceColor;
+      case cyberpunkMode:
+        return cyberpunkSurfaceColor;
+      case islandGoldMode:
+        return bviSunriseSurfaceColor;
+      case bviPrideMode:
+        return bviPrideSurfaceColor;
       default:
         return lightSurfaceColor;
     }
@@ -77,6 +200,14 @@ class PremiumTheme {
         return darkAccentColor;
       case sunsetMode:
         return sunsetAccentColor;
+      case pinkMode:
+        return pinkAccentColor;
+      case cyberpunkMode:
+        return cyberpunkAccentColor;
+      case islandGoldMode:
+        return bviSunriseAccentColor;
+      case bviPrideMode:
+        return bviPrideAccentColor;
       default:
         return lightAccentColor;
     }
@@ -88,6 +219,14 @@ class PremiumTheme {
         return darkPrimaryTextColor;
       case sunsetMode:
         return sunsetPrimaryTextColor;
+      case pinkMode:
+        return pinkPrimaryTextColor;
+      case cyberpunkMode:
+        return cyberpunkPrimaryTextColor;
+      case islandGoldMode:
+        return bviSunrisePrimaryTextColor;
+      case bviPrideMode:
+        return bviPridePrimaryTextColor;
       default:
         return lightPrimaryTextColor;
     }
@@ -99,6 +238,14 @@ class PremiumTheme {
         return darkSecondaryTextColor;
       case sunsetMode:
         return sunsetSecondaryTextColor;
+      case pinkMode:
+        return pinkSecondaryTextColor;
+      case cyberpunkMode:
+        return cyberpunkSecondaryTextColor;
+      case islandGoldMode:
+        return bviSunriseSecondaryTextColor;
+      case bviPrideMode:
+        return bviPrideSecondaryTextColor;
       default:
         return lightSecondaryTextColor;
     }
@@ -110,6 +257,14 @@ class PremiumTheme {
         return darkTertiaryTextColor;
       case sunsetMode:
         return sunsetTertiaryTextColor;
+      case pinkMode:
+        return pinkTertiaryTextColor;
+      case cyberpunkMode:
+        return cyberpunkTertiaryTextColor;
+      case islandGoldMode:
+        return bviSunriseTertiaryTextColor;
+      case bviPrideMode:
+        return bviPrideTertiaryTextColor;
       default:
         return lightTertiaryTextColor;
     }
@@ -121,6 +276,14 @@ class PremiumTheme {
         return darkDividerColor;
       case sunsetMode:
         return sunsetDividerColor;
+      case pinkMode:
+        return pinkDividerColor;
+      case cyberpunkMode:
+        return cyberpunkDividerColor;
+      case islandGoldMode:
+        return bviSunriseDividerColor;
+      case bviPrideMode:
+        return bviPrideDividerColor;
       default:
         return lightDividerColor;
     }
@@ -166,7 +329,12 @@ class PremiumTheme {
 
   /// Get brightness for current theme
   static Brightness get currentBrightness {
-    if (_currentMode == darkMode || _currentMode == sunsetMode) {
+    if (_currentMode == darkMode ||
+        _currentMode == sunsetMode ||
+        _currentMode == pinkMode ||
+        _currentMode == cyberpunkMode ||
+        _currentMode == islandGoldMode ||
+        _currentMode == bviPrideMode) {
       return Brightness.dark;
     }
     return Brightness.light;
@@ -175,9 +343,12 @@ class PremiumTheme {
   // MARK: - Theme Configuration
 
   static ThemeData get currentTheme {
+    // Use CupertinoSystemDisplay on iOS for proper SF Pro rendering
+    final fontFamilyToUse = _iosFontFamily ?? fontFamily;
+
     return ThemeData(
-      useMaterial3: true,
-      fontFamily: fontFamily,
+      useMaterial3: false, // Material2 for consistent text rendering across iOS/Android
+      fontFamily: fontFamilyToUse,
 
       // Font fallbacks for emoji support across all platforms
       // This prevents the "missing Noto fonts" error for emoji characters
@@ -199,62 +370,71 @@ class PremiumTheme {
       // Background
       scaffoldBackgroundColor: backgroundColor,
 
-      // Text Theme - Clean, elevated, minimal
-      // Note: height property removed to fix iOS text spacing issues
+      // Text Theme - Uses Apple's official letter spacing values on iOS
+      // Reference: Flutter's cupertino/text_theme.dart
       textTheme: TextTheme(
         displayLarge: TextStyle(
-          fontSize: 32,
-          fontWeight: FontWeight.w300, // Light for elegance
-          letterSpacing: -0.5,
+          fontSize: 34,
+          fontWeight: FontWeight.w700,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(34),
         ),
         displayMedium: TextStyle(
           fontSize: 28,
-          fontWeight: FontWeight.w300,
-          letterSpacing: -0.3,
+          fontWeight: FontWeight.w400,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(28),
         ),
         headlineLarge: TextStyle(
-          fontSize: 24,
+          fontSize: 22,
           fontWeight: FontWeight.w400,
-          letterSpacing: 0.0,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(22),
         ),
         headlineMedium: TextStyle(
           fontSize: 20,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.15,
+          fontWeight: FontWeight.w400,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(20),
         ),
         titleLarge: TextStyle(
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.1,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(17),
         ),
         titleMedium: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          letterSpacing: 0.2,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(16),
         ),
         bodyLarge: TextStyle(
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: FontWeight.w400,
-          letterSpacing: 0.1,
           color: primaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(17),
         ),
         bodyMedium: TextStyle(
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: FontWeight.w400,
-          letterSpacing: 0.25,
           color: secondaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(15),
         ),
         bodySmall: TextStyle(
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w400,
-          letterSpacing: 0.4,
           color: tertiaryTextColor,
+          fontFamily: fontFamilyToUse,
+          letterSpacing: _appleLetterSpacing(13),
         ),
       ),
 
@@ -266,7 +446,7 @@ class PremiumTheme {
         titleTextStyle: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.1,
+
           color: primaryTextColor,
         ),
         iconTheme: IconThemeData(color: primaryTextColor),
@@ -286,7 +466,7 @@ class PremiumTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
+
           ),
         ),
       ),
@@ -301,7 +481,7 @@ class PremiumTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.1,
+
           ),
         ),
       ),

@@ -97,7 +97,7 @@ class PaywallDialog extends StatelessWidget {
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
                       color: PremiumTheme.primaryTextColor,
-                      letterSpacing: -0.3,
+
                     ),
                   ),
                 ],
@@ -114,7 +114,6 @@ class PaywallDialog extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       color: PremiumTheme.secondaryTextColor,
-                      
                     ),
                   ),
                   const SizedBox(height: 20),
