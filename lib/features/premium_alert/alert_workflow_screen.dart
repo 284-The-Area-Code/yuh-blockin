@@ -67,17 +67,20 @@ class LicensePlateFormatter extends TextInputFormatter {
     }
 
     // Format 3: AB123CD -> AB-123-CD (2 letters + 3 numbers + 2 letters)
-    if (text.length >= 7 && RegExp(r'^[A-Z]{2}[0-9]{3}[A-Z]{2}$').hasMatch(text)) {
+    if (text.length >= 7 &&
+        RegExp(r'^[A-Z]{2}[0-9]{3}[A-Z]{2}$').hasMatch(text)) {
       return '${text.substring(0, 2)}-${text.substring(2, 5)}-${text.substring(5)}';
     }
 
     // Format 4: German style long plates ABC1234DE -> ABC-1234-DE
-    if (text.length >= 9 && RegExp(r'^[A-Z]{3}[0-9]{4}[A-Z]{2}$').hasMatch(text)) {
+    if (text.length >= 9 &&
+        RegExp(r'^[A-Z]{3}[0-9]{4}[A-Z]{2}$').hasMatch(text)) {
       return '${text.substring(0, 3)}-${text.substring(3, 7)}-${text.substring(7)}';
     }
 
     // Format 5: Extra long plates ABCD1234EF -> ABCD-1234-EF
-    if (text.length >= 10 && RegExp(r'^[A-Z]{4}[0-9]{4}[A-Z]{2}$').hasMatch(text)) {
+    if (text.length >= 10 &&
+        RegExp(r'^[A-Z]{4}[0-9]{4}[A-Z]{2}$').hasMatch(text)) {
       return '${text.substring(0, 4)}-${text.substring(4, 8)}-${text.substring(8)}';
     }
 
@@ -89,7 +92,8 @@ class LicensePlateFormatter extends TextInputFormatter {
 
       for (int i = 0; i < text.length; i++) {
         String char = text[i];
-        String currentType = RegExp(r'[A-Z]').hasMatch(char) ? 'letter' : 'number';
+        String currentType =
+            RegExp(r'[A-Z]').hasMatch(char) ? 'letter' : 'number';
 
         if (lastType.isEmpty || currentType == lastType) {
           currentSegment += char;
@@ -177,7 +181,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
   final PlateStorageService _plateStorageService = PlateStorageService();
   final SimpleAlertService _alertService = SimpleAlertService();
   final UserStatsService _statsService = UserStatsService();
-  final UnacknowledgedAlertService _unacknowledgedAlertService = UnacknowledgedAlertService();
+  final UnacknowledgedAlertService _unacknowledgedAlertService =
+      UnacknowledgedAlertService();
 
   String _urgencyLevel = 'Normal';
   PremiumEmojiExpression? _selectedEmoji;
@@ -186,7 +191,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
   String? _primaryPlate;
   bool _hasLoadedDependencies = false;
   Timer? _primaryPlateRefreshTimer;
-  final List<DateTime> _paymentTierAlertTimes = []; // Track alert timing for payment tier limits
+  final List<DateTime> _paymentTierAlertTimes =
+      []; // Track alert timing for payment tier limits
 
   // Emoji pack selection
   String _selectedEmojiPack = 'Classic'; // 'Classic' or 'GenZ'
@@ -224,7 +230,6 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       vsync: this,
     );
 
-
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 1.0),
       end: Offset.zero,
@@ -240,7 +245,6 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       parent: _slideController,
       curve: Curves.easeIn,
     ));
-
 
     // Add lifecycle observer for app state changes
     WidgetsBinding.instance.addObserver(this);
@@ -295,7 +299,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
   /// Changed from 3 seconds to 30 seconds to reduce unnecessary I/O
   /// Event-driven updates (didChangeDependencies, didChangeAppLifecycleState) handle most cases
   void _startPrimaryPlateRefresh() {
-    _primaryPlateRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    _primaryPlateRefreshTimer =
+        Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) {
         _loadPrimaryPlate();
       } else {
@@ -314,7 +319,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       debugPrint('🔄 AlertWorkflow: Initial dependencies loaded');
     } else {
       // User returned to screen, refresh primary plate
-      debugPrint('🔄 AlertWorkflow: Dependencies changed, likely returned to screen - refreshing primary plate...');
+      debugPrint(
+          '🔄 AlertWorkflow: Dependencies changed, likely returned to screen - refreshing primary plate...');
       _loadPrimaryPlate();
     }
   }
@@ -329,7 +335,6 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       _loadPrimaryPlate();
     }
   }
-
 
   @override
   void dispose() {
@@ -360,83 +365,93 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
         }
       },
       child: Scaffold(
-      backgroundColor: widget.isEmbedded ? Colors.transparent : PremiumTheme.backgroundColor.withValues(alpha: 0.95),
-      body: Stack(
-        children: [
-          // Main content
-          SlideTransition(
-            position: _slideAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SafeArea(
-            top: !widget.isEmbedded, // Skip top safe area when embedded (bottom sheet handles it)
-            bottom: true,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                // Check if we need to use responsive layout for very small screens
-                final isVerySmallScreen = constraints.maxHeight < 600;
+        backgroundColor: widget.isEmbedded
+            ? Colors.transparent
+            : PremiumTheme.backgroundColor.withValues(alpha: 0.95),
+        body: Stack(
+          children: [
+            // Main content
+            SlideTransition(
+              position: _slideAnimation,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SafeArea(
+                  top: !widget
+                      .isEmbedded, // Skip top safe area when embedded (bottom sheet handles it)
+                  bottom: true,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Check if we need to use responsive layout for very small screens
+                      final isVerySmallScreen = constraints.maxHeight < 600;
 
-                return Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isVerySmallScreen ? 20.0 : 24.0,
-                    vertical: isVerySmallScreen ? 12.0 : 20.0,
+                      return Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isVerySmallScreen ? 20.0 : 24.0,
+                          vertical: isVerySmallScreen ? 12.0 : 20.0,
+                        ),
+                        child: Column(
+                          children: [
+                            // Header with back action
+                            _buildHeader(context),
+
+                            SizedBox(height: isVerySmallScreen ? 12.0 : 20.0),
+
+                            // Main scrollable content for mobile
+                            Expanded(
+                              child: SingleChildScrollView(
+                                physics: const BouncingScrollPhysics(),
+                                child: Column(
+                                  children: [
+                                    // User vehicle context badge (more compact)
+                                    if (_primaryPlate != null)
+                                      _buildVehicleContextBadge(),
+
+                                    // Title and description (more compact)
+                                    _buildTitle(),
+
+                                    SizedBox(
+                                        height: isVerySmallScreen ? 8.0 : 12.0),
+
+                                    // License plate input
+                                    _buildPlateInput(),
+
+                                    SizedBox(
+                                        height: isVerySmallScreen ? 8.0 : 12.0),
+
+                                    // Urgency selection
+                                    _buildUrgencySelection(),
+
+                                    SizedBox(
+                                        height: isVerySmallScreen ? 8.0 : 12.0),
+
+                                    // Emoji expression selection
+                                    _buildEmojiSelector(),
+
+                                    SizedBox(
+                                        height:
+                                            isVerySmallScreen ? 10.0 : 14.0),
+
+                                    // Send alert button
+                                    _buildSendButton(),
+
+                                    SizedBox(
+                                        height: isVerySmallScreen ? 8.0 : 12.0),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  child: Column(
-                    children: [
-                  // Header with back action
-                  _buildHeader(context),
-
-                  SizedBox(height: isVerySmallScreen ? 12.0 : 20.0),
-
-                  // Main scrollable content for mobile
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          // User vehicle context badge (more compact)
-                          if (_primaryPlate != null) _buildVehicleContextBadge(),
-
-                          // Title and description (more compact)
-                          _buildTitle(),
-
-                          SizedBox(height: isVerySmallScreen ? 8.0 : 12.0),
-
-                          // License plate input
-                          _buildPlateInput(),
-
-                          SizedBox(height: isVerySmallScreen ? 8.0 : 12.0),
-
-                          // Urgency selection
-                          _buildUrgencySelection(),
-
-                          SizedBox(height: isVerySmallScreen ? 8.0 : 12.0),
-
-                          // Emoji expression selection
-                          _buildEmojiSelector(),
-
-                          SizedBox(height: isVerySmallScreen ? 10.0 : 14.0),
-
-                          // Send alert button
-                          _buildSendButton(),
-
-                          SizedBox(height: isVerySmallScreen ? 8.0 : 12.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                    ],
-                  ),
-                );
-              },
+                ),
+              ),
             ),
-          ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -552,7 +567,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
               letterSpacing: 0.3,
             ),
             children: [
-              TextSpan(text: 'Send '),
+              const TextSpan(text: 'Send '),
               TextSpan(
                 text: 'Respectful',
                 style: TextStyle(
@@ -560,7 +575,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
                   color: PremiumTheme.accentColor,
                 ),
               ),
-              TextSpan(text: ' Alert'),
+              const TextSpan(text: ' Alert'),
             ],
           ),
         ),
@@ -622,7 +637,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
             textCapitalization: TextCapitalization.characters,
             inputFormatters: [
               LicensePlateFormatter(), // Custom auto-dash formatter
-              LengthLimitingTextInputFormatter(18), // Support longest international plates with dashes
+              LengthLimitingTextInputFormatter(
+                  18), // Support longest international plates with dashes
             ],
           ),
         ),
@@ -662,15 +678,15 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
 
     // Color mapping for urgency levels
     final urgencyColors = {
-      'Low': const Color(0xFF34D399),    // Light green
-      'Normal': PremiumTheme.accentColor,  // Standard blue
-      'High': const Color(0xFFEF4444),   // Red
+      'Low': const Color(0xFF34D399), // Light green
+      'Normal': PremiumTheme.accentColor, // Standard blue
+      'High': const Color(0xFFEF4444), // Red
     };
 
     final urgencyIntensities = {
-      'Low': 0.6,      // Lighter
-      'Normal': 0.8,   // Normal
-      'High': 1.0,     // Darker/full intensity
+      'Low': 0.6, // Lighter
+      'Normal': 0.8, // Normal
+      'High': 1.0, // Darker/full intensity
     };
 
     return Column(
@@ -684,13 +700,12 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
             color: PremiumTheme.primaryTextColor,
           ),
         ),
-
         const SizedBox(height: 8),
-
         Row(
           children: urgencyLevels.map((level) {
             final isSelected = _urgencyLevel == level;
-            final urgencyColor = urgencyColors[level] ?? PremiumTheme.accentColor;
+            final urgencyColor =
+                urgencyColors[level] ?? PremiumTheme.accentColor;
             final intensity = urgencyIntensities[level] ?? 0.8;
 
             return Expanded(
@@ -706,13 +721,13 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: isSelected
-                      ? urgencyColor.withValues(alpha: intensity)
-                      : urgencyColor.withValues(alpha: 0.1),
+                        ? urgencyColor.withValues(alpha: intensity)
+                        : urgencyColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isSelected
-                        ? urgencyColor.withValues(alpha: 0.5)
-                        : urgencyColor.withValues(alpha: 0.2),
+                          ? urgencyColor.withValues(alpha: 0.5)
+                          : urgencyColor.withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
@@ -806,97 +821,100 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
 
         // Emoji Grid - lighter container
         LayoutBuilder(
-              builder: (context, constraints) {
-                // Calculate optimal height for the grid
-                final itemCount = availableEmojis.length;
-                final crossAxisCount = 3;
-                final rowCount = (itemCount / crossAxisCount).ceil();
-                final itemHeight = constraints.maxWidth / crossAxisCount * (1 / 1.1);
-                final totalHeight = rowCount * itemHeight + (rowCount - 1) * 12;
+          builder: (context, constraints) {
+            // Calculate optimal height for the grid
+            final itemCount = availableEmojis.length;
+            const crossAxisCount = 3;
+            final rowCount = (itemCount / crossAxisCount).ceil();
+            final itemHeight =
+                constraints.maxWidth / crossAxisCount * (1 / 1.1);
+            final totalHeight = rowCount * itemHeight + (rowCount - 1) * 12;
 
-                return SizedBox(
-                  height: totalHeight,
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 1.1,
-                      crossAxisSpacing: isVerySmallScreen ? 8.0 : 12.0,
-                      mainAxisSpacing: isVerySmallScreen ? 8.0 : 12.0,
-                    ),
-                    itemCount: availableEmojis.length,
-                    itemBuilder: (context, index) {
-                      final emoji = availableEmojis[index];
-                      final isSelected = _selectedEmoji?.id == emoji.id;
+            return SizedBox(
+              height: totalHeight,
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 1.1,
+                  crossAxisSpacing: isVerySmallScreen ? 8.0 : 12.0,
+                  mainAxisSpacing: isVerySmallScreen ? 8.0 : 12.0,
+                ),
+                itemCount: availableEmojis.length,
+                itemBuilder: (context, index) {
+                  final emoji = availableEmojis[index];
+                  final isSelected = _selectedEmoji?.id == emoji.id;
 
-                      return GestureDetector(
-                        onTap: () => _selectEmojiWithAnimation(emoji),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? emoji.accentColor.withValues(alpha: 0.15)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            border: isSelected
-                                ? Border.all(
-                                    color: emoji.accentColor.withValues(alpha: 0.5),
-                                    width: 2,
-                                  )
-                                : Border.all(
-                                    color: PremiumTheme.dividerColor.withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: emoji.accentColor.withValues(alpha: 0.2),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                      spreadRadius: 0,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Optimized animated emoji
-                              AnimatedEmojiWidget(
-                                expression: emoji,
-                                isSelected: isSelected,
-                                isPlaying: isSelected,
-                                size: 38, // Reduced size to fit better
+                  return GestureDetector(
+                    onTap: () => _selectEmojiWithAnimation(emoji),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? emoji.accentColor.withValues(alpha: 0.15)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: isSelected
+                            ? Border.all(
+                                color: emoji.accentColor.withValues(alpha: 0.5),
+                                width: 2,
+                              )
+                            : Border.all(
+                                color: PremiumTheme.dividerColor
+                                    .withValues(alpha: 0.3),
+                                width: 1,
                               ),
-                              const SizedBox(height: 4), // Reduced spacing
-                              // Emoji title - flexible to fit available space
-                              Flexible(
-                                child: Text(
-                                  emoji.title,
-                                  style: TextStyle(
-                                    fontSize: 10, // Slightly smaller to ensure fit
-                                    fontWeight: FontWeight.w500,
-                                    color: isSelected
-                                        ? emoji.accentColor
-                                        : PremiumTheme.secondaryTextColor,
-                                    letterSpacing: 0.1,
-                                     // Tighter line height
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      emoji.accentColor.withValues(alpha: 0.2),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                  spreadRadius: 0,
                                 ),
-                              ),
-                            ],
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Optimized animated emoji
+                          AnimatedEmojiWidget(
+                            expression: emoji,
+                            isSelected: isSelected,
+                            isPlaying: isSelected,
+                            size: 38, // Reduced size to fit better
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-        ],
-      );
+                          const SizedBox(height: 4), // Reduced spacing
+                          // Emoji title - flexible to fit available space
+                          Flexible(
+                            child: Text(
+                              emoji.title,
+                              style: TextStyle(
+                                fontSize: 10, // Slightly smaller to ensure fit
+                                fontWeight: FontWeight.w500,
+                                color: isSelected
+                                    ? emoji.accentColor
+                                    : PremiumTheme.secondaryTextColor,
+                                letterSpacing: 0.1,
+                                // Tighter line height
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   /// Build emoji pack tabs (Gen Z and Classic)
@@ -989,51 +1007,51 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-          onPressed: isEnabled ? _sendAlert : null,
-          onLongPress: _isValidPlate ? _onButtonPress : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: PremiumTheme.accentColor,
-            foregroundColor: Colors.white,
-            elevation: 2, // Reduced elevation for better performance
-            shadowColor: Colors.black26, // Simpler shadow color
-            shape: RoundedRectangleBorder(
-              borderRadius: PremiumTheme.mediumRadius,
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
-            minimumSize: const Size(double.infinity, 56),
-            // Disable splash and highlight for smoother tap
-            splashFactory: NoSplash.splashFactory,
+        onPressed: isEnabled ? _sendAlert : null,
+        onLongPress: _isValidPlate ? _onButtonPress : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: PremiumTheme.accentColor,
+          foregroundColor: Colors.white,
+          elevation: 2, // Reduced elevation for better performance
+          shadowColor: Colors.black26, // Simpler shadow color
+          shape: const RoundedRectangleBorder(
+            borderRadius: PremiumTheme.mediumRadius,
           ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _isLoading
-                ? SizedBox(
-                    key: const ValueKey('loading'),
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Row(
-                    key: const ValueKey('content'),
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.send, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Send Respectful Alert',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+          minimumSize: const Size(double.infinity, 56),
+          // Disable splash and highlight for smoother tap
+          splashFactory: NoSplash.splashFactory,
         ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: _isLoading
+              ? const SizedBox(
+                  key: ValueKey('loading'),
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Row(
+                  key: ValueKey('content'),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.send, size: 20),
+                    SizedBox(width: 12),
+                    Text(
+                      'Send Respectful Alert',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 
@@ -1091,8 +1109,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       return true;
     });
 
-    _lastAlertTimes.removeWhere((plate, time) =>
-        now.difference(time).inHours >= 1);
+    _lastAlertTimes
+        .removeWhere((plate, time) => now.difference(time).inHours >= 1);
 
     // Check global rate limit (max alerts per minute)
     if (_lastAnyAlert != null &&
@@ -1102,7 +1120,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
 
     // Check per-plate rate limit
     if (_lastAlertTimes.containsKey(plateNumber)) {
-      final timeSinceLastAlert = now.difference(_lastAlertTimes[plateNumber]!).inSeconds;
+      final timeSinceLastAlert =
+          now.difference(_lastAlertTimes[plateNumber]!).inSeconds;
       if (timeSinceLastAlert < _minTimeBetweenAlerts) {
         final remainingTime = _minTimeBetweenAlerts - timeSinceLastAlert;
         return 'Alert for this plate was recently sent. Please wait ${remainingTime}s before sending again.';
@@ -1123,9 +1142,9 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
         final alertUrgency = parts[2];
         final timestamp = DateTime.tryParse(parts[1]);
         return alertPlate == plateNumber &&
-               alertUrgency == _urgencyLevel &&
-               timestamp != null &&
-               now.difference(timestamp).inMinutes < 5;
+            alertUrgency == _urgencyLevel &&
+            timestamp != null &&
+            now.difference(timestamp).inMinutes < 5;
       }
       return false;
     });
@@ -1152,9 +1171,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
     // CRITICAL: Check if user has at least one registered license plate
     if (_primaryPlate == null || _primaryPlate!.isEmpty) {
       _showErrorDialog(
-        'Please register at least one license plate before sending alerts.\n\n'
-        'Go to "My Vehicles" from the home screen to add your license plate.'
-      );
+          'Please register at least one license plate before sending alerts.\n\n'
+          'Go to "My Vehicles" from the home screen to add your license plate.');
       return;
     }
 
@@ -1200,7 +1218,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       final result = await _alertService.sendAlert(
         targetPlateNumber: plateNumber,
         senderUserId: senderUserId,
-        message: '${_urgencyLevel} alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
+        message:
+            '$_urgencyLevel alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
       );
 
       if (mounted) {
@@ -1210,7 +1229,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
           // Record alert timing for payment tier limits
           _paymentTierAlertTimes.add(DateTime.now());
           // Keep only recent alerts (last hour for cleanup)
-          _paymentTierAlertTimes.removeWhere((time) => DateTime.now().difference(time).inHours > 1);
+          _paymentTierAlertTimes.removeWhere(
+              (time) => DateTime.now().difference(time).inHours > 1);
 
           // Increment alerts sent counter in user stats
           await _statsService.incrementAlertsSent();
@@ -1224,7 +1244,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
               alertId: result.alertId!,
               targetPlateNumber: plateNumber,
               urgencyLevel: _urgencyLevel,
-              message: '${_urgencyLevel} alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
+              message:
+                  '$_urgencyLevel alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
             );
           }
 
@@ -1233,11 +1254,12 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
             PageRouteBuilder(
               pageBuilder: (context, animation, secondaryAnimation) =>
                   AlertConfirmationScreen(
-                    plateNumber: plateNumber,
-                    urgencyLevel: _urgencyLevel,
-                    selectedEmoji: _selectedEmoji!,
-                  ),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                plateNumber: plateNumber,
+                urgencyLevel: _urgencyLevel,
+                selectedEmoji: _selectedEmoji!,
+              ),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
                 // Use a simple, GPU-accelerated opacity transition
                 return FadeTransition(
                   opacity: CurvedAnimation(
@@ -1261,7 +1283,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       if (mounted) {
         setState(() => _isLoading = false);
         // Show detailed network/connection error
-        final errorMessage = _getDetailedErrorMessage(e.toString(), isNetworkError: true);
+        final errorMessage =
+            _getDetailedErrorMessage(e.toString(), isNetworkError: true);
         _showErrorDialog(errorMessage);
       }
     }
@@ -1273,7 +1296,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       barrierColor: Colors.black.withValues(alpha: 0.3),
       builder: (context) => AlertDialog(
         backgroundColor: PremiumTheme.surfaceColor,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: PremiumTheme.largeRadius,
         ),
         contentPadding: const EdgeInsets.all(32),
@@ -1301,7 +1324,6 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
                 color: PremiumTheme.secondaryTextColor,
-                
               ),
               textAlign: TextAlign.center,
             ),
@@ -1309,13 +1331,14 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 backgroundColor: PremiumTheme.accentColor,
-                shape: RoundedRectangleBorder(
+                shape: const RoundedRectangleBorder(
                   borderRadius: PremiumTheme.smallRadius,
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Understood',
                 style: TextStyle(
                   fontSize: 16,
@@ -1331,7 +1354,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
   }
 
   /// Get detailed error message based on the failure reason
-  String _getDetailedErrorMessage(String? error, {bool isNetworkError = false}) {
+  String _getDetailedErrorMessage(String? error,
+      {bool isNetworkError = false}) {
     if (isNetworkError) {
       return 'Connection failed. Please check your internet connection and try again.';
     }
@@ -1343,11 +1367,14 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
     final lowerError = error.toLowerCase();
 
     // Check for specific error types
-    if (lowerError.contains('license plate not registered') || lowerError.contains('not registered')) {
+    if (lowerError.contains('license plate not registered') ||
+        lowerError.contains('not registered')) {
       return 'No users have registered this license plate. The owner needs to install Yuh Blockin to receive alerts.';
     }
 
-    if (lowerError.contains('rate limit') || lowerError.contains('too many') || lowerError.contains('spam')) {
+    if (lowerError.contains('rate limit') ||
+        lowerError.contains('too many') ||
+        lowerError.contains('spam')) {
       final isFreeTier = _getUserTier() == 'free';
       if (isFreeTier) {
         return 'Alert rate limit reached. Free users can send 1 alert per minute. Upgrade to Premium for faster alerts!';
@@ -1356,7 +1383,9 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       }
     }
 
-    if (lowerError.contains('network') || lowerError.contains('connection') || lowerError.contains('timeout')) {
+    if (lowerError.contains('network') ||
+        lowerError.contains('connection') ||
+        lowerError.contains('timeout')) {
       return 'Network connection failed. Please check your internet and try again.';
     }
 
@@ -1364,7 +1393,8 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       return 'Invalid license plate format. Please check the plate number and try again.';
     }
 
-    if (lowerError.contains('user not found') || lowerError.contains('authentication')) {
+    if (lowerError.contains('user not found') ||
+        lowerError.contains('authentication')) {
       return 'Account verification failed. Please restart the app and try again.';
     }
 
@@ -1418,5 +1448,3 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
     }
   }
 }
-
-

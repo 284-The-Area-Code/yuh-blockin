@@ -11,7 +11,8 @@ class SubscriptionStatusScreen extends StatefulWidget {
   const SubscriptionStatusScreen({super.key});
 
   @override
-  State<SubscriptionStatusScreen> createState() => _SubscriptionStatusScreenState();
+  State<SubscriptionStatusScreen> createState() =>
+      _SubscriptionStatusScreenState();
 }
 
 class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
@@ -77,9 +78,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
             : null,
         color: isPremium ? null : PremiumTheme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: isPremium
-            ? null
-            : Border.all(color: PremiumTheme.dividerColor),
+        border: isPremium ? null : Border.all(color: PremiumTheme.dividerColor),
       ),
       child: Column(
         children: [
@@ -282,7 +281,6 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
               iconColor: Colors.amber,
               onTap: _openUpgradeScreen,
             ),
-
           _buildActionTile(
             icon: Icons.restore,
             title: 'Restore Purchases',
@@ -291,7 +289,6 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
             isLoading: _isRestoring,
             onTap: _restorePurchases,
           ),
-
           if (isPremium)
             _buildActionTile(
               icon: Icons.manage_accounts,
@@ -301,7 +298,6 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
               onTap: _openPlayStoreSubscriptions,
               showDivider: false,
             ),
-
           if (!isPremium)
             _buildActionTile(
               icon: Icons.manage_accounts,
@@ -364,10 +360,12 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
             size: 16,
             color: PremiumTheme.tertiaryTextColor,
           ),
-          onTap: isLoading ? null : () {
-            HapticFeedback.lightImpact();
-            onTap();
-          },
+          onTap: isLoading
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  onTap();
+                },
         ),
         if (showDivider)
           Divider(
@@ -507,7 +505,8 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
 
   Future<void> _openPlayStoreSubscriptions() async {
     // Deep link to Play Store subscriptions
-    final uri = Uri.parse('https://play.google.com/store/account/subscriptions');
+    final uri =
+        Uri.parse('https://play.google.com/store/account/subscriptions');
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -522,7 +521,8 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
   }
 
   Future<void> _contactSupport() async {
-    final uri = Uri.parse('mailto:${PaymentConfig.supportEmail}?subject=Yuh Blockin Support');
+    final uri = Uri.parse(
+        'mailto:${PaymentConfig.supportEmail}?subject=Yuh Blockin Support');
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
@@ -530,7 +530,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Email: ${PaymentConfig.supportEmail}')),
+          const SnackBar(content: Text('Email: ${PaymentConfig.supportEmail}')),
         );
       }
     }

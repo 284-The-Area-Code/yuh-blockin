@@ -6,7 +6,7 @@
 
 // Set premium page title before header loads
 add_filter( 'pre_get_document_title', function() {
-	return 'YuhBlockin - Move with Respect';
+	return 'YuhBlockin — Move with Respect';
 }, 999 );
 
 // Add favicon
@@ -99,7 +99,7 @@ get_header();
       <div class="yb-hero__inner">
         <div class="yb-hero__content">
           <h1 class="yb-hero__headline">Don't argue in the lot.<br>Just send a respectful ping.</h1>
-          <p class="yb-hero__subcopy">YuhBlockin helps drivers in the Caribbean resolve being blocked in quietly and quickly right from their phones.</p>
+          <p class="yb-hero__subcopy">YuhBlockin helps drivers resolve blocked parking quietly and quickly—right from their phones.</p>
           <div class="yb-hero__actions">
             <a href="#get-app" class="yb-btn yb-btn--primary yb-btn--lg">
               <span>Get YuhBlockin</span>

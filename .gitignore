@@ -49,3 +49,5 @@ NUL
 *.jks
 *.keystore
 android/key.properties
+.aider*
+lib/app/

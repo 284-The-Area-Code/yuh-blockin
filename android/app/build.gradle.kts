@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.yuhblockin.yuh_blockin_app"
+    namespace = "com.yuhblockin.v1"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -40,7 +40,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.yuhblockin.yuh_blockin_app"
+        applicationId = "com.yuhblockin.v1"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -49,6 +49,7 @@ android {
 
     buildTypes {
         release {
+            // signingConfig = signingConfigs.getByName("release")
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             isShrinkResources = false

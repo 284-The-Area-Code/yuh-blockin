@@ -227,7 +227,7 @@ function yuhblockin_enqueue_landing_assets() {
 			'yuhblockin-landing',
 			get_template_directory_uri() . '/assets/css/yuhblockin.css',
 			array( 'yuhblockin-fonts' ),
-			filemtime( get_template_directory() . '/assets/css/yuhblockin.css' )
+			'3.0.0'
 		);
 
 		// Landing page scripts
@@ -235,7 +235,7 @@ function yuhblockin_enqueue_landing_assets() {
 			'yuhblockin-landing',
 			get_template_directory_uri() . '/assets/js/yuhblockin.js',
 			array(),
-			filemtime( get_template_directory() . '/assets/js/yuhblockin.js' ),
+			'2.2.0',
 			true
 		);
 	}

@@ -25,7 +25,8 @@ class PlateRegistrationScreen extends StatefulWidget {
   });
 
   @override
-  State<PlateRegistrationScreen> createState() => _PlateRegistrationScreenState();
+  State<PlateRegistrationScreen> createState() =>
+      _PlateRegistrationScreenState();
 }
 
 class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
@@ -34,14 +35,16 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
 
   final PlateStorageService _storageService = PlateStorageService();
   final SimpleAlertService _alertService = SimpleAlertService();
-  final PlateVerificationService _verificationService = PlateVerificationService();
+  final PlateVerificationService _verificationService =
+      PlateVerificationService();
 
   List<String> _registeredPlates = [];
   String? _primaryPlate;
   bool _isValidPlate = false;
   bool _isRegistering = false;
 
-  bool get _isAtMaxCapacity => _registeredPlates.length >= PlateStorageService.maxVehicles;
+  bool get _isAtMaxCapacity =>
+      _registeredPlates.length >= PlateStorageService.maxVehicles;
 
   @override
   void initState() {
@@ -72,7 +75,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
         _primaryPlate = primaryPlate;
       });
       if (kDebugMode) {
-        debugPrint('✅ Loaded ${plates.length} registered plates from local storage');
+        debugPrint(
+            '✅ Loaded ${plates.length} registered plates from local storage');
         debugPrint('✅ Primary plate: ${primaryPlate ?? "none set"}');
       }
     } catch (e) {
@@ -120,17 +124,20 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       return;
     }
 
-    String normalizedPlate = value.trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
+    String normalizedPlate =
+        value.trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
 
     // Auto-format with dash between letters and numbers
     normalizedPlate = _formatPlateWithDash(normalizedPlate);
 
-    final lengthValid = normalizedPlate.length >= 2 && normalizedPlate.length <= 12;
+    final lengthValid =
+        normalizedPlate.length >= 2 && normalizedPlate.length <= 12;
     final formatValid = RegExp(r'^[A-Z0-9\s\-]+$').hasMatch(normalizedPlate);
     final hasAlphaNumeric = RegExp(r'[A-Z0-9]').hasMatch(normalizedPlate);
     final notDuplicate = !_registeredPlates.contains(normalizedPlate);
 
-    final isValid = lengthValid && formatValid && hasAlphaNumeric && notDuplicate;
+    final isValid =
+        lengthValid && formatValid && hasAlphaNumeric && notDuplicate;
 
     debugPrint('Validating plate "$value" -> "$normalizedPlate"');
     debugPrint('Length valid: $lengthValid (${normalizedPlate.length})');
@@ -189,7 +196,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       final plateNumber = _plateInputController.text.trim();
 
       if (kDebugMode) {
-        debugPrint('🔐 Registering plate with multi-user privacy protection: $plateNumber');
+        debugPrint(
+            '🔐 Registering plate with multi-user privacy protection: $plateNumber');
       }
 
       // Initialize simple alert service
@@ -210,7 +218,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
         bool userExistsInDB = await _alertService.userExists(userId);
         if (!userExistsInDB) {
           if (kDebugMode) {
-            debugPrint('⚠️ User ID exists in prefs but NOT in database! Need to create user.');
+            debugPrint(
+                '⚠️ User ID exists in prefs but NOT in database! Need to create user.');
           }
           needsNewUser = true;
         } else {
@@ -233,17 +242,18 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
           }
 
           // Small delay to ensure user creation is fully committed before plate registration
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
         } catch (e) {
           if (kDebugMode) {
             debugPrint('❌ Failed to create user: $e');
           }
           setState(() => _isRegistering = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to create user profile. Please check your internet connection and try again.'),
+            const SnackBar(
+              content: Text(
+                  'Failed to create user profile. Please check your internet connection and try again.'),
               backgroundColor: Colors.red,
-              duration: const Duration(milliseconds: 800),
+              duration: Duration(milliseconds: 800),
             ),
           );
           return; // Don't continue if user creation failed
@@ -302,7 +312,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       if (mounted) {
         await _showOwnershipKeyDialog(plateNumber, ownershipKey);
       }
-
     } on PlateAlreadyRegisteredException catch (e) {
       // Plate belongs to another user
       if (kDebugMode) {
@@ -319,7 +328,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       if (errorMessage.contains('USER_DUPLICATE')) {
         errorMessage = 'You have already registered this license plate.';
       } else if (errorMessage.contains('INIT_ERROR')) {
-        errorMessage = 'Failed to connect to registration system. Please check your internet connection.';
+        errorMessage =
+            'Failed to connect to registration system. Please check your internet connection.';
       } else {
         errorMessage = 'Registration failed. Please try again.';
       }
@@ -332,7 +342,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
 
   /// Show ownership key dialog - CRITICAL for security
   /// User must save this key to prove ownership if disputed
-  Future<void> _showOwnershipKeyDialog(String plateNumber, String ownershipKey) async {
+  Future<void> _showOwnershipKeyDialog(
+      String plateNumber, String ownershipKey) async {
     bool hasCopied = false;
 
     await showDialog(
@@ -367,214 +378,214 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                 children: [
                   // Success icon
                   Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.green.shade400,
-                        Colors.green.shade600,
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    color: Colors.white,
-                    size: 36,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Title
-                Text(
-                  'Plate Registered!',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: PremiumTheme.primaryTextColor,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  plateNumber,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: PremiumTheme.accentColor,
-                    letterSpacing: 2,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Security key section
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: PremiumTheme.backgroundColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.amber.withValues(alpha: 0.5),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.key_rounded,
-                            color: Colors.amber.shade600,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Your Ownership Key',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.amber.shade600,
-                            ),
-                          ),
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.green.shade400,
+                          Colors.green.shade600,
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 36,
+                    ),
+                  ),
 
-                      // The key itself
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: PremiumTheme.surfaceColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: PremiumTheme.dividerColor,
-                          ),
-                        ),
-                        child: SelectableText(
-                          ownershipKey,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            fontFamily: 'monospace',
-                            color: PremiumTheme.primaryTextColor,
-                            letterSpacing: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                  const SizedBox(height: 20),
+
+                  // Title
+                  Text(
+                    'Plate Registered!',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: PremiumTheme.primaryTextColor,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    plateNumber,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: PremiumTheme.accentColor,
+                      letterSpacing: 2,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Security key section
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: PremiumTheme.backgroundColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.5),
+                        width: 1,
                       ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.key_rounded,
+                              color: Colors.amber.shade600,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Your Ownership Key',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.amber.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
-                      const SizedBox(height: 12),
-
-                      // Copy button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            await _verificationService.copyKeyToClipboard(ownershipKey);
-                            HapticFeedback.mediumImpact();
-                            setDialogState(() => hasCopied = true);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Key copied to clipboard!'),
-                                  backgroundColor: Colors.green,
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
-                          icon: Icon(
-                            hasCopied ? Icons.check : Icons.copy_rounded,
-                            size: 18,
+                        // The key itself
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                          label: Text(hasCopied ? 'Copied!' : 'Copy Key'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: hasCopied
-                                ? Colors.green
-                                : PremiumTheme.accentColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                          decoration: BoxDecoration(
+                            color: PremiumTheme.surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: PremiumTheme.dividerColor,
+                            ),
+                          ),
+                          child: SelectableText(
+                            ownershipKey,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'monospace',
+                              color: PremiumTheme.primaryTextColor,
+                              letterSpacing: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Copy button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              await _verificationService
+                                  .copyKeyToClipboard(ownershipKey);
+                              HapticFeedback.mediumImpact();
+                              setDialogState(() => hasCopied = true);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Key copied to clipboard!'),
+                                    backgroundColor: Colors.green,
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: Icon(
+                              hasCopied ? Icons.check : Icons.copy_rounded,
+                              size: 18,
+                            ),
+                            label: Text(hasCopied ? 'Copied!' : 'Copy Key'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: hasCopied
+                                  ? Colors.green
+                                  : PremiumTheme.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Warning text
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.red.withValues(alpha: 0.3),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.red.shade400,
-                        size: 24,
+
+                  const SizedBox(height: 16),
+
+                  // Warning text
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.3),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Save this key securely! It\'s the only way to prove you own this plate. Like a crypto key - if you lose it, you lose ownership.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.red.shade300,
-                            
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red.shade400,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Save this key securely! It\'s the only way to prove you own this plate. Like a crypto key - if you lose it, you lose ownership.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red.shade300,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Continue button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Dismiss keyboard first
-                      FocusScope.of(context).unfocus();
-                      Navigator.of(context).pop();
-                      _showSuccessAnimation();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: PremiumTheme.accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'I\'ve Saved My Key',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      ],
                     ),
                   ),
-                ),
+
+                  const SizedBox(height: 20),
+
+                  // Continue button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Dismiss keyboard first
+                        FocusScope.of(context).unfocus();
+                        Navigator.of(context).pop();
+                        _showSuccessAnimation();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: PremiumTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        'I\'ve Saved My Key',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -645,7 +656,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
               backgroundColor: PremiumTheme.surfaceColor,
               title: Row(
                 children: [
@@ -682,7 +694,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         color: PremiumTheme.secondaryTextColor,
-                        
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -718,7 +729,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -756,7 +768,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                       ),
                     ),
                   ],
@@ -764,7 +777,9 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isRecovering ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isRecovering
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: Text(
                     'Cancel',
                     style: TextStyle(
@@ -775,93 +790,101 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: isRecovering ? null : () async {
-                    final plateNumber = plateController.text.trim();
-                    final ownershipKey = keyController.text.trim();
+                  onPressed: isRecovering
+                      ? null
+                      : () async {
+                          final plateNumber = plateController.text.trim();
+                          final ownershipKey = keyController.text.trim();
 
-                    if (plateNumber.isEmpty || ownershipKey.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter both plate number and key'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
+                          if (plateNumber.isEmpty || ownershipKey.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Please enter both plate number and key'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
 
-                    // Get current user ID
-                    final prefs = await SharedPreferences.getInstance();
-                    final userId = prefs.getString('user_id');
-                    if (userId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('User not found. Please restart the app.'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
+                          // Get current user ID
+                          final prefs = await SharedPreferences.getInstance();
+                          final userId = prefs.getString('user_id');
+                          if (userId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'User not found. Please restart the app.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
 
-                    setDialogState(() => isRecovering = true);
+                          setDialogState(() => isRecovering = true);
 
-                    try {
-                      final result = await _verificationService.verifyOwnership(
-                        plateNumber: plateNumber,
-                        ownershipKey: ownershipKey,
-                        userId: userId,
-                      );
+                          try {
+                            final result =
+                                await _verificationService.verifyOwnership(
+                              plateNumber: plateNumber,
+                              ownershipKey: ownershipKey,
+                              userId: userId,
+                            );
 
-                      if (result.success) {
-                        // Save to local storage
-                        await _storageService.addPlate(plateNumber);
-                        await _verificationService.saveKeyLocally(
-                          plateNumber: plateNumber,
-                          ownershipKey: ownershipKey,
-                        );
+                            if (result.success) {
+                              // Save to local storage
+                              await _storageService.addPlate(plateNumber);
+                              await _verificationService.saveKeyLocally(
+                                plateNumber: plateNumber,
+                                ownershipKey: ownershipKey,
+                              );
 
-                        // Reload plates
-                        await _loadExistingPlates();
+                              // Reload plates
+                              await _loadExistingPlates();
 
-                        if (mounted) {
-                          Navigator.of(dialogContext).pop();
-                          HapticFeedback.mediumImpact();
+                              if (mounted) {
+                                Navigator.of(dialogContext).pop();
+                                HapticFeedback.mediumImpact();
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result.message ?? 'Plate recovered successfully!'),
-                              backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      } else {
-                        setDialogState(() => isRecovering = false);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result.error ?? 'Recovery failed'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      setDialogState(() => isRecovering = false);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  },
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(result.message ??
+                                        'Plate recovered successfully!'),
+                                    backgroundColor: Colors.green,
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            } else {
+                              setDialogState(() => isRecovering = false);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text(result.error ?? 'Recovery failed'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            setDialogState(() => isRecovering = false);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: PremiumTheme.accentColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -872,7 +895,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text(
@@ -897,7 +921,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           backgroundColor: PremiumTheme.surfaceColor,
           title: Row(
             children: [
@@ -933,7 +958,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   color: PremiumTheme.secondaryTextColor,
-                  
                 ),
               ),
               const SizedBox(height: 16),
@@ -974,7 +998,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
               onPressed: () => Navigator.of(context).pop(),
               style: TextButton.styleFrom(
                 foregroundColor: PremiumTheme.accentColor,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               child: const Text(
                 'OK',
@@ -996,7 +1021,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Delete Vehicle',
             style: TextStyle(
@@ -1017,7 +1043,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: PremiumTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(8),
@@ -1062,7 +1089,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Delete',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
@@ -1108,14 +1135,14 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Vehicle deleted successfully'),
-            backgroundColor: Colors.green.shade400,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(milliseconds: 800),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
+        SnackBar(
+          content: const Text('Vehicle deleted successfully'),
+          backgroundColor: Colors.green.shade400,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 800),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
     } catch (e) {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1175,7 +1202,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                     SizedBox(height: isCompact ? 14 : 20),
 
                     // Registered plates list
-                    if (_registeredPlates.isNotEmpty) _buildRegisteredPlates(isCompact),
+                    if (_registeredPlates.isNotEmpty)
+                      _buildRegisteredPlates(isCompact),
                   ],
                 ),
               ),
@@ -1443,7 +1471,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
             style: TextStyle(
               fontSize: isCompact ? 13 : 14,
               color: PremiumTheme.secondaryTextColor,
-              
             ),
             textAlign: TextAlign.center,
           ),
@@ -1569,9 +1596,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
           backgroundColor: _isValidPlate
               ? PremiumTheme.accentColor
               : PremiumTheme.surfaceColor,
-          foregroundColor: _isValidPlate
-              ? Colors.white
-              : PremiumTheme.tertiaryTextColor,
+          foregroundColor:
+              _isValidPlate ? Colors.white : PremiumTheme.tertiaryTextColor,
           elevation: _isValidPlate ? 4 : 0,
           shadowColor: _isValidPlate
               ? PremiumTheme.accentColor.withValues(alpha: 0.4)
@@ -1585,14 +1611,15 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
               width: 1,
             ),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: isCompact ? 12 : 14),
+          padding: EdgeInsets.symmetric(
+              horizontal: 20, vertical: isCompact ? 12 : 14),
         ),
         child: _isRegistering
-            ? SizedBox(
+            ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   strokeWidth: 2,
                 ),
               )
@@ -1715,7 +1742,8 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                       plate,
                       style: TextStyle(
                         fontSize: isCompact ? 15 : 16,
-                        fontWeight: isPrimary ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            isPrimary ? FontWeight.w600 : FontWeight.w500,
                         color: PremiumTheme.primaryTextColor,
                         letterSpacing: 1.5,
                       ),
@@ -1724,12 +1752,13 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                   // Primary badge or hint
                   if (isPrimary)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: PremiumTheme.accentColor,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
+                      child: const Text(
                         'PRIMARY',
                         style: TextStyle(
                           fontSize: 9,
@@ -1877,13 +1906,15 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
                   // Main card
                   Container(
                     margin: const EdgeInsets.all(40),
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 48, vertical: 36),
                     decoration: BoxDecoration(
                       color: PremiumTheme.surfaceColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: PremiumTheme.accentColor.withValues(alpha: 0.2 * _glowAnimation.value),
+                          color: PremiumTheme.accentColor
+                              .withValues(alpha: 0.2 * _glowAnimation.value),
                           blurRadius: 40 * _glowAnimation.value,
                           spreadRadius: 4,
                         ),
@@ -1913,7 +1944,8 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: PremiumTheme.accentColor.withValues(alpha: 0.3),
+                                color: PremiumTheme.accentColor
+                                    .withValues(alpha: 0.3),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
@@ -1922,7 +1954,7 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
                           child: Center(
                             child: Transform.scale(
                               scale: _checkAnimation.value,
-                              child: Icon(
+                              child: const Icon(
                                 Icons.check_rounded,
                                 color: Colors.white,
                                 size: 40,
@@ -1964,7 +1996,7 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
 
   List<Widget> _buildSparkles() {
     final sparkles = <Widget>[];
-    final sparkleCount = 8;
+    const sparkleCount = 8;
 
     for (int i = 0; i < sparkleCount; i++) {
       final angle = (i * 2 * pi / sparkleCount) - pi / 2;
@@ -1993,10 +2025,11 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
                   boxShadow: [
                     BoxShadow(
                       color: (i % 3 == 0
-                          ? PremiumTheme.accentColor
-                          : i % 3 == 1
-                              ? Colors.amber
-                              : Colors.white).withValues(alpha: 0.6),
+                              ? PremiumTheme.accentColor
+                              : i % 3 == 1
+                                  ? Colors.amber
+                                  : Colors.white)
+                          .withValues(alpha: 0.6),
                       blurRadius: 8,
                       spreadRadius: 2,
                     ),

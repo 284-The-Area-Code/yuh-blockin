@@ -16,10 +16,11 @@ class AlertHistoryScreen extends StatefulWidget {
   State<AlertHistoryScreen> createState() => _AlertHistoryScreenState();
 }
 
-class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTickerProviderStateMixin {
+class _AlertHistoryScreenState extends State<AlertHistoryScreen>
+    with SingleTickerProviderStateMixin {
   final SimpleAlertService _alertService = SimpleAlertService();
   final UserAliasService _aliasService = UserAliasService();
-  List<Alert> _receivedAlerts = [];
+  final List<Alert> _receivedAlerts = [];
   List<Alert> _sentAlerts = [];
   bool _isLoading = true;
   late TabController _tabController;
@@ -54,7 +55,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
     try {
       // Listen to received alerts stream - handle each alert individually
       _receivedAlertsSubscription?.cancel();
-      _receivedAlertsSubscription = _alertService.getAlertsStream(widget.userId).listen(
+      _receivedAlertsSubscription =
+          _alertService.getAlertsStream(widget.userId).listen(
         (alert) {
           if (mounted) {
             setState(() {
@@ -63,10 +65,12 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
                 _seenReceivedAlertIds.add(alert.id);
                 _receivedAlerts.add(alert);
                 // Sort by newest first
-                _receivedAlerts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                _receivedAlerts
+                    .sort((a, b) => b.createdAt.compareTo(a.createdAt));
               } else {
                 // Update existing alert (e.g., when response is added)
-                final index = _receivedAlerts.indexWhere((a) => a.id == alert.id);
+                final index =
+                    _receivedAlerts.indexWhere((a) => a.id == alert.id);
                 if (index != -1) {
                   _receivedAlerts[index] = alert;
                 }
@@ -85,7 +89,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
 
       // Listen to sent alerts stream - receives full list each time
       _sentAlertsSubscription?.cancel();
-      _sentAlertsSubscription = _alertService.getSentAlertsStream(widget.userId).listen(
+      _sentAlertsSubscription =
+          _alertService.getSentAlertsStream(widget.userId).listen(
         (alertList) {
           if (mounted) {
             setState(() {
@@ -162,7 +167,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Response sent: ${_getResponseDisplayText(response)}'),
+            content:
+                Text('Response sent: ${_getResponseDisplayText(response)}'),
             backgroundColor: Colors.green,
             duration: const Duration(milliseconds: 500),
           ),
@@ -271,7 +277,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
             builder: (context, snapshot) {
               String message;
               if (snapshot.hasData) {
-                final alias = _aliasService.formatAliasForDisplay(snapshot.data!);
+                final alias =
+                    _aliasService.formatAliasForDisplay(snapshot.data!);
                 message = '$alias needs you to move your car';
               } else {
                 message = 'Someone needs you to move your car';
@@ -454,8 +461,14 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: hasResponse
-              ? [statusColor.withValues(alpha: 0.08), statusColor.withValues(alpha: 0.03)]
-              : [Colors.blue.withValues(alpha: 0.05), Colors.grey.withValues(alpha: 0.02)],
+              ? [
+                  statusColor.withValues(alpha: 0.08),
+                  statusColor.withValues(alpha: 0.03)
+                ]
+              : [
+                  Colors.blue.withValues(alpha: 0.05),
+                  Colors.grey.withValues(alpha: 0.02)
+                ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -501,7 +514,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: statusColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
@@ -533,7 +547,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
                         future: _aliasService.getAliasForUser(alert.receiverId),
                         builder: (context, snapshot) {
                           final alias = snapshot.hasData
-                              ? _aliasService.formatAliasForDisplay(snapshot.data!)
+                              ? _aliasService
+                                  .formatAliasForDisplay(snapshot.data!)
                               : 'Driver';
                           return Text(
                             'Alert sent to $alias',
@@ -547,7 +562,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
                           );
                         },
                       ),
-                      if (alert.message != null && alert.message!.isNotEmpty) ...[
+                      if (alert.message != null &&
+                          alert.message!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           alert.message!,
@@ -573,8 +589,10 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(alert.response == '5_minutes' ? 0 : 16),
-                  bottomRight: Radius.circular(alert.response == '5_minutes' ? 0 : 16),
+                  bottomLeft:
+                      Radius.circular(alert.response == '5_minutes' ? 0 : 16),
+                  bottomRight:
+                      Radius.circular(alert.response == '5_minutes' ? 0 : 16),
                 ),
               ),
               child: Row(
@@ -864,11 +882,10 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            resolution == 'resolved'
-                ? '✓ Marked as resolved'
-                : 'Alert closed',
+            resolution == 'resolved' ? '✓ Marked as resolved' : 'Alert closed',
           ),
-          backgroundColor: resolution == 'resolved' ? Colors.green : Colors.grey,
+          backgroundColor:
+              resolution == 'resolved' ? Colors.green : Colors.grey,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -880,21 +897,24 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
       case 'clear_received':
         _showClearConfirmationDialog(
           title: 'Clear Received Alerts',
-          message: 'Are you sure you want to delete all ${_receivedAlerts.length} received alerts? This cannot be undone.',
+          message:
+              'Are you sure you want to delete all ${_receivedAlerts.length} received alerts? This cannot be undone.',
           onConfirm: () => _clearReceivedAlerts(),
         );
         break;
       case 'clear_sent':
         _showClearConfirmationDialog(
           title: 'Clear Sent Alerts',
-          message: 'Are you sure you want to delete all ${_sentAlerts.length} sent alerts? This cannot be undone.',
+          message:
+              'Are you sure you want to delete all ${_sentAlerts.length} sent alerts? This cannot be undone.',
           onConfirm: () => _clearSentAlerts(),
         );
         break;
       case 'clear_all':
         _showClearConfirmationDialog(
           title: 'Clear All Alerts',
-          message: 'Are you sure you want to delete all ${_receivedAlerts.length + _sentAlerts.length} alerts? This cannot be undone.',
+          message:
+              'Are you sure you want to delete all ${_receivedAlerts.length + _sentAlerts.length} alerts? This cannot be undone.',
           onConfirm: () => _clearAllAlerts(),
         );
         break;
@@ -1187,7 +1207,8 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
                         padding: const EdgeInsets.only(top: 16),
                         itemCount: _receivedAlerts.length,
                         itemBuilder: (context, index) {
-                          return _buildReceivedAlertItem(_receivedAlerts[index]);
+                          return _buildReceivedAlertItem(
+                              _receivedAlerts[index]);
                         },
                       ),
 
@@ -1225,4 +1246,3 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> with SingleTick
     );
   }
 }
-

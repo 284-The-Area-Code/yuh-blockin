@@ -24,7 +24,6 @@ import 'features/plate_registration/plate_registration_screen.dart';
 import 'features/onboarding/onboarding_flow.dart';
 import 'features/theme_settings/theme_settings_screen.dart';
 import 'features/subscription/paywall_dialog.dart';
-import 'features/subscription/upgrade_screen.dart';
 import 'features/subscription/subscription_status_screen.dart';
 import 'core/services/subscription_service.dart';
 import 'core/services/plate_verification_service.dart';
@@ -216,7 +215,8 @@ class _AppInitializerState extends State<AppInitializer>
 
       debugPrint(
           '🔍 AppInitializer: hasCompletedOnboarding = $hasCompletedOnboarding');
-      debugPrint('🔍 AppInitializer: hasUserId = $hasUserId (userId = $userId)');
+      debugPrint(
+          '🔍 AppInitializer: hasUserId = $hasUserId (userId = $userId)');
 
       if (!mounted) return;
 
@@ -228,7 +228,6 @@ class _AppInitializerState extends State<AppInitializer>
       if (!mounted) return;
 
       _navigateToNextScreen();
-
     } catch (e) {
       debugPrint('❌ AppInitializer: Error checking status: $e');
       if (mounted) {
@@ -260,9 +259,8 @@ class _AppInitializerState extends State<AppInitializer>
     // Navigate with seamless transition
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => _goToHome
-            ? const PremiumHomeScreen()
-            : const OnboardingFlow(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            _goToHome ? const PremiumHomeScreen() : const OnboardingFlow(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           // Fade in the new screen
           return FadeTransition(
@@ -307,136 +305,138 @@ class _AppInitializerState extends State<AppInitializer>
                 child: Transform.scale(
                   scale: exitScale,
                   child: Column(
-              children: [
-                // Spacer to push logo 20% above center
-                const Spacer(flex: 2),
+                    children: [
+                      // Spacer to push logo 20% above center
+                      const Spacer(flex: 2),
 
-                // Logo - clean without shimmer
-                Transform.translate(
-                  offset: Offset(0, _logoSlide.value),
-                  child: FadeTransition(
-                    opacity: _logoFade,
-                    child: ScaleTransition(
-                      scale: _logoScale,
-                      child: Image.asset(
-                        'assets/images/app_icon.png',
-                        width: _logoSize,
-                        height: _logoSize,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Tagline with premium shimmer on text
-                FadeTransition(
-                  opacity: _taglineFade,
-                  child: _showShimmer
-                      ? Shimmer.fromColors(
-                          baseColor: _deepBlue,
-                          highlightColor: _teal.withValues(alpha: 0.7),
-                          period: const Duration(milliseconds: 2000),
-                          direction: ShimmerDirection.ltr,
-                          child: Text(
-                            'Move with respect.',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w400,
-                              color: _deepBlue,
-                              letterSpacing: 0.3,
+                      // Logo - clean without shimmer
+                      Transform.translate(
+                        offset: Offset(0, _logoSlide.value),
+                        child: FadeTransition(
+                          opacity: _logoFade,
+                          child: ScaleTransition(
+                            scale: _logoScale,
+                            child: Image.asset(
+                              'assets/images/app_icon.png',
+                              width: _logoSize,
+                              height: _logoSize,
+                              fit: BoxFit.contain,
                             ),
-                          ),
-                        )
-                      : Text(
-                          'Move with respect.',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w400,
-                            color: _deepBlue,
-                            letterSpacing: 0.3,
                           ),
                         ),
-                ),
+                      ),
 
-                // Spacer to balance layout
-                const Spacer(flex: 3),
+                      const SizedBox(height: 24),
 
-                // Premium footer with slide-up animation
-                Transform.translate(
-                  offset: Offset(0, _footerSlide.value),
-                  child: FadeTransition(
-                    opacity: _footerFade,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 48.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // "from" with decorative lines
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 24,
-                                height: 0.5,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.transparent,
-                                      _teal.withValues(alpha: 0.3),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  'from',
+                      // Tagline with premium shimmer on text
+                      FadeTransition(
+                        opacity: _taglineFade,
+                        child: _showShimmer
+                            ? Shimmer.fromColors(
+                                baseColor: _deepBlue,
+                                highlightColor: _teal.withValues(alpha: 0.7),
+                                period: const Duration(milliseconds: 2000),
+                                direction: ShimmerDirection.ltr,
+                                child: const Text(
+                                  'Move with respect.',
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w300,
-                                    color: _teal.withValues(alpha: 0.5),
-                                    letterSpacing: 2.0,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w400,
+                                    color: _deepBlue,
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
-                              ),
-                              Container(
-                                width: 24,
-                                height: 0.5,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      _teal.withValues(alpha: 0.3),
-                                      Colors.transparent,
-                                    ],
-                                  ),
+                              )
+                            : const Text(
+                                'Move with respect.',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w400,
+                                  color: _deepBlue,
+                                  letterSpacing: 0.3,
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // "DezeTingz" with brand gradient
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [_teal, _coral],
-                            ).createShader(bounds),
-                            child: const Text(
-                              'DezeTingz',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                                letterSpacing: 2.5,
-                              ),
+                      ),
+
+                      // Spacer to balance layout
+                      const Spacer(flex: 3),
+
+                      // Premium footer with slide-up animation
+                      Transform.translate(
+                        offset: Offset(0, _footerSlide.value),
+                        child: FadeTransition(
+                          opacity: _footerFade,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 48.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // "from" with decorative lines
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 24,
+                                      height: 0.5,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.transparent,
+                                            _teal.withValues(alpha: 0.3),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12),
+                                      child: Text(
+                                        'from',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w300,
+                                          color: _teal.withValues(alpha: 0.5),
+                                          letterSpacing: 2.0,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 24,
+                                      height: 0.5,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            _teal.withValues(alpha: 0.3),
+                                            Colors.transparent,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // "DezeTingz" with brand gradient
+                                ShaderMask(
+                                  shaderCallback: (bounds) =>
+                                      const LinearGradient(
+                                    colors: [_teal, _coral],
+                                  ).createShader(bounds),
+                                  child: const Text(
+                                    'DezeTingz',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      letterSpacing: 2.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
+                    ],
                   ),
                 ),
               );
@@ -513,7 +513,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   final NotificationService _notificationService = NotificationService();
   final ConnectivityService _connectivityService = ConnectivityService();
   final SubscriptionService _subscriptionService = SubscriptionService();
-  final BackgroundAlertService _backgroundAlertService = BackgroundAlertService();
+  final BackgroundAlertService _backgroundAlertService =
+      BackgroundAlertService();
   bool _isOffline = false;
   bool _showOfflineBanner = false;
   bool _isActivityFeedExpanded = true; // Activity feed collapse state
@@ -667,7 +668,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     final formatValid = RegExp(r'^[A-Z0-9\s\-]+$').hasMatch(normalizedPlate);
     final hasAlphaNumeric = RegExp(r'[A-Z0-9]').hasMatch(normalizedPlate);
 
-    final isValid = lengthValid && formatValid && hasAlphaNumeric && normalizedPlate.isNotEmpty;
+    final isValid = lengthValid &&
+        formatValid &&
+        hasAlphaNumeric &&
+        normalizedPlate.isNotEmpty;
 
     // Update text field if formatting changed it
     if (normalizedPlate != value && normalizedPlate.isNotEmpty) {
@@ -722,9 +726,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
     // Step 1.5: Sync local plates with database (remove stale local data)
     if (_currentUserId != null) {
-      final syncResult = await _plateStorageService.syncWithDatabase(_currentUserId!);
+      final syncResult =
+          await _plateStorageService.syncWithDatabase(_currentUserId!);
       if (syncResult.hadChanges) {
-        debugPrint('🔄 Sync: removed ${syncResult.removedCount}, restored ${syncResult.restoredCount}');
+        debugPrint(
+            '🔄 Sync: removed ${syncResult.removedCount}, restored ${syncResult.restoredCount}');
       }
 
       // Clean up orphaned ownership keys after sync
@@ -830,7 +836,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     try {
       return await _statsService.getStats();
     } catch (e) {
-      return UserStats(carsFreed: 0, situationsResolved: 0, alertsSent: 0, alertsReceived: 0);
+      return UserStats(
+          carsFreed: 0,
+          situationsResolved: 0,
+          alertsSent: 0,
+          alertsReceived: 0);
     }
   }
 
@@ -1007,7 +1017,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     try {
       // User creation is now handled by _ensureUserExists(), so we can use _currentUserId directly
       if (_currentUserId == null) {
-        debugPrint('❌ Alert system initialization failed: No user ID available');
+        debugPrint(
+            '❌ Alert system initialization failed: No user ID available');
         return;
       }
 
@@ -1041,13 +1052,15 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                 _recentReceivedAlerts.add(alert);
               } else {
                 // Update existing alert
-                final index = _recentReceivedAlerts.indexWhere((a) => a.id == alert.id);
+                final index =
+                    _recentReceivedAlerts.indexWhere((a) => a.id == alert.id);
                 if (index != -1) {
                   _recentReceivedAlerts[index] = alert;
                 }
               }
               // Keep only 5 most recent, sorted by newest first
-              _recentReceivedAlerts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              _recentReceivedAlerts
+                  .sort((a, b) => b.createdAt.compareTo(a.createdAt));
               if (_recentReceivedAlerts.length > 5) {
                 _recentReceivedAlerts = _recentReceivedAlerts.take(5).toList();
               }
@@ -1070,9 +1083,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             _shownAlertIds.add(alert.id); // Mark as shown
           } else {
             if (!isRecent) {
-              debugPrint('ℹ️ Alert ${alert.id} is ${alertAge.inMinutes}min old - skipping banner (too old)');
+              debugPrint(
+                  'ℹ️ Alert ${alert.id} is ${alertAge.inMinutes}min old - skipping banner (too old)');
             } else {
-              debugPrint('ℹ️ Alert ${alert.id} already shown, read, or responded to - skipping');
+              debugPrint(
+                  'ℹ️ Alert ${alert.id} already shown, read, or responded to - skipping');
             }
             // Still mark as shown to prevent future triggers
             _shownAlertIds.add(alert.id);
@@ -1128,7 +1143,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       if (alert.response != null &&
           alert.responseAt != null &&
           !_acknowledgedAlertIds.contains(alert.id)) {
-
         // Mark this alert as processed to prevent duplicate marking
         _acknowledgedAlertIds.add(alert.id);
 
@@ -1148,7 +1162,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             _loadUnacknowledgedAlertsCount();
           }
         }).catchError((error) {
-          debugPrint('⚠️ Failed to mark alert ${alert.id} as acknowledged: $error');
+          debugPrint(
+              '⚠️ Failed to mark alert ${alert.id} as acknowledged: $error');
           // Remove from set if marking failed, so we can retry
           _acknowledgedAlertIds.remove(alert.id);
         });
@@ -1198,10 +1213,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       );
       debugPrint('📢 Showed response notification: $title - $body');
     } else {
-      debugPrint('ℹ️ Skipped system notification (app in foreground): $title - $body');
+      debugPrint(
+          'ℹ️ Skipped system notification (app in foreground): $title - $body');
     }
   }
-
 
   /// Sync unacknowledged alerts with database (call when viewing alert history)
   Future<void> _syncUnacknowledgedAlerts() async {
@@ -1218,7 +1233,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         if (alert.response != null &&
             alert.responseAt != null &&
             !_acknowledgedAlertIds.contains(alert.id)) {
-
           _acknowledgedAlertIds.add(alert.id);
 
           await _unacknowledgedAlertService.markAlertAcknowledged(alert.id);
@@ -1274,7 +1288,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     if (_appLifecycleState != AppLifecycleState.resumed) {
       _notificationService.showAlertNotification(
         title: 'Someone needs you to move!',
-        body: '$senderAlias is asking you to move your car${emoji != null ? ' $emoji' : ''}',
+        body:
+            '$senderAlias is asking you to move your car${emoji != null ? ' $emoji' : ''}',
         payload: alert.id,
         playSound: true,
         vibrate: true,
@@ -1556,7 +1571,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               content: Text(
                 'Are you sure you want to exit the app?',
                 style: TextStyle(
-                    color: PremiumTheme.primaryTextColor.withValues(alpha: 0.8)),
+                    color:
+                        PremiumTheme.primaryTextColor.withValues(alpha: 0.8)),
               ),
               actions: [
                 TextButton(
@@ -1577,8 +1593,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           );
 
           if ((shouldExit ?? false) && mounted) {
-            // ignore: use_build_context_synchronously
-            Navigator.of(context).pop();
+            // Use SystemNavigator.pop() to properly close the app on Android
+            // instead of just popping the route, which leaves a black screen.
+            SystemNavigator.pop();
           }
         }
       },
@@ -1626,7 +1643,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   bottom: false,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade700,
                       boxShadow: [
@@ -1639,7 +1657,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                        const Icon(Icons.wifi_off,
+                            color: Colors.white, size: 18),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
@@ -1652,8 +1671,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => setState(() => _showOfflineBanner = false),
-                          child: const Icon(Icons.close, color: Colors.white, size: 18),
+                          onTap: () =>
+                              setState(() => _showOfflineBanner = false),
+                          child: const Icon(Icons.close,
+                              color: Colors.white, size: 18),
                         ),
                       ],
                     ),
@@ -1679,7 +1700,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       bottom: bottomPadding,
                     ),
                     // Always use static content with Expanded widgets - fits without scrolling
-                    child: _buildStaticContent(theme, isTablet, isCompact: isCompact),
+                    child: _buildStaticContent(theme, isTablet,
+                        isCompact: isCompact),
                   );
                 },
               ),
@@ -1903,11 +1925,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       // Megaphone icon - bold, action-oriented
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 100),
-                        transform: Matrix4.translationValues(0.0, _isPressed ? 4.0 : 0.0, 0.0),
+                        transform: Matrix4.translationValues(
+                            0.0, _isPressed ? 4.0 : 0.0, 0.0),
                         child: Icon(
                           Icons.campaign_rounded,
                           size: isTablet ? 56 : 48,
-                          color: _isPressed ? Colors.white.withValues(alpha: 0.9) : Colors.white,
+                          color: _isPressed
+                              ? Colors.white.withValues(alpha: 0.9)
+                              : Colors.white,
                         ),
                       ),
 
@@ -1947,7 +1972,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   Widget _buildBranding() {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -2055,7 +2081,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              setState(() => _isActivityFeedExpanded = !_isActivityFeedExpanded);
+              setState(
+                  () => _isActivityFeedExpanded = !_isActivityFeedExpanded);
             },
             child: Container(
               color: Colors.transparent,
@@ -2079,7 +2106,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   const SizedBox(width: 6),
                   // Item count badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: PremiumTheme.accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -2102,7 +2130,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         if (_currentUserId != null) {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => AlertHistoryScreen(userId: _currentUserId!),
+                              builder: (_) =>
+                                  AlertHistoryScreen(userId: _currentUserId!),
                             ),
                           );
                         }
@@ -2147,13 +2176,17 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         // Divider
                         Container(
                           height: 1,
-                          color: PremiumTheme.dividerColor.withValues(alpha: 0.2),
+                          color:
+                              PremiumTheme.dividerColor.withValues(alpha: 0.2),
                         ),
                         // Compact alert items
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Column(
-                            children: displayAlerts.map((item) => _buildActivityItem(item, isTablet)).toList(),
+                            children: displayAlerts
+                                .map((item) =>
+                                    _buildActivityItem(item, isTablet))
+                                .toList(),
                           ),
                         ),
                       ],
@@ -2291,7 +2324,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  item.isReceived ? Icons.call_received_rounded : Icons.call_made_rounded,
+                  item.isReceived
+                      ? Icons.call_received_rounded
+                      : Icons.call_made_rounded,
                   color: statusColor,
                   size: 16,
                 ),
@@ -2314,8 +2349,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                             title,
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: needsAction ? FontWeight.w700 : FontWeight.w500,
-                              color: needsAction ? Colors.orange.shade800 : PremiumTheme.primaryTextColor,
+                              fontWeight: needsAction
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: needsAction
+                                  ? Colors.orange.shade800
+                                  : PremiumTheme.primaryTextColor,
                             ),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
@@ -2337,7 +2376,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         if (showResponseHighlight) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
                               color: statusColor,
                               borderRadius: BorderRadius.circular(4),
@@ -2374,7 +2414,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               // Action indicator - constrained to prevent overflow
               if (needsAction)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(10),
@@ -2528,7 +2569,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
             // Update the local received alerts list immediately for responsive UI
             setState(() {
-              final index = _recentReceivedAlerts.indexWhere((a) => a.id == alert.id);
+              final index =
+                  _recentReceivedAlerts.indexWhere((a) => a.id == alert.id);
               if (index != -1) {
                 // Create updated alert with response
                 final updatedAlert = Alert(
@@ -2678,9 +2720,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             ),
             const SizedBox(width: 6),
             Text(
-              isPremium
-                  ? 'Premium'
-                  : '$used/$limit today',
+              isPremium ? 'Premium' : '$used/$limit today',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -3044,7 +3084,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     PaywallDialog.show(
                       context,
                       remainingAlerts: 0,
-                      customMessage: 'Notify drivers you\'re blocking with Premium',
+                      customMessage:
+                          'Notify drivers you\'re blocking with Premium',
                     );
                   }
                   return;
@@ -3094,7 +3135,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               ),
               child: Icon(
                 icon,
-                color: isPremium ? PremiumTheme.accentColor : PremiumTheme.secondaryTextColor,
+                color: isPremium
+                    ? PremiumTheme.accentColor
+                    : PremiumTheme.secondaryTextColor,
                 size: 24,
               ),
             ),
@@ -3116,7 +3159,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       if (isPremium) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             gradient: PremiumTheme.heroGradient,
                             borderRadius: BorderRadius.circular(6),
@@ -3642,7 +3686,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           SizedBox(
             height: isTablet ? 20 : 18,
             child: Center(
-              child: Text(emoji, style: TextStyle(fontSize: isTablet ? 16 : 14)),
+              child:
+                  Text(emoji, style: TextStyle(fontSize: isTablet ? 16 : 14)),
             ),
           ),
           const SizedBox(height: 4),
@@ -3900,7 +3945,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: PremiumTheme.accentColor,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                    padding:
+                        EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -4079,10 +4125,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       onPressed: () {
                         Navigator.of(context).pop();
                         // Navigate to plate registration
-                        Navigator.of(context).push(
+                        Navigator.of(context)
+                            .push(
                           PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                                SlideTransition(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    SlideTransition(
                               position: Tween<Offset>(
                                 begin: const Offset(1.0, 0.0),
                                 end: Offset.zero,
@@ -4094,7 +4142,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                             ),
                             transitionDuration: PremiumTheme.mediumDuration,
                           ),
-                        ).then((_) async {
+                        )
+                            .then((_) async {
                           // Refresh data after returning
                           await _refreshAllData();
                         });
@@ -4132,12 +4181,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   /// Compact notification icon for header - premium style
   Widget _buildCompactNotificationIcon(bool isTablet) {
     // Count unresponded received alerts (alerts where YOU are blocking someone)
-    final unrespondedReceivedCount = _recentReceivedAlerts
-        .where((alert) => !alert.hasResponse)
-        .length;
+    final unrespondedReceivedCount =
+        _recentReceivedAlerts.where((alert) => !alert.hasResponse).length;
 
     // Total actionable items: sent alerts waiting + received alerts needing response
-    final totalActionableCount = _unacknowledgedAlertsCount + unrespondedReceivedCount;
+    final totalActionableCount =
+        _unacknowledgedAlertsCount + unrespondedReceivedCount;
     final hasActionableAlerts = totalActionableCount > 0;
 
     // Badge should show when there are any actionable alerts
@@ -4531,7 +4580,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   }
 
   /// Build content layout (with Flexible widgets to fit without scrolling)
-  Widget _buildStaticContent(ThemeData theme, bool isTablet, {bool isCompact = false}) {
+  Widget _buildStaticContent(ThemeData theme, bool isTablet,
+      {bool isCompact = false}) {
     // When alert mode is active, use a simpler layout that doesn't cause overflow
     if (_isAlertModeActive) {
       return _buildAlertModeLayout(theme, isTablet);
@@ -4648,7 +4698,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             _buildInlineAlertMode(isTablet),
 
             // Bottom padding for keyboard
-            SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 40),
+            SizedBox(
+                height: MediaQuery.of(context).viewInsets.bottom > 0 ? 20 : 40),
           ],
         ),
       ),
@@ -4845,12 +4896,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     vertical: 4.0,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFF1E88E5), // Vibrant blue
-                        const Color(0xFF1565C0), // Deeper blue
+                        Color(0xFF1E88E5), // Vibrant blue
+                        Color(0xFF1565C0), // Deeper blue
                       ],
                     ),
                     borderRadius: BorderRadius.circular(14),
@@ -4904,7 +4955,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                                       if (_currentAlertEmoji != null) ...[
                                         Text(
                                           _currentAlertEmoji!,
-                                          style: TextStyle(fontSize: isTablet ? 16 : 14),
+                                          style: TextStyle(
+                                              fontSize: isTablet ? 16 : 14),
                                         ),
                                         const SizedBox(width: 6),
                                       ],
@@ -4926,7 +4978,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                                         : 'Someone needs you to move',
                                     style: TextStyle(
                                       fontSize: isTablet ? 13 : 11,
-                                      color: Colors.white.withValues(alpha: 0.85),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.85),
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -5053,9 +5106,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                 Icon(
                   icon,
                   size: isTablet ? 14 : 12,
-                  color: isPrimary
-                      ? const Color(0xFF1565C0)
-                      : Colors.white,
+                  color: isPrimary ? const Color(0xFF1565C0) : Colors.white,
                 ),
                 const SizedBox(width: 3),
                 Flexible(
@@ -5064,9 +5115,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     style: TextStyle(
                       fontSize: isTablet ? 11 : 10,
                       fontWeight: FontWeight.w600,
-                      color: isPrimary
-                          ? const Color(0xFF1565C0)
-                          : Colors.white,
+                      color: isPrimary ? const Color(0xFF1565C0) : Colors.white,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -5106,7 +5155,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             horizontal: isTablet ? 16.0 : 12.0,
           ),
           decoration: BoxDecoration(
-            color: isPrimary ? Colors.white : Colors.white.withValues(alpha: 0.15),
+            color:
+                isPrimary ? Colors.white : Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
             border: !isPrimary
                 ? Border.all(
@@ -5238,7 +5288,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               end: Alignment.bottomCenter,
               colors: isNotifyMode
                   ? [Colors.green.shade400, Colors.green.shade600]
-                  : [PremiumTheme.accentColor, PremiumTheme.accentColor.withValues(alpha: 0.5)],
+                  : [
+                      PremiumTheme.accentColor,
+                      PremiumTheme.accentColor.withValues(alpha: 0.5)
+                    ],
             ),
             borderRadius: BorderRadius.circular(2),
           ),
@@ -5262,7 +5315,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   if (isNotifyMode) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         gradient: PremiumTheme.heroGradient,
                         borderRadius: BorderRadius.circular(6),
@@ -5435,7 +5489,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               final emoji = entry.value;
               final isSelected = _alertSelectedEmoji == emoji;
               return Padding(
-                padding: EdgeInsets.only(right: index < emojis.length - 1 ? 8 : 0),
+                padding:
+                    EdgeInsets.only(right: index < emojis.length - 1 ? 8 : 0),
                 child: GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
@@ -5457,7 +5512,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                               ],
                             )
                           : null,
-                      color: isSelected ? null : PremiumTheme.backgroundColor.withValues(alpha: 0.6),
+                      color: isSelected
+                          ? null
+                          : PremiumTheme.backgroundColor.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
@@ -5468,7 +5525,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: PremiumTheme.accentColor.withValues(alpha: 0.15),
+                                color: PremiumTheme.accentColor
+                                    .withValues(alpha: 0.15),
                                 blurRadius: 8,
                                 spreadRadius: 0,
                               ),
@@ -5498,7 +5556,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   Widget _buildInlineUrgencySelector(bool isTablet) {
     final urgencyData = [
       {'level': 'Low', 'icon': Icons.schedule, 'color': Colors.green},
-      {'level': 'Normal', 'icon': Icons.notifications_outlined, 'color': PremiumTheme.accentColor},
+      {
+        'level': 'Normal',
+        'icon': Icons.notifications_outlined,
+        'color': PremiumTheme.accentColor
+      },
       {'level': 'High', 'icon': Icons.priority_high, 'color': Colors.red},
     ];
 
@@ -5561,7 +5623,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                             ],
                           )
                         : null,
-                    color: isSelected ? null : PremiumTheme.backgroundColor.withValues(alpha: 0.6),
+                    color: isSelected
+                        ? null
+                        : PremiumTheme.backgroundColor.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected
@@ -5588,7 +5652,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         child: Icon(
                           icon,
                           size: isTablet ? 20 : 18,
-                          color: isSelected ? color : PremiumTheme.tertiaryTextColor,
+                          color: isSelected
+                              ? color
+                              : PremiumTheme.tertiaryTextColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -5596,8 +5662,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         level,
                         style: TextStyle(
                           fontSize: isTablet ? 13 : 12,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? color : PremiumTheme.secondaryTextColor,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected
+                              ? color
+                              : PremiumTheme.secondaryTextColor,
                         ),
                       ),
                     ],
@@ -5614,7 +5683,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   Widget _buildInlineSendButton(bool isTablet) {
     final canSend = _isAlertPlateValid && !_isSendingAlert;
     final isNotifyMode = _alertModeType == 'i_am_blocking';
-    final buttonColor = isNotifyMode ? Colors.green.shade500 : PremiumTheme.accentColor;
+    final buttonColor =
+        isNotifyMode ? Colors.green.shade500 : PremiumTheme.accentColor;
 
     return GestureDetector(
       onTap: canSend ? _sendInlineAlert : null,
@@ -5658,13 +5728,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               : null,
         ),
         child: _isSendingAlert
-            ? Center(
+            ? const Center(
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
               )
@@ -5687,7 +5757,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       fontSize: isTablet ? 16 : 15,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
-                      color: canSend ? Colors.white : PremiumTheme.tertiaryTextColor,
+                      color: canSend
+                          ? Colors.white
+                          : PremiumTheme.tertiaryTextColor,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -5695,9 +5767,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     opacity: canSend ? 1.0 : 0.5,
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
-                      isNotifyMode ? Icons.notifications_active_rounded : Icons.send_rounded,
+                      isNotifyMode
+                          ? Icons.notifications_active_rounded
+                          : Icons.send_rounded,
                       size: isTablet ? 18 : 16,
-                      color: canSend ? Colors.white : PremiumTheme.tertiaryTextColor,
+                      color: canSend
+                          ? Colors.white
+                          : PremiumTheme.tertiaryTextColor,
                     ),
                   ),
                 ],
@@ -5773,8 +5849,8 @@ class _PremiumToastState extends State<_PremiumToast>
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.8)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween:
+            Tween(begin: 1.0, end: 0.8).chain(CurveTween(curve: Curves.easeIn)),
         weight: 20,
       ),
     ]).animate(_controller);
@@ -5791,8 +5867,8 @@ class _PremiumToastState extends State<_PremiumToast>
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween:
+            Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)),
         weight: 25,
       ),
     ]).animate(_controller);
