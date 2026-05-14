@@ -25,6 +25,7 @@ import 'features/onboarding/onboarding_flow.dart';
 import 'features/theme_settings/theme_settings_screen.dart';
 import 'features/subscription/paywall_dialog.dart';
 import 'features/subscription/subscription_status_screen.dart';
+import 'features/alert_sound_settings/alert_sound_settings_screen.dart';
 import 'core/services/subscription_service.dart';
 import 'core/services/plate_verification_service.dart';
 
@@ -1800,6 +1801,23 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     transitionDuration: PremiumTheme.mediumDuration,
                   ),
                 );
+              } else if (value == 'sounds') {
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: PremiumTheme.standardCurve,
+                      )),
+                      child: const AlertSoundSettingsScreen(),
+                    ),
+                    transitionDuration: PremiumTheme.mediumDuration,
+                  ),
+                );
               } else if (value == 'vehicles') {
                 await Navigator.of(context).push(
                   PageRouteBuilder(
@@ -1853,6 +1871,26 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     const SizedBox(width: 12),
                     Text(
                       'Themes',
+                      style: TextStyle(
+                        color: PremiumTheme.primaryTextColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'sounds',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.volume_up_outlined,
+                      color: PremiumTheme.accentColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Alert Sounds',
                       style: TextStyle(
                         color: PremiumTheme.primaryTextColor,
                         fontWeight: FontWeight.w500,
