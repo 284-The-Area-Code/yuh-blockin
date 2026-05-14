@@ -33,6 +33,18 @@ import 'core/services/plate_verification_service.dart';
 /// Minimal, elegant, professional with subtle 2025 motion signature
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set system UI style for absolute platform parity (edge-to-edge feel)
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+
+  // Enable edge-to-edge mode for Android to match iOS full-screen behavior
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   runApp(const PremiumYuhBlockinApp());
 }
 
@@ -65,6 +77,10 @@ class PremiumYuhBlockinApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: themeNotifier.currentTheme,
             home: const AppInitializer(),
+            // Ensure identical scroll physics across platforms (iOS-style bounce)
+            scrollBehavior: const MaterialScrollBehavior().copyWith(
+              physics: const BouncingScrollPhysics(),
+            ),
           );
         },
       ),

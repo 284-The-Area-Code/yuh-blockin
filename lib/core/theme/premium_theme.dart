@@ -329,6 +329,14 @@ class PremiumTheme {
         color: primaryTextColor,
         size: 24,
       ),
+
+      // Page Transitions - Force iOS-style slide on all platforms for parity
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 
