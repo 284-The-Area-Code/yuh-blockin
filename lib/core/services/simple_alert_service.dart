@@ -643,6 +643,37 @@ class Alert {
   /// Check if alert has been responded to
   bool get hasResponse => response != null;
 
+  /// Create a copy of Alert with updated fields
+  Alert copyWith({
+    String? id,
+    String? senderId,
+    String? receiverId,
+    String? plateHash,
+    String? message,
+    String? soundPath,
+    String? urgencyLevel,
+    String? response,
+    String? responseMessage,
+    DateTime? createdAt,
+    DateTime? readAt,
+    DateTime? responseAt,
+  }) {
+    return Alert(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      plateHash: plateHash ?? this.plateHash,
+      message: message ?? this.message,
+      soundPath: soundPath ?? this.soundPath,
+      urgencyLevel: urgencyLevel ?? this.urgencyLevel,
+      response: response ?? this.response,
+      responseMessage: responseMessage ?? this.responseMessage,
+      createdAt: createdAt ?? this.createdAt,
+      readAt: readAt ?? this.readAt,
+      responseAt: responseAt ?? this.responseAt,
+    );
+  }
+
   /// Get human-readable response text
   String get responseText {
     switch (response) {

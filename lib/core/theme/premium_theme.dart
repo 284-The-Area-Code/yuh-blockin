@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Premium theme system inspired by Apple, Uber, Airbnb design languages
@@ -12,7 +12,7 @@ class PremiumTheme {
   // MARK: - iOS-Native Typography Helpers
 
   /// Check if running on iOS
-  static bool get isIOS => Platform.isIOS;
+  static bool get isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   /// iOS font family - uses CupertinoSystemDisplay for proper SF Pro rendering
   /// This fixes Flutter's default which incorrectly uses SF Pro Text for all sizes

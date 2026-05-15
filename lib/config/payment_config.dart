@@ -63,7 +63,7 @@ class PaymentConfig {
   static const String lifetimeEntitlement = 'lifetime';
 
   /// Free tier configuration
-  static const int freeDailyAlertLimit = 3;
+  static const int freeDailyAlertLimit = 2;
   static const int freeMaxPlates = 3;
 
   /// Premium tier configuration

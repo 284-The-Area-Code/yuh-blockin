@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../core/services/subscription_service.dart';
@@ -13,7 +13,7 @@ class PremiumMonthlyScreen extends StatefulWidget {
   const PremiumMonthlyScreen({super.key});
 
   /// Check if running on iOS
-  static bool get isIOS => Platform.isIOS;
+  static bool get isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   State<PremiumMonthlyScreen> createState() => _PremiumMonthlyScreenState();
@@ -120,7 +120,7 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
   @override
   Widget build(BuildContext context) {
     // Guard: Only show on iOS
-    if (!Platform.isIOS) {
+    if (!isIOS) {
       return const Scaffold(
         body: Center(
           child: Text('This screen is only available on iOS'),

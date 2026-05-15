@@ -43,16 +43,20 @@ import 'features/account_recovery/view_my_keys_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  // On iOS, Firebase is already configured in AppDelegate.swift, so we skip Dart-side init
-  // On Android, we use the google-services.json via DefaultFirebaseOptions
-  try {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Initialize Firebase with web-safe error handling
+  // On web, Firebase is not configured in DefaultFirebaseOptions, so we skip it
+  if (!kIsWeb) {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+    } catch (e) {
+      debugPrint('Firebase init handled: $e');
     }
-  } catch (e) {
-    // Firebase already initialized (common on iOS where AppDelegate configures it)
-    debugPrint('Firebase init: $e');
+  } else {
+    debugPrint('Firebase initialization skipped on web (not configured)');
   }
 
   runApp(const PremiumYuhBlockinApp());
@@ -1755,8 +1759,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           );
 
           if ((shouldExit ?? false) && mounted) {
-            // ignore: use_build_context_synchronously
-            Navigator.of(context).pop();
+            // Use SystemNavigator.pop() to properly close the app activity on Android
+            await SystemNavigator.pop();
           }
         }
       },
@@ -4479,11 +4483,40 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           ),
         );
 
-        // Sync and refresh unacknowledged alerts after viewing alert history
-        // Counter will show correct count based on actual unacknowledged alerts
+        // CLEAR NOTIFICATION COUNT ON CLICK
+        // 1. Instant UI update
         if (mounted) {
-          await _syncUnacknowledgedAlerts();
-          await _loadUnacknowledgedAlertsCount();
+          setState(() {
+            _unacknowledgedAlertsCount = 0;
+            // Mark recent alerts as read locally
+            for (int i = 0; i < _recentReceivedAlerts.length; i++) {
+              if (_recentReceivedAlerts[i].readAt == null) {
+                _recentReceivedAlerts[i] = _recentReceivedAlerts[i].copyWith(readAt: DateTime.now());
+              }
+            }
+          });
+        }
+
+        // 2. Persistent database update (background)
+        try {
+          // Collect all unread alert IDs from current local lists
+          final List<String> unreadIds = [
+            ..._recentReceivedAlerts.where((a) => a.readAt == null).map((a) => a.id),
+          ];
+          
+          if (unreadIds.isNotEmpty) {
+            await Future.wait(unreadIds.map((id) => _alertService.markAlertRead(id)));
+          }
+
+          // Clear the local unacknowledged service cache (sent alerts)
+          await _unacknowledgedAlertService.clearAllAlerts();
+          
+          // Force a re-fetch of count to confirm it's 0
+          if (mounted) {
+            _loadUnacknowledgedAlertsCount();
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error resetting notification count: $e');
         }
       },
       child: Stack(
@@ -5165,15 +5198,15 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     vertical: 4.0,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: _getUrgencyGradient(_currentAlertUrgency),
-                    ),
+                    color: PremiumTheme.surfaceColor,
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _getUrgencyPrimaryColor(_currentAlertUrgency).withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: _getUrgencyPrimaryColor(_currentAlertUrgency).withValues(alpha: 0.4),
+                        color: _getUrgencyPrimaryColor(_currentAlertUrgency).withValues(alpha: 0.15),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -5202,7 +5235,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                               width: isTablet ? 44 : 40,
                               height: isTablet ? 44 : 40,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: _getUrgencyPrimaryColor(_currentAlertUrgency).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Center(
@@ -5213,7 +5246,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                                       )
                                     : Icon(
                                         Icons.directions_car_rounded,
-                                        color: Colors.white,
+                                        color: _getUrgencyPrimaryColor(_currentAlertUrgency),
                                         size: isTablet ? 22 : 20,
                                       ),
                               ),
@@ -5229,7 +5262,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                                     style: TextStyle(
                                       fontSize: isTablet ? 15 : 13,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: PremiumTheme.primaryTextColor,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -5239,7 +5272,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                                         : 'New request',
                                     style: TextStyle(
                                       fontSize: isTablet ? 12 : 11,
-                                      color: Colors.white.withValues(alpha: 0.8),
+                                      color: PremiumTheme.secondaryTextColor,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -5255,12 +5288,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                                 width: 28,
                                 height: 28,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
+                                  color: PremiumTheme.dividerColor.withValues(alpha: 0.5),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   Icons.close_rounded,
-                                  color: Colors.white.withValues(alpha: 0.9),
+                                  color: PremiumTheme.secondaryTextColor,
                                   size: isTablet ? 16 : 14,
                                 ),
                               ),
@@ -5349,12 +5382,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             ),
             decoration: BoxDecoration(
               color: isPrimary
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.15),
+                  ? PremiumTheme.accentColor
+                  : PremiumTheme.surfaceColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
               border: !isPrimary
                   ? Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: PremiumTheme.dividerColor,
                       width: 1,
                     )
                   : null,
@@ -5367,8 +5400,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   icon,
                   size: isTablet ? 14 : 12,
                   color: isPrimary
-                      ? const Color(0xFF1565C0)
-                      : Colors.white,
+                      ? Colors.white
+                      : PremiumTheme.secondaryTextColor,
                 ),
                 const SizedBox(width: 3),
                 Flexible(
@@ -5378,8 +5411,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       fontSize: isTablet ? 11 : 10,
                       fontWeight: FontWeight.w600,
                       color: isPrimary
-                          ? const Color(0xFF1565C0)
-                          : Colors.white,
+                          ? Colors.white
+                          : PremiumTheme.secondaryTextColor,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),

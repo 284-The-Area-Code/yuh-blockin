@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -17,7 +16,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     }
   } catch (e) {
-    // Already initialized
+    // Already initialized or handled
   }
   if (kDebugMode) {
     debugPrint('Background push message: ${message.messageId}');
@@ -38,9 +37,13 @@ class PushNotificationService {
   factory PushNotificationService() => _instance;
   PushNotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+
+  // Helper for platform checking that works on web
+  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   /// Callback when notification is tapped
   Function(String? alertId)? onNotificationTapped;
@@ -48,6 +51,10 @@ class PushNotificationService {
   /// Initialize Firebase Messaging and request permissions
   Future<void> initialize({Function(String?)? onTap}) async {
     if (_initialized) return;
+    if (kIsWeb) {
+      _initialized = true;
+      return;
+    }
 
     onNotificationTapped = onTap;
 
@@ -123,7 +130,7 @@ class PushNotificationService {
     );
 
     // Create notification channel for Android with custom sound
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       const channel = AndroidNotificationChannel(
         'yuh_blockin_alerts', // Same channel ID as NotificationService
         'Yuh Blockin Alerts',
@@ -146,7 +153,7 @@ class PushNotificationService {
     try {
       // IMPORTANT: On iOS, you MUST get the APNs token first before getting FCM token
       // This ensures proper registration with Apple Push Notification service
-      if (Platform.isIOS) {
+      if (_isIOS) {
         final apnsToken = await _messaging.getAPNSToken();
         if (apnsToken == null) {
           if (kDebugMode) {
@@ -188,7 +195,7 @@ class PushNotificationService {
         return;
       }
 
-      final platform = Platform.isIOS ? 'ios' : 'android';
+      final platform = _isIOS ? 'ios' : 'android';
 
       // Save to Supabase device_tokens table
       await Supabase.instance.client.from('device_tokens').upsert({
@@ -277,7 +284,7 @@ class PushNotificationService {
     final channelId = 'yuh_blockin_alert_$soundFileName';
 
     // Create the notification channel for this specific sound
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       final androidPlugin = _localNotifications
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {

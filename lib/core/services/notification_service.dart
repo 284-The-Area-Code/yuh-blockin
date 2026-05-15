@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -27,13 +25,17 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
+  // Helper for platform checking that works on web
+  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
   Function(String?)? _onNotificationTapped;
 
   /// Initialize the notification service
   Future<void> initialize({Function(String?)? onNotificationTapped}) async {
-    if (_isInitialized) return;
+    if (_isInitialized || kIsWeb) return;
 
     _onNotificationTapped = onNotificationTapped;
 
@@ -59,7 +61,7 @@ class NotificationService {
     );
 
     // Create/update notification channel with custom sound (Android only)
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       await _createNotificationChannel();
     }
 
@@ -72,11 +74,13 @@ class NotificationService {
 
   /// Request notification permissions
   Future<bool> _requestPermissions({bool critical = false}) async {
-    if (Platform.isAndroid) {
+    if (kIsWeb) return true;
+    
+    if (_isAndroid) {
       // Android 13+ requires explicit notification permission
       final status = await Permission.notification.request();
       return status.isGranted;
-    } else if (Platform.isIOS) {
+    } else if (_isIOS) {
       final result = await _notifications
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
@@ -182,7 +186,7 @@ class NotificationService {
     final channelId = 'yuh_blockin_alert_$soundFileName';
 
     // Create the notification channel for this specific sound
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
@@ -262,11 +266,13 @@ class NotificationService {
   /// Vibrate even when phone is on silent
   /// Uses a premium rhythm pattern: quick-quick-quick-LONG, quick-quick-LONG
   Future<void> _vibrateForSilentMode() async {
+    if (kIsWeb) return;
+
     try {
       final hasVibrator = await Vibration.hasVibrator();
       if (hasVibrator != true) return;
 
-      if (Platform.isIOS) {
+      if (_isIOS) {
         HapticFeedback.heavyImpact();
         await Future.delayed(const Duration(milliseconds: 150));
         HapticFeedback.heavyImpact();
@@ -345,7 +351,9 @@ class NotificationService {
 
   /// Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
-    if (Platform.isAndroid) {
+    if (kIsWeb) return true;
+
+    if (_isAndroid) {
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       return await androidPlugin?.areNotificationsEnabled() ?? false;

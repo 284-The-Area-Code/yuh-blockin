@@ -34,7 +34,28 @@ class _AlertSoundSettingsScreenState extends State<AlertSoundSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _setupAudio();
     _loadSavedSounds();
+  }
+
+  void _setupAudio() {
+    // Configure audio global context for the app
+    AudioPlayer.global.setAudioContext(
+      AudioContext(
+        android: const AudioContextAndroid(
+          stayAwake: true,
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.notificationEvent,
+          audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+        ),
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.playback,
+          options: const {
+            AVAudioSessionOptions.mixWithOthers,
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -59,9 +80,13 @@ class _AlertSoundSettingsScreenState extends State<AlertSoundSettingsScreen> {
 
   Future<void> _playSound(String path) async {
     try {
+      debugPrint('Attempting to play sound: $path');
       setState(() => _playingSound = path);
+      
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource(path));
+      // Ensure player is ready
+      await _audioPlayer.setSource(AssetSource(path));
+      await _audioPlayer.resume();
 
       // Reset playing state after sound completes (approx 2 seconds)
       Future.delayed(const Duration(seconds: 2), () {

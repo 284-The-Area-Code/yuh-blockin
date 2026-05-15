@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -14,7 +13,7 @@ class SubscriptionService {
   SubscriptionService._internal();
 
   // Get API key from secure configuration
-  static String get _revenueCatApiKey => PaymentConfig.getApiKey(isIOS: Platform.isIOS);
+  static String get _revenueCatApiKey => PaymentConfig.getApiKey(isIOS: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
 
   // Cached SharedPreferences instance to avoid N+1 disk reads
   static SharedPreferences? _cachedPrefs;

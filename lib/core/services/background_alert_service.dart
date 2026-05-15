@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -33,8 +32,14 @@ class BackgroundAlertService {
   static const String _notificationChannelId = 'yuh_blockin_alerts';
   static const String _notificationChannelName = 'Yuh Blockin Alerts';
 
+  // Helper for platform checking that works on web
+  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
   /// Initialize and start the background service
   Future<void> initializeService() async {
+    if (kIsWeb) return;
+
     final service = FlutterBackgroundService();
 
     // Configure notification channel for foreground service with custom sound
@@ -53,7 +58,7 @@ class BackgroundAlertService {
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
         FlutterLocalNotificationsPlugin();
 
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       await flutterLocalNotificationsPlugin
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>()
@@ -342,7 +347,8 @@ Future<void> _showAlertNotification(
   final channelId = 'yuh_blockin_alert_$soundFileName';
 
   // Create the notification channel for this specific sound (Android only)
-  if (Platform.isAndroid) {
+  // Use defaultTargetPlatform here since we're in a global function
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
     final androidPlugin = plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
