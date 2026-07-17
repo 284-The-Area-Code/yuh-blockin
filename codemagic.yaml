@@ -3,17 +3,17 @@ workflows:
     name: iOS Release Build
     max_build_duration: 60
     instance_type: mac_mini_m1
-
+    integrations:
+      app_store_connect: "*"
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       groups:
-        - app_store_credentials  # Add in Codemagic UI
+        - app_store_credentials
       vars:
         BUNDLE_ID: "com.yuhblockin.v1"
         APP_STORE_APP_ID: "6791093118"
-
     scripts:
       - name: Set up code signing
         script: |
@@ -21,51 +21,18 @@ workflows:
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
-
       - name: Get Flutter packages
         script: flutter pub get
-
       - name: Install CocoaPods
         script: |
           cd ios && pod install
-
       - name: Build iOS IPA
         script: |
           flutter build ipa --release --build-number=$BUILD_NUMBER
-
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-
-  android-release:
-    name: Android Release Build
-    max_build_duration: 30
-    instance_type: linux_x2
-
-    environment:
-      flutter: stable
-      java: 11
-      groups:
-        - google_play_credentials  # Add in Codemagic UI
-
-    scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
-
-      - name: Build Android App Bundle
-        script: |
-          flutter build appbundle --release
-
-    artifacts:
-      - build/app/outputs/bundle/release/*.aab
-      - build/app/outputs/flutter-apk/*.apk
-
-    publishing:
-      google_play:
-        auth: integration
-        track: internal
