@@ -11,14 +11,14 @@ workflows:
       groups:
         - app_store_credentials  # Add in Codemagic UI
       vars:
-        BUNDLE_ID: "com.yuhblockin.yuh-blockin-app"
-        APP_STORE_APP_ID: "YOUR_APP_STORE_ID"  # Get from App Store Connect
+        BUNDLE_ID: "com.yuhblockin.v1"
+        APP_STORE_APP_ID: "6791093118"
 
     scripts:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
 
@@ -31,19 +31,15 @@ workflows:
 
       - name: Build iOS IPA
         script: |
-          flutter build ipa --release \
-            --export-options-plist=/Users/builder/export_options.plist
+          flutter build ipa --release --build-number=$BUILD_NUMBER
 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
 
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        auth: integration
         submit_to_testflight: true
 
   android-release:
@@ -71,5 +67,5 @@ workflows:
 
     publishing:
       google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        auth: integration
         track: internal
