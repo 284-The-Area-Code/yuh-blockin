@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Payment Configuration for Yuh Blockin'
 ///
 /// IMPORTANT: For production, set these values via environment variables:
@@ -41,9 +43,14 @@ class PaymentConfig {
     return _androidApiKey;
   }
 
-  /// Check if payment system is properly configured
+  /// Check if payment system is properly configured for a real store
   static bool get isConfiguredForProduction {
-    return _androidApiKey.isNotEmpty;
+    return _androidApiKey.isNotEmpty && !_androidApiKey.contains('demo');
+  }
+
+  /// Check if we are in demo/testing mode
+  static bool get isDemoMode {
+    return _androidApiKey.contains('demo') || (kDebugMode && _androidApiKey.isEmpty);
   }
 
   /// Get a user-friendly error message if not configured
@@ -63,7 +70,7 @@ class PaymentConfig {
   static const String lifetimeEntitlement = 'lifetime';
 
   /// Free tier configuration
-  static const int freeDailyAlertLimit = 2;
+  static const int freeDailyAlertLimit = 1;
   static const int freeMaxPlates = 3;
 
   /// Premium tier configuration

@@ -43,7 +43,7 @@ void main() {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
-  // Enable edge-to-edge mode for Android to match iOS full-screen behavior
+  // Enable edge-to-edge mode for standard production behavior
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   runApp(const PremiumYuhBlockinApp());
@@ -511,6 +511,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   // Unacknowledged alerts tracking
   int _unacknowledgedAlertsCount = 0;
+  int _unseenAlertsCount = 0;
+  int _unseenImpactCount = 0;
+  int _lastSeenImpact = 0; // Legacy, kept for migration if needed
+  int _lastSeenNotificationCount = 0; // Legacy, kept for migration if needed
 
   // Track which alert IDs have been shown to prevent re-showing
   final Set<String> _shownAlertIds = {};
@@ -761,14 +765,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       _loadPrimaryPlateData(),
       _loadUserStatsData(),
       _loadUnacknowledgedAlertsCountData(),
+      SharedPreferences.getInstance(),
     ]);
 
     // Step 3: Single batched setState for all data
     if (mounted) {
+      final prefs = results[3] as SharedPreferences;
       setState(() {
         _primaryPlate = results[0] as String?;
         _userStats = results[1] as UserStats;
         _unacknowledgedAlertsCount = results[2] as int;
+        _unseenAlertsCount = prefs.getInt('unseen_alerts_count') ?? 0;
+        _unseenImpactCount = prefs.getInt('unseen_impact_count') ?? 0;
+        _lastSeenImpact = prefs.getInt('last_seen_impact') ?? 0;
+        _lastSeenNotificationCount =
+            prefs.getInt('last_seen_notification_count') ?? 0;
       });
     }
 
@@ -877,13 +888,20 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         _loadPrimaryPlateData(),
         _loadUserStatsData(),
         _loadUnacknowledgedAlertsCountData(),
+        SharedPreferences.getInstance(),
       ]);
 
       if (mounted) {
+        final prefs = results[3] as SharedPreferences;
         setState(() {
           _primaryPlate = results[0] as String?;
           _userStats = results[1] as UserStats;
           _unacknowledgedAlertsCount = results[2] as int;
+          _unseenAlertsCount = prefs.getInt('unseen_alerts_count') ?? 0;
+          _unseenImpactCount = prefs.getInt('unseen_impact_count') ?? 0;
+          _lastSeenImpact = prefs.getInt('last_seen_impact') ?? 0;
+          _lastSeenNotificationCount =
+              prefs.getInt('last_seen_notification_count') ?? 0;
         });
       }
 
@@ -1163,6 +1181,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         // Mark this alert as processed to prevent duplicate marking
         _acknowledgedAlertIds.add(alert.id);
 
+        // Increment unseen counters
+        _incrementUnseenAlerts();
+        _incrementUnseenImpact();
+
         // Increment "They Moved" counter - someone responded to your alert
         _statsService.incrementSituationsResolved().then((_) {
           _loadUserStats(); // Refresh stats display
@@ -1297,6 +1319,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       _loadUserStats(); // Refresh stats display
     });
 
+    // Increment unseen alerts counter
+    _incrementUnseenAlerts();
+
     // Play premium alert sound
     _playPremiumAlertSound();
 
@@ -1396,6 +1421,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       if (success) {
         // Update user stats - increment cars freed (user moved their car)
         await _statsService.incrementCarsFreed();
+
+        // Increment unseen impact counter
+        _incrementUnseenImpact();
 
         // Get updated stats for display
         final updatedStats = await _statsService.getStats();
@@ -2609,6 +2637,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           if (success && mounted) {
             HapticFeedback.mediumImpact();
             await _statsService.incrementCarsFreed();
+
+            // Increment unseen impact counter
+            _incrementUnseenImpact();
 
             // Dismiss the alert banner if it's showing this same alert
             if (_showingAlertBanner && _currentIncomingAlert?.id == alert.id) {
@@ -3824,12 +3855,18 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   /// Compact stats icon for header - premium style
   Widget _buildCompactStatsIcon(bool isTablet) {
-    final totalImpact = _userStats.carsFreed + _userStats.situationsResolved;
-    final hasStats = totalImpact > 0;
+    final hasNewStats = _unseenImpactCount > 0;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         HapticFeedback.lightImpact();
+
+        // Immediate UI feedback - reset count instantly
+        setState(() => _unseenImpactCount = 0);
+
+        // Background persistence
+        unawaited(_resetUnseenImpact());
+
         _showStatsDialog();
       },
       child: Stack(
@@ -3841,7 +3878,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: hasStats
+                colors: hasNewStats
                     ? [
                         Colors.green.shade500.withValues(alpha: 0.15),
                         Colors.green.shade600.withValues(alpha: 0.08),
@@ -3853,14 +3890,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               ),
               shape: BoxShape.circle,
               border: Border.all(
-                color: hasStats
+                color: hasNewStats
                     ? Colors.green.withValues(alpha: 0.2)
                     : PremiumTheme.accentColor.withValues(alpha: 0.1),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: hasStats
+                  color: hasNewStats
                       ? Colors.green.withValues(alpha: 0.1)
                       : PremiumTheme.accentColor.withValues(alpha: 0.05),
                   blurRadius: 8,
@@ -3872,14 +3909,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             child: Icon(
               Icons.trending_up,
               size: isTablet ? 20 : 18,
-              color: hasStats
+              color: hasNewStats
                   ? Colors.green.shade700
                   : PremiumTheme.tertiaryTextColor,
             ),
           ),
 
           // Badge positioned cleanly outside the icon at top-right corner
-          if (hasStats)
+          if (hasNewStats)
             Positioned(
               top: -4,
               right: -4,
@@ -3913,7 +3950,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                 ),
                 child: Center(
                   child: Text(
-                    totalImpact > 99 ? '99+' : '$totalImpact',
+                    _unseenImpactCount > 99 ? '99+' : '$_unseenImpactCount',
                     style: TextStyle(
                       fontSize: isTablet ? 13 : 12,
                       fontWeight: FontWeight.w800,
@@ -4234,29 +4271,23 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   /// Compact notification icon for header - premium style
   Widget _buildCompactNotificationIcon(bool isTablet) {
-    // Count unresponded received alerts (alerts where YOU are blocking someone)
-    final unrespondedReceivedCount =
-        _recentReceivedAlerts.where((alert) => !alert.hasResponse).length;
+    final hasNewActionableAlerts = _unseenAlertsCount > 0;
 
-    // Total actionable items: sent alerts waiting + received alerts needing response
-    final totalActionableCount =
-        _unacknowledgedAlertsCount + unrespondedReceivedCount;
-    final hasActionableAlerts = totalActionableCount > 0;
-
-    // Badge should show when there are any actionable alerts
-    final showingUrgent = hasActionableAlerts;
-    final badgeCount = totalActionableCount;
-    final shouldShowBadge = hasActionableAlerts;
+    // Badge should show when there are any NEW actionable alerts
+    final shouldShowBadge = hasNewActionableAlerts;
+    final badgeCount = _unseenAlertsCount;
 
     return GestureDetector(
       onTap: () async {
         HapticFeedback.lightImpact();
 
-        // Reset counter immediately when opening notifications
-        setState(() {
-          _unacknowledgedAlertsCount = 0;
-        });
+        // Immediate UI feedback - reset count instantly
+        setState(() => _unseenAlertsCount = 0);
 
+        // Background persistence
+        unawaited(_resetUnseenAlerts());
+
+        if (!mounted) return;
         await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => AlertHistoryScreen(
@@ -4366,6 +4397,34 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         ],
       ),
     );
+  }
+
+  // --- Helpers for unseen counters ---
+
+  Future<void> _incrementUnseenAlerts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final newCount = (prefs.getInt('unseen_alerts_count') ?? 0) + 1;
+    await prefs.setInt('unseen_alerts_count', newCount);
+    if (mounted) setState(() => _unseenAlertsCount = newCount);
+  }
+
+  Future<void> _incrementUnseenImpact() async {
+    final prefs = await SharedPreferences.getInstance();
+    final newCount = (prefs.getInt('unseen_impact_count') ?? 0) + 1;
+    await prefs.setInt('unseen_impact_count', newCount);
+    if (mounted) setState(() => _unseenImpactCount = newCount);
+  }
+
+  Future<void> _resetUnseenAlerts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('unseen_alerts_count', 0);
+    if (mounted) setState(() => _unseenAlertsCount = 0);
+  }
+
+  Future<void> _resetUnseenImpact() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('unseen_impact_count', 0);
+    if (mounted) setState(() => _unseenImpactCount = 0);
   }
 
   /// Show notification statistics in a premium dialog

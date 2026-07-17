@@ -48,8 +48,8 @@ class SubscriptionService {
     _currentUserId = userId;
 
     try {
-      // Configure RevenueCat only if API key is available
-      if (_revenueCatApiKey.isNotEmpty) {
+      // Configure RevenueCat only if API key is available AND not a demo key
+      if (_revenueCatApiKey.isNotEmpty && !PaymentConfig.isDemoMode) {
         await Purchases.configure(
           PurchasesConfiguration(_revenueCatApiKey)..appUserID = userId,
         );
@@ -71,6 +71,12 @@ class SubscriptionService {
 
       // Sync with server
       await _syncSubscriptionStatus();
+
+      // FOR INTERVIEW: Force premium if demo key is used
+      if (PaymentConfig.isDemoMode) {
+        _isPremium = true;
+        _subscriptionStatus = 'lifetime';
+      }
 
       // Load daily usage
       await _loadDailyUsage();
@@ -110,9 +116,7 @@ class SubscriptionService {
       final supabase = Supabase.instance.client;
 
       // Call server-side function to validate user's alert permission
-      final response = await supabase.rpc('validate_alert_permission', params: {
-        'p_user_id': _currentUserId,
-      });
+      final response = await supabase.rpc('validate_alert_permission');
 
       if (response is Map<String, dynamic>) {
         final allowed = response['allowed'] as bool? ?? false;
@@ -215,9 +219,7 @@ class SubscriptionService {
     // Also update server
     try {
       final supabase = Supabase.instance.client;
-      await supabase.rpc('increment_daily_usage', params: {
-        'p_user_id': _currentUserId,
-      });
+      await supabase.rpc('increment_daily_usage');
     } catch (e) {
       if (kDebugMode) {
         debugPrint('⚠️ Failed to sync daily usage to server: $e');
@@ -287,15 +289,15 @@ class SubscriptionService {
 
   Future<PurchaseResult> _purchaseProduct(String productId) async {
     try {
-      // Check if payment system is configured
+      // Check if we should use demo mode
+      if (PaymentConfig.isDemoMode) {
+        debugPrint('🧪 Demo mode: Simulating purchase of $productId');
+        await _simulatePurchase(productId, isDemo: true);
+        return PurchaseResult(success: true, message: 'Demo purchase successful (TEST MODE)');
+      }
+
+      // If not in demo mode, proceed with real RevenueCat purchase
       if (_revenueCatApiKey.isEmpty) {
-        // Only allow demo mode in debug builds AND when explicitly not production
-        if (kDebugMode && !PaymentConfig.isConfiguredForProduction) {
-          debugPrint('🧪 Demo mode: Simulating purchase of $productId');
-          debugPrint('⚠️ This is a TEST purchase - will not work in production');
-          await _simulatePurchase(productId, isDemo: true);
-          return PurchaseResult(success: true, message: 'Demo purchase successful (TEST MODE)');
-        }
         return PurchaseResult(
           success: false,
           error: 'Payment system not available. Please contact ${PaymentConfig.supportEmail}',

@@ -266,6 +266,14 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
               label: PremiumTheme.isIOS ? 'App Store' : 'Google Play',
             ),
           ),
+          if (PaymentConfig.isDemoMode)
+            Expanded(
+              child: _buildPaymentMethodButton(
+                id: 'demo',
+                icon: CupertinoIcons.lab_flask_solid,
+                label: 'Demo Mode',
+              ),
+            ),
           Expanded(
             child: _buildPaymentMethodButton(
               id: 'ath_movil',
@@ -838,7 +846,9 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     if (_selectedPlan == null) return;
 
     // Route to appropriate payment method
-    if (_paymentMethod == 'ath_movil') {
+    if (_paymentMethod == 'demo') {
+      await _purchaseWithDemoMode();
+    } else if (_paymentMethod == 'ath_movil') {
       // ATH Móvil is coming soon - shouldn't reach here but just in case
       _showErrorSnackbar('ATH Móvil coming soon! Please use ${PremiumTheme.isIOS ? "App Store" : "Google Play"}.');
       return;
@@ -871,6 +881,38 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
       }
       if (mounted) {
         _showErrorSnackbar('An error occurred. Please try again.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _purchaseWithDemoMode() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Small delay for realism
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      PurchaseResult result;
+      if (_selectedPlan == 'monthly') {
+        result = await _subscriptionService.purchaseMonthly();
+      } else {
+        result = await _subscriptionService.purchaseLifetime();
+      }
+
+      if (!mounted) return;
+
+      if (result.success) {
+        _showSuccessDialog();
+      } else {
+        _showErrorSnackbar(result.error ?? 'Demo purchase failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackbar('An error occurred during demo purchase.');
       }
     } finally {
       if (mounted) {

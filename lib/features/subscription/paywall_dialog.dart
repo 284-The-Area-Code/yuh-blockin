@@ -109,7 +109,7 @@ class PaywallDialog extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    customMessage ?? "You've used all 3 free alerts for today.",
+                    customMessage ?? "You've used your 1 free alert for today.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,

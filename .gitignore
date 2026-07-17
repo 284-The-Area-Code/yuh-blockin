@@ -49,12 +49,12 @@ NUL
 *.jks
 *.keystore
 android/key.properties
-<<<<<<< HEAD
 .aider*
 lib/app/
-=======
 
 # Firebase Admin SDK - NEVER commit this
 docs/yuh-blockin-firebase-adminsdk*.json
 *firebase-adminsdk*.json
->>>>>>> origin/main
+
+# Marketing / Screenshots
+assets/images/phone_screenshots/
