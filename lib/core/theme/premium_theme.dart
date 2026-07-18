@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 /// Premium theme system inspired by Apple, Uber, Airbnb design languages
 /// Professional, minimal, with subtle 2025 glow signature
@@ -513,8 +514,8 @@ class PremiumTheme {
       // Page Transitions - Force iOS-style slide on all platforms for parity
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: <TargetPlatform, PageTransitionsBuilder>{
-          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
+          TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
         },
       ),
     );
@@ -550,13 +551,13 @@ class PremiumTheme {
   /// Subtle elevation for cards
   static List<BoxShadow> get subtleShadow => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: Colors.black.withOpacity(0.04),
           blurRadius: 16,
           offset: const Offset(0, 4),
           spreadRadius: 0,
         ),
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.02),
+          color: Colors.black.withOpacity(0.02),
           blurRadius: 4,
           offset: const Offset(0, 1),
           spreadRadius: 0,
@@ -566,13 +567,13 @@ class PremiumTheme {
   /// Medium elevation for elevated elements
   static List<BoxShadow> get mediumShadow => [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
+          color: Colors.black.withOpacity(0.08),
           blurRadius: 24,
           offset: const Offset(0, 8),
           spreadRadius: 0,
         ),
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: Colors.black.withOpacity(0.04),
           blurRadius: 8,
           offset: const Offset(0, 2),
           spreadRadius: 0,
@@ -582,13 +583,13 @@ class PremiumTheme {
   /// Strong elevation for hero elements
   static List<BoxShadow> get strongShadow => [
         BoxShadow(
-          color: accentColor.withValues(alpha: 0.25),
+          color: accentColor.withOpacity(0.25),
           blurRadius: 32,
           offset: const Offset(0, 16),
           spreadRadius: 8,
         ),
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.12),
+          color: Colors.black.withOpacity(0.12),
           blurRadius: 48,
           offset: const Offset(0, 24),
           spreadRadius: 0,
@@ -602,9 +603,9 @@ class PremiumTheme {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.1),
+          Colors.white.withOpacity(0.1),
           Colors.transparent,
-          Colors.black.withValues(alpha: 0.05),
+          Colors.black.withOpacity(0.05),
         ],
         stops: const [0.0, 0.5, 1.0],
       );
@@ -615,7 +616,7 @@ class PremiumTheme {
         end: Alignment.bottomRight,
         colors: [
           accentColor,
-          accentColor.withValues(alpha: 0.8),
+          accentColor.withOpacity(0.8),
         ],
       );
 
