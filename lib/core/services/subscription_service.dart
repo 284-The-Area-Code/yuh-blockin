@@ -72,12 +72,6 @@ class SubscriptionService {
       // Sync with server
       await _syncSubscriptionStatus();
 
-      // FOR INTERVIEW: Force premium if demo key is used
-      if (PaymentConfig.isDemoMode) {
-        _isPremium = true;
-        _subscriptionStatus = 'lifetime';
-      }
-
       // Load daily usage
       await _loadDailyUsage();
 
