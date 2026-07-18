@@ -31,13 +31,11 @@ workflows:
           cd ios && pod install
       - name: Build iOS IPA
         script: |
-          # The FIX: Disable signing during archive to bypass Xcode errors
+          # STANDARD COMMAND: Flutter now sees a correctly configured Xcode project
           flutter build ipa --release \
             --build-name=1.0.0 \
             --build-number=$(($BUILD_NUMBER + 1)) \
-            --export-method=app-store \
-            --no-codesign
-          xcode-project package-app --ipa --bundle-id "$BUNDLE_ID"
+            --export-method=app-store
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
