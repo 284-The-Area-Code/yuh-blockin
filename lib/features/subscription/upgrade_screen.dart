@@ -235,7 +235,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(
+              const Icon(
                 CupertinoIcons.check_mark,
                 color: CupertinoColors.systemGreen,
                 size: 14,
@@ -1024,8 +1024,8 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(CupertinoIcons.check_mark_circled_solid, color: CupertinoColors.systemGreen),
-            SizedBox(width: 8),
+            const Icon(CupertinoIcons.check_mark_circled_solid, color: CupertinoColors.systemGreen),
+            const SizedBox(width: 8),
             Text(isRestore ? 'Restored!' : 'Welcome to Premium!'),
           ],
         ),

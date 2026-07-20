@@ -573,7 +573,7 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Email: ${PaymentConfig.supportEmail}')),
+          const SnackBar(content: Text('Email: ${PaymentConfig.supportEmail}')),
         );
       }
     }

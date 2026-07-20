@@ -27,7 +27,6 @@ import 'features/plate_registration/plate_registration_screen.dart';
 import 'features/onboarding/onboarding_flow.dart';
 import 'features/theme_settings/theme_settings_screen.dart';
 import 'features/subscription/paywall_dialog.dart';
-import 'features/subscription/upgrade_screen.dart';
 import 'features/subscription/subscription_status_screen.dart';
 import 'core/services/subscription_service.dart';
 import 'core/services/plate_verification_service.dart';
@@ -401,7 +400,7 @@ class _AppInitializerState extends State<AppInitializer>
                               scale: _logoScale,
                               // Shimmer with transparent edges using ShaderMask
                               child: ShaderMask(
-                                shaderCallback: (bounds) => RadialGradient(
+                                shaderCallback: (bounds) => const RadialGradient(
                                   center: Alignment.center,
                                   radius: 0.5,
                                   colors: [
@@ -409,7 +408,7 @@ class _AppInitializerState extends State<AppInitializer>
                                     Colors.white,
                                     Colors.transparent,
                                   ],
-                                  stops: const [0.0, 0.85, 1.0],
+                                  stops: [0.0, 0.85, 1.0],
                                 ).createShader(bounds),
                                 blendMode: BlendMode.dstIn,
                                 child: Shimmer(
@@ -6004,13 +6003,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               : null,
         ),
         child: _isSendingAlert
-            ? Center(
+            ? const Center(
                 child: SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
               )

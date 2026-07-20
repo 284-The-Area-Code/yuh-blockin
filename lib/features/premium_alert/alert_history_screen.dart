@@ -871,7 +871,7 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
                   value: 'clear_all',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                      const Icon(Icons.delete_outline, size: 20, color: Colors.red),
                       const SizedBox(width: 12),
                       Text(
                         'Clear All',

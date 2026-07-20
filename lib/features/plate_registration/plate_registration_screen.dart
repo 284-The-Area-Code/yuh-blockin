@@ -244,17 +244,17 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
           }
 
           // Small delay to ensure user creation is fully committed before plate registration
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
         } catch (e) {
           if (kDebugMode) {
             debugPrint('❌ Failed to create user: $e');
           }
           setState(() => _isRegistering = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text('Failed to create user profile. Please check your internet connection and try again.'),
               backgroundColor: Colors.red,
-              duration: const Duration(milliseconds: 800),
+              duration: Duration(milliseconds: 800),
             ),
           );
           return; // Don't continue if user creation failed
@@ -494,10 +494,10 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                             setDialogState(() => hasCopied = true);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Key copied to clipboard!'),
+                                const SnackBar(
+                                  content: Text('Key copied to clipboard!'),
                                   backgroundColor: Colors.green,
-                                  duration: const Duration(seconds: 1),
+                                  duration: Duration(seconds: 1),
                                 ),
                               );
                             }
@@ -1068,7 +1068,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Delete',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
@@ -1115,7 +1115,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Vehicle deleted successfully'),
+            content: const Text('Vehicle deleted successfully'),
             backgroundColor: Colors.green.shade400,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(milliseconds: 800),
@@ -1472,7 +1472,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                   ),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
@@ -1480,7 +1480,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                       size: 16,
                       color: Colors.white,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       'Upgrade for ${PaymentConfig.premiumMaxPlates} vehicles',
                       style: TextStyle(
@@ -1635,11 +1635,11 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: isCompact ? 12 : 14),
         ),
         child: _isRegistering
-            ? SizedBox(
+            ? const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   strokeWidth: 2,
                 ),
               )
@@ -1776,7 +1776,7 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                         color: PremiumTheme.accentColor,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(
+                      child: const Text(
                         'PRIMARY',
                         style: TextStyle(
                           fontSize: 9,
@@ -1969,7 +1969,7 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
                           child: Center(
                             child: Transform.scale(
                               scale: _checkAnimation.value,
-                              child: Icon(
+                              child: const Icon(
                                 Icons.check_rounded,
                                 color: Colors.white,
                                 size: 40,
@@ -2011,7 +2011,7 @@ class _SuccessAnimationState extends State<_SuccessAnimation>
 
   List<Widget> _buildSparkles() {
     final sparkles = <Widget>[];
-    final sparkleCount = 8;
+    const sparkleCount = 8;
 
     for (int i = 0; i < sparkleCount; i++) {
       final angle = (i * 2 * pi / sparkleCount) - pi / 2;

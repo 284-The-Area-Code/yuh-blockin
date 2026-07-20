@@ -4276,6 +4276,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     // Badge should show when there are any NEW actionable alerts
     final shouldShowBadge = hasNewActionableAlerts;
     final badgeCount = _unseenAlertsCount;
+    final showingUrgent = hasNewActionableAlerts;
 
     return GestureDetector(
       onTap: () async {

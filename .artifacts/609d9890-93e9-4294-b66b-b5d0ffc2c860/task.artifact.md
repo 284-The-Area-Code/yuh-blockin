@@ -1,0 +1,5 @@
+- [ ] Git Checkpoint
+- [ ] Remove forced `resolutionStrategy` in `android/build.gradle.kts`
+- [ ] Upgrade Gradle Wrapper to 8.14.5 in `android/gradle/wrapper/gradle-wrapper.properties`
+- [ ] Upgrade AGP to 8.7.3 in `android/settings.gradle.kts`
+- [ ] Verify build (`flutter build apk --release`)

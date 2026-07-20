@@ -762,7 +762,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
               builder: (context, constraints) {
                 // Calculate optimal height for the grid
                 final itemCount = availableEmojis.length;
-                final crossAxisCount = 3;
+                const crossAxisCount = 3;
                 final rowCount = (itemCount / crossAxisCount).ceil();
                 final itemHeight = constraints.maxWidth / crossAxisCount * (1 / 1.1);
                 final totalHeight = rowCount * itemHeight + (rowCount - 1) * 12;
@@ -954,13 +954,13 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
                     height: 24,
                     child: CupertinoActivityIndicator(color: Colors.white),
                   )
-                : Row(
-                    key: const ValueKey('content'),
+                : const Row(
+                    key: ValueKey('content'),
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(CupertinoIcons.paperplane_fill, size: 20),
-                      const SizedBox(width: 12),
-                      const Text(
+                      Icon(CupertinoIcons.paperplane_fill, size: 20),
+                      SizedBox(width: 12),
+                      Text(
                         'Send Respectful Alert',
                         style: TextStyle(
                           fontSize: 16,
@@ -1139,7 +1139,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       final result = await _alertService.sendAlert(
         targetPlateNumber: plateNumber,
         senderUserId: senderUserId,
-        message: '${_urgencyLevel} alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
+        message: '$_urgencyLevel alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
         soundPath: soundPath,
         urgencyLevel: _urgencyLevel,
       );
@@ -1165,7 +1165,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
               alertId: result.alertId!,
               targetPlateNumber: plateNumber,
               urgencyLevel: _urgencyLevel,
-              message: '${_urgencyLevel} alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
+              message: '$_urgencyLevel alert: ${_selectedEmoji?.description ?? 'Vehicle alert'}',
             );
           }
 
@@ -1221,12 +1221,12 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
             Text('Alert Failed'),
           ],
         ),
-        content: Column(
+        content: const Column(
           children: [
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
               'Unable to send alert. Please check your connection and try again.',
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16),
             ),
           ],
         ),

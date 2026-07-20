@@ -266,11 +266,11 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
           HapticFeedback.mediumImpact();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Row(
+              content: const Row(
                 children: [
-                  const Icon(Icons.lock_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 12),
-                  const Flexible(
+                  Icon(Icons.lock_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 12),
+                  Flexible(
                     child: Text('Subscribe to unlock premium themes'),
                   ),
                 ],
@@ -453,7 +453,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
@@ -461,7 +461,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                               size: 10,
                               color: goldenPoppy,
                             ),
-                            const SizedBox(width: 3),
+                            SizedBox(width: 3),
                             Text(
                               'BVI',
                               style: TextStyle(
@@ -594,11 +594,11 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
           HapticFeedback.mediumImpact();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Row(
+              content: const Row(
                 children: [
-                  const Icon(Icons.lock_rounded, color: Colors.white, size: 18),
-                  const SizedBox(width: 12),
-                  const Flexible(
+                  Icon(Icons.lock_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 12),
+                  Flexible(
                     child: Text('Subscribe to unlock premium themes'),
                   ),
                 ],
