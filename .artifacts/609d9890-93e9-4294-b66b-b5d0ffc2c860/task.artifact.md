@@ -1,5 +1,15 @@
-- [ ] Git Checkpoint
-- [ ] Remove forced `resolutionStrategy` in `android/build.gradle.kts`
-- [ ] Upgrade Gradle Wrapper to 8.14.5 in `android/gradle/wrapper/gradle-wrapper.properties`
-- [ ] Upgrade AGP to 8.7.3 in `android/settings.gradle.kts`
-- [ ] Verify build (`flutter build apk --release`)
+- [ ] Dependencies & Configuration
+    - [ ] Remove `firebase_core` and `firebase_messaging` from `pubspec.yaml`
+    - [ ] Delete `lib/firebase_options.dart`
+    - [ ] Delete `android/app/google-services.json`
+    - [ ] Delete `ios/Runner/GoogleService-Info.plist`
+- [ ] Android Manifest & Build
+    - [ ] Remove Firebase blocks from `android/app/src/main/AndroidManifest.xml`
+- [ ] Flutter Logic
+    - [ ] Delete `lib/core/services/push_notification_service.dart`
+    - [ ] Remove Firebase code from `lib/main.dart`
+- [ ] iOS Cleanup
+    - [ ] Remove Firebase flags from `ios/Runner/Info.plist`
+- [ ] Verification
+    - [ ] Run `flutter pub get`
+    - [ ] Run `flutter build apk --release -t lib/main_premium.dart`

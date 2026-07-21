@@ -53,11 +53,6 @@
 		<array>
 			<string>audio</string>
 			<string>fetch</string>
-			<string>remote-notification</string>
 		</array>
-		<key>FirebaseAppDelegateProxyEnabled</key>
-		<true/>
-		<key>FirebaseAutomaticScreenReportingEnabled</key>
-		<false/>
 	</dict>
 </plist>

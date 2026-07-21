@@ -28,14 +28,6 @@ subprojects {
         }
     }
 
-    buildscript {
-        configurations.all {
-            resolutionStrategy {
-                force("com.android.tools.build:gradle:8.13.2")
-                force("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
-            }
-        }
-    }
 }
 
 subprojects {

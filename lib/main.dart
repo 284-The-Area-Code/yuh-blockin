@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 // Native splash removed - using custom AppInitializer splash instead
 import 'dart:async';
 import 'dart:math' as math;
@@ -32,7 +30,6 @@ import 'core/services/subscription_service.dart';
 import 'core/services/plate_verification_service.dart';
 import 'core/services/sound_preferences_service.dart';
 import 'core/services/account_recovery_service.dart';
-import 'core/services/push_notification_service.dart';
 import 'features/alert_sound_settings/alert_sound_settings_screen.dart';
 import 'features/account_recovery/view_my_keys_screen.dart';
 
@@ -41,22 +38,6 @@ import 'features/account_recovery/view_my_keys_screen.dart';
 /// Minimal, elegant, professional with subtle 2025 motion signature
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase with web-safe error handling
-  // On web, Firebase is not configured in DefaultFirebaseOptions, so we skip it
-  if (!kIsWeb) {
-    try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
-      }
-    } catch (e) {
-      debugPrint('Firebase init handled: $e');
-    }
-  } else {
-    debugPrint('Firebase initialization skipped on web (not configured)');
-  }
 
   runApp(const PremiumYuhBlockinApp());
 }
@@ -585,7 +566,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   final ConnectivityService _connectivityService = ConnectivityService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final BackgroundAlertService _backgroundAlertService = BackgroundAlertService();
-  final PushNotificationService _pushNotificationService = PushNotificationService();
   final SoundPreferencesService _soundPreferencesService = SoundPreferencesService();
   bool _isOffline = false;
   bool _showOfflineBanner = false;
@@ -843,24 +823,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       },
     );
 
-    // Initialize push notification service (Firebase)
-    try {
-      await _pushNotificationService.initialize(
-        onTap: (alertId) {
-          if (kDebugMode) {
-            debugPrint('Push notification tapped with alert: $alertId');
-          }
-          // Could navigate to specific alert
-        },
-      );
-      if (kDebugMode) {
-        debugPrint('Push notification service initialized');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Push notification initialization error: $e');
-      }
-    }
 
     // Initialize background alert service for reliable locked-screen notifications
     try {
@@ -1170,7 +1132,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       await _backgroundAlertService.setUserId(userId);
 
       // Update push notification service with user ID
-      await _pushNotificationService.updateUserId(userId);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to ensure user exists: $e');

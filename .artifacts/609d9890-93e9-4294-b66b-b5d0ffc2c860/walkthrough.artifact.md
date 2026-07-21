@@ -1,31 +1,41 @@
-# Walkthrough: Flutter SDK Recovery
+# Walkthrough: Build Fix and Dependency Upgrade
 
-I have successfully restored your Flutter SDK to a healthy state.
+I have successfully resolved the Android build failures and upgraded the project's build dependencies following a staged, safe sequence.
 
 ## Changes Made
 
-### Flutter SDK
-- **Reset to Stable**: Performed a hard reset on `/home/xthebluepill/tools/flutter` to match `origin/stable` (version 3.44.7).
-- **Cache Purge**: Deleted `bin/cache` to ensure all SDK artifacts and the Dart SDK were cleanly redownloaded.
-- **Rebuilt Tooling**: Ran `flutter doctor` to recompile the `flutter_tool` and verify the environment.
+### Environment Fix
+- Identified that `ANDROID_USER_HOME` and `ANDROID_PREFS_ROOT` environment variables were causing the `AndroidLocationsBuildService` initialization failure.
+- Verified that unsetting these variables allows Gradle to use the default healthy `.android` configuration.
+
+### Flutter App Logic
+- **[main_premium.dart](file:///home/xthebluepill/Documents/lab/yuh-blockin/lib/main_premium.dart)**: Defined the missing `showingUrgent` variable in `_buildCompactNotificationIcon` to fix the Dart compilation error.
+
+### Android Build Configuration
+- **[build.gradle.kts](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/build.gradle.kts)**: Removed the forced `resolutionStrategy` for AGP and Kotlin, allowing versions to be managed cleanly via the `plugins` block.
+- **[gradle-wrapper.properties](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/gradle/wrapper/gradle-wrapper.properties)**: Upgraded Gradle to **8.14.5**.
+- **[settings.gradle.kts](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/settings.gradle.kts)**: Upgraded Android Gradle Plugin (AGP) to **8.13.2**. This version satisfies the requirements of modern dependencies like `androidx.core:core:1.17.0` while remaining within the project's compatibility range.
+- **Kotlin**: Remained at **2.1.0** to ensure maximum plugin compatibility.
 
 ## Verification Results
 
-### SDK Health Check
-Ran `flutter doctor` which confirmed the environment is now correctly configured:
-```text
-[✓] Flutter (Channel stable, 3.44.7, on Kali GNU/Linux Rolling 6.19.14+kali-amd64)
-[✓] Android toolchain - develop for Android devices (Android SDK version 36.1.0)
-[✓] Chrome - develop for the web
-[✓] Linux toolchain - develop for Linux desktop
-[✓] Connected device (2 available)
-[✓] Network resources
+### Build Verification
+Ran a full clean rebuild:
+```bash
+unset ANDROID_USER_HOME
+unset ANDROID_PREFS_ROOT
+flutter clean
+flutter pub get
+flutter build apk --release -t lib/main_premium.dart
 ```
 
-### Command Execution
-Ran `flutter devices` which now completes successfully:
+**Result**: SUCCESS
 ```text
-Found 2 connected devices:
-  Linux (desktop) • linux  • linux-x64      • Kali GNU/Linux Rolling 6.19.14+kali-amd64
-  Chrome (web)    • chrome • web-javascript • Google Chrome 150.0.7871.46
+✓ Built build/app/outputs/flutter-apk/app-release.apk (76.8MB)
 ```
+
+### Success Metrics
+- ✅ **No `AndroidLocationsBuildService` error**: Confirmed environment variable isolation fixed the service crash.
+- ✅ **Clean Compilation**: `main_premium.dart` now compiles without errors.
+- ✅ **Dependency Satisfaction**: AGP 8.13.2 correctly handles the latest AndroidX metadata requirements.
+- ✅ **Stable Kotlin**: Maintained 2.1.0 to prevent third-party plugin regressions.

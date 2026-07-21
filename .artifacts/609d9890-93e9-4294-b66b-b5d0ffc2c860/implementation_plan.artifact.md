@@ -1,39 +1,39 @@
-# Staged Build Fix and Dependency Upgrade (User Recommended Sequence)
+# Remove Unused Firebase Components
 
-This plan follows the user's recommended sequence to resolve build errors and upgrade dependencies safely, isolating environmental issues from version changes.
+This plan outlines the removal of unused Firebase dependencies, configuration files, and manifest entries to align the project with the "Firebase-free" declaration for the Google Play Store.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Environment Fix**: The `AndroidLocationsBuildService` error was caused by conflicting environment variables (`ANDROID_USER_HOME`, `ANDROID_PREFS_ROOT`). These will be unset during the build process.
-
 > [!WARNING]
-> **Kotlin Version**: Kotlin will remain at **2.1.0** to ensure maximum plugin compatibility, as recommended.
+> This process will completely remove Firebase Messaging support from the project. Since the app currently uses a custom `dataSync` foreground service for real-time alerts, this removal will not impact the core functionality, but it is a permanent architectural change.
 
 ## Proposed Changes
 
-### 1. Git Checkpoint
-- Perform a git commit to save the current working state (with the code fix already applied) before making build configuration changes.
+### New Branch
+- Created branch `cleanup/remove-unused-firebase`.
 
-### 2. Remove Forced ResolutionStrategy
-- **[MODIFY] [build.gradle.kts](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/build.gradle.kts)**: Remove the forced `resolutionStrategy` for AGP and Kotlin. This lets the `plugins` block manage versions properly.
+### 1. Dependencies & Configuration
+- **[MODIFY] [pubspec.yaml](file:///home/xthebluepill/Documents/lab/yuh-blockin/pubspec.yaml)**: Remove `firebase_core` and `firebase_messaging`.
+- **[DELETE] [firebase_options.dart](file:///home/xthebluepill/Documents/lab/yuh-blockin/lib/firebase_options.dart)**: Delete the generated Firebase options file.
+- **[DELETE] [google-services.json](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/app/google-services.json)**: Delete the Android Firebase config.
+- **[DELETE] [GoogleService-Info.plist](file:///home/xthebluepill/Documents/lab/yuh-blockin/ios/Runner/GoogleService-Info.plist)**: Delete the iOS Firebase config.
 
-### 3. Upgrade Gradle Wrapper
-- **[MODIFY] [gradle-wrapper.properties](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/gradle/wrapper/gradle-wrapper.properties)**: Update `distributionUrl` to Gradle **8.14.5**.
+### 2. Android Manifest & Build
+- **[MODIFY] [AndroidManifest.xml](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/app/src/main/AndroidManifest.xml)**:
+    - Remove the `FirebaseInitProvider` removal block.
+    - Remove `firebase_messaging_auto_init_enabled` and `firebase_analytics_collection_enabled` meta-data.
+- **[MODIFY] [app/build.gradle.kts](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/app/build.gradle.kts)**: Ensure no `com.google.gms.google-services` plugin is applied.
 
-### 4. Upgrade Android Gradle Plugin (AGP)
-- **[MODIFY] [settings.gradle.kts](file:///home/xthebluepill/Documents/lab/yuh-blockin/android/settings.gradle.kts)**: Update `com.android.application` version to **8.7.3**.
+### 3. Flutter Logic
+- **[DELETE] [push_notification_service.dart](file:///home/xthebluepill/Documents/lab/yuh-blockin/lib/core/services/push_notification_service.dart)**: Delete the unused Firebase service wrapper.
+- **[MODIFY] [main.dart](file:///home/xthebluepill/Documents/lab/yuh-blockin/lib/main.dart)**: Remove Firebase imports and initialization code in the `main()` and `_initializeApp` functions.
+
+### 4. iOS Cleanup
+- **[MODIFY] [Info.plist](file:///home/xthebluepill/Documents/lab/yuh-blockin/ios/Runner/Info.plist)**: Remove Firebase proxy and reporting flags.
 
 ## Verification Plan
 
 ### Automated Tests
-1. **Unset environment variables**: `unset ANDROID_USER_HOME`, `unset ANDROID_PREFS_ROOT`.
-2. **Clean rebuild**:
-   - `flutter clean`
-   - `flutter pub get`
-   - `flutter build apk --release -t lib/main_premium.dart`
-
-### Success Criteria
-- [ ] No `AndroidLocationsBuildService` error.
-- [ ] `flutter build apk` completes successfully.
-- [ ] AGP version warning is resolved.
+- Run `flutter pub get` to update dependencies.
+- Run `flutter build apk --release -t lib/main_premium.dart` to ensure the project still builds successfully without Firebase.
+- Verify with `grep` that no Firebase-related strings remain in the `lib/` directory.
