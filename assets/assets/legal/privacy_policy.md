@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated: December 10, 2024**
+**Last Updated: December 10, 2025**
 
 DezeTingz ("we," "our," or "us") operates the Yuh Blockin' mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
 
@@ -133,4 +133,4 @@ This Privacy Policy shall be governed by and construed in accordance with the la
 
 ---
 
-*This Privacy Policy is effective as of December 10, 2024.*
+*This Privacy Policy is effective as of December 10, 2025.*
