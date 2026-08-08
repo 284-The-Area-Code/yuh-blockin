@@ -24,6 +24,22 @@ subprojects {
                 android.defaultConfig {
                     targetSdk = 36
                 }
+
+                // Inject namespace if missing to satisfy AGP 8.0+ requirements
+                if (android.namespace == null) {
+                    val manifestFile = project.file("src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        val manifestXml = manifestFile.readText()
+                        val packageMatch = Regex("package=\"([^\"]+)\"").find(manifestXml)
+                        if (packageMatch != null) {
+                            android.namespace = packageMatch.groupValues[1]
+                        } else {
+                            android.namespace = "com.${project.name.replace("-", "_")}"
+                        }
+                    } else {
+                        android.namespace = "com.${project.name.replace("-", "_")}"
+                    }
+                }
             }
         }
     }

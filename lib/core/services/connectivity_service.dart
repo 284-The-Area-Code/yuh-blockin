@@ -35,8 +35,15 @@ class ConnectivityService {
     onConnectionRestored = onRestored;
     onConnectionTypeChanged = onTypeChanged;
 
-    // Check initial connection status
+    // Check initial connection status with a "warmer" retry
     await _checkConnection();
+    
+    // If the system says 'none' immediately on boot, wait 1s and try again
+    if (!_isConnected) {
+      debugPrint('📡 Connectivity cold start - waiting 1.5s to warm up network...');
+      await Future.delayed(const Duration(milliseconds: 1500));
+      await _checkConnection();
+    }
 
     // Listen for changes
     _subscription = _connectivity.onConnectivityChanged.listen(_handleConnectivityChange);

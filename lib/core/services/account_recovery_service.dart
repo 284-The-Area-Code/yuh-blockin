@@ -36,9 +36,9 @@ class AccountRecoveryService {
         );
       }
 
-      // Check if user exists in database
-      final userExists = await _alertService.userExists(userId);
-      if (!userExists) {
+      // Check if user exists in database (safe check)
+      final userExistsResult = await _alertService.userExists(userId);
+      if (userExistsResult == false) {
         return AutoLoginResult(
           canAutoLogin: false,
           reason: 'User not found in database',
@@ -216,11 +216,11 @@ class AccountRecoveryService {
     try {
       final result = await _supabase
           .from('plates')
-          .select('plate_number')
+          .select('plate_hash')
           .eq('user_id', userId);
 
       return (result as List)
-          .map((row) => row['plate_number'] as String)
+          .map((row) => row['plate_hash'] as String)
           .toList();
     } catch (e) {
       if (kDebugMode) {

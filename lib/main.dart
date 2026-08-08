@@ -8,9 +8,11 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
 
 import 'core/theme/premium_theme.dart';
+import 'core/theme/theme_notifier.dart';
 import 'core/services/plate_storage_service.dart';
 import 'core/services/user_stats_service.dart';
 import 'core/services/simple_alert_service.dart';
@@ -20,6 +22,8 @@ import 'core/services/notification_service.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/background_alert_service.dart';
 import 'config/premium_config.dart';
+import 'config/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'features/premium_alert/alert_history_screen.dart';
 import 'features/plate_registration/plate_registration_screen.dart';
 import 'features/onboarding/onboarding_flow.dart';
@@ -39,22 +43,33 @@ import 'features/account_recovery/view_my_keys_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(const PremiumYuhBlockinApp());
-}
-
-/// Global theme notifier for app-wide theme changes
-class ThemeNotifier extends ChangeNotifier {
-  String _currentMode = PremiumTheme.lightMode;
-
-  String get currentMode => _currentMode;
-
-  void setTheme(String mode) {
-    _currentMode = mode;
-    PremiumTheme.setThemeMode(mode);
-    notifyListeners();
+  // 1. Initialize Supabase as early as possible (Global Instance)
+  // This reduces TTFB (Time To First Byte) for all subsequent service calls
+  try {
+    await Supabase.initialize(
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
+      realtimeClientOptions: const RealtimeClientOptions(
+        eventsPerSecond: 10,
+      ),
+    );
+    debugPrint('🚀 Supabase Global Initialization Complete');
+  } catch (e) {
+    debugPrint('⚠️ Supabase Global Init Warning: $e');
   }
 
-  ThemeData get currentTheme => PremiumTheme.currentTheme;
+  // Set system UI style for absolute platform parity (edge-to-edge feel)
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+
+  // Enable edge-to-edge mode for standard production behavior
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  runApp(const PremiumYuhBlockinApp());
 }
 
 class PremiumYuhBlockinApp extends StatelessWidget {
@@ -87,6 +102,10 @@ class PremiumYuhBlockinApp extends StatelessWidget {
               );
             },
             home: const AppInitializer(),
+            // Ensure identical scroll physics across platforms (iOS-style bounce)
+            scrollBehavior: const MaterialScrollBehavior().copyWith(
+              physics: const BouncingScrollPhysics(),
+            ),
           );
         },
       ),
@@ -104,7 +123,7 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late AnimationController _exitController;
   late Animation<double> _logoScale;
@@ -205,6 +224,12 @@ class _AppInitializerState extends State<AppInitializer>
       ),
     );
 
+    // Register lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Initial foreground status for background service
+    FlutterBackgroundService().invoke('setForeground', {'foreground': true});
+
     _controller.forward();
 
     // Start shimmer later - after logo is fully visible
@@ -219,15 +244,38 @@ class _AppInitializerState extends State<AppInitializer>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _exitController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-establish Supabase connections when app returns from background
+      SimpleAlertService().refreshConnection();
+      
+      // Update background service: main app is in foreground
+      FlutterBackgroundService().invoke('setForeground', {'foreground': true});
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Update background service: main app is in background
+      FlutterBackgroundService().invoke('setForeground', {'foreground': false});
+    }
+  }
+
   Future<void> _checkOnboardingStatus() async {
     debugPrint('🔍 AppInitializer: Checking onboarding status...');
+    
+    // Start the minimum branding timer and logic in parallel
+    // Reduced minimum splash time from 3.5s to 1.8s for "fast experience"
+    final minTimer = Future.delayed(const Duration(milliseconds: 1800));
 
     try {
+      // 1. Initialize services (Now reusing early-init Supabase instance)
+      final alertService = SimpleAlertService();
+      await alertService.initialize();
+
       final prefs = await SharedPreferences.getInstance();
       final hasCompletedOnboarding =
           prefs.getBool('onboarding_completed') ?? false;
@@ -240,44 +288,52 @@ class _AppInitializerState extends State<AppInitializer>
 
       if (!mounted) return;
 
-      // Primary check: Does user have registered plates?
-      // This is the most reliable indicator of a returning user
+      // 2. Optimized verification
+      bool? userExistsResult;
+      if (hasUserId) {
+        // This call is now "Fast-path" optimized in SimpleAlertService
+        userExistsResult = await alertService.userExists(userId!);
+        
+        if (userExistsResult == false) {
+          debugPrint('⚠️ Stored user_id explicitly NOT FOUND in DB - clearing stale flags');
+          await prefs.remove('onboarding_completed');
+          await prefs.remove('user_id');
+          await prefs.remove('user_id_backup');
+        }
+      }
+
+      final userExists = userExistsResult == true;
+
+      // 3. Auto-login check
       try {
         final recoveryService = AccountRecoveryService();
         final autoLoginResult = await recoveryService.checkAutoLogin();
 
         if (autoLoginResult.canAutoLogin) {
           debugPrint('🔓 Auto-login: User has ${autoLoginResult.plateCount} registered plate(s)');
-          // Ensure flags are set for future launches
           await prefs.setBool('onboarding_completed', true);
           _goToHome = true;
-        } else if (hasCompletedOnboarding && hasUserId) {
-          // Fallback: User has flags but no plates yet (edge case)
-          debugPrint('🔓 Flags present but no plates - going to home');
+        } else if (hasCompletedOnboarding && (userExists || userExistsResult == null)) {
+          debugPrint('🔓 Profile flags present - going to home (safe mode)');
           _goToHome = true;
         } else {
-          debugPrint('🔄 New user - showing onboarding');
+          debugPrint('🔄 New or deleted user - showing onboarding');
           _goToHome = false;
         }
       } catch (e) {
         debugPrint('⚠️ Auto-login check error: $e');
-        // Fallback to flag-based check on error
-        if (hasCompletedOnboarding && hasUserId) {
-          _goToHome = true;
-        } else {
-          _goToHome = false;
-        }
+        _goToHome = hasCompletedOnboarding && (userExists || userExistsResult == null);
       }
 
-      // Show splash for 3.5 seconds to display branding properly
-      await Future.delayed(const Duration(milliseconds: 3500));
+      // Wait for both logic AND minimum timer
+      await minTimer;
 
       if (!mounted) return;
-
       _navigateToNextScreen();
 
     } catch (e) {
       debugPrint('❌ AppInitializer: Error checking status: $e');
+      await minTimer; // Still respect branding time on error
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -546,6 +602,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   // Unacknowledged alerts tracking
   int _unacknowledgedAlertsCount = 0;
+  int _unseenAlertsCount = 0;
+  int _unseenImpactCount = 0;
 
   // Track which alert IDs have been shown to prevent re-showing
   final Set<String> _shownAlertIds = {};
@@ -597,7 +655,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   // Static regex for emoji extraction (compiled once for performance)
   static final RegExp _emojiRegex = RegExp(
-      r'[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]',
+      '[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]',
       unicode: true);
 
   // Cancellable timers/futures for cleanup
@@ -796,14 +854,18 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       _loadPrimaryPlateData(),
       _loadUserStatsData(),
       _loadUnacknowledgedAlertsCountData(),
+      SharedPreferences.getInstance(),
     ]);
 
     // Step 3: Single batched setState for all data
     if (mounted) {
+      final prefs = results[3] as SharedPreferences;
       setState(() {
         _primaryPlate = results[0] as String?;
         _userStats = results[1] as UserStats;
         _unacknowledgedAlertsCount = results[2] as int;
+        _unseenAlertsCount = prefs.getInt('unseen_alerts_count') ?? 0;
+        _unseenImpactCount = prefs.getInt('unseen_impact_count') ?? 0;
       });
     }
 
@@ -915,13 +977,20 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         _loadPrimaryPlateData(),
         _loadUserStatsData(),
         _loadUnacknowledgedAlertsCountData(),
+        SharedPreferences.getInstance(),
       ]);
 
       if (mounted) {
+        final prefs = results[3] as SharedPreferences;
+        // RELOAD prefs to get latest values from potential background syncs
+        await prefs.reload();
+
         setState(() {
           _primaryPlate = results[0] as String?;
           _userStats = results[1] as UserStats;
           _unacknowledgedAlertsCount = results[2] as int;
+          _unseenAlertsCount = prefs.getInt('unseen_alerts_count') ?? 0;
+          _unseenImpactCount = prefs.getInt('unseen_impact_count') ?? 0;
         });
       }
 
@@ -1018,6 +1087,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     }
   }
 
+  /// Play simple positive sound when someone responds to your alert
+  Future<void> _playResponseAcknowledgmentSound() async {
+    try {
+      HapticFeedback.lightImpact();
+      // Use a subtle sound (fall back to normal if success sound is missing)
+      try {
+        await _alertAudioPlayer.play(AssetSource('sounds/success_ping.wav'));
+      } catch (_) {
+        await _alertAudioPlayer.play(AssetSource('sounds/normal/normal_alert.wav'), volume: 0.5);
+      }
+    } catch (e) {
+      debugPrint('Failed to play response sound: $e');
+    }
+  }
+
   /// Play urgency-based vibration pattern
   Future<void> _playUrgencyVibration(String urgency) async {
     switch (urgency) {
@@ -1099,12 +1183,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
       // Verify the user exists in database before using it
       if (userId != null) {
-        final exists = await _alertService.userExists(userId);
-        if (!exists) {
-          debugPrint('⚠️ Stored user_id not found in database: $userId');
-          // User doesn't exist in DB - might have been deleted or DB was reset
-          // Create a new user instead of using invalid ID
+        final existsResult = await _alertService.userExists(userId);
+        if (existsResult == false) {
+          debugPrint('⚠️ Stored user_id explicitly NOT FOUND in database: $userId');
+          // User definitely doesn't exist in DB - clear and force new user
           userId = null;
+        } else if (existsResult == null) {
+          debugPrint('📡 Network error verifying user - continuing with local ID to prevent lockout');
         } else {
           debugPrint('✅ Verified user exists in database: $userId');
         }
@@ -1160,9 +1245,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     }
   }
 
-  /// Start listening for real-time incoming alerts
+  /// Start listening for real-time incoming alerts with retry logic
   void _startListeningForAlerts() {
     if (_currentUserId == null) return;
+
+    _alertStreamSubscription?.cancel();
 
     try {
       _alertStreamSubscription =
@@ -1195,9 +1282,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           // 1. Haven't been shown before
           // 2. Haven't been read yet
           // 3. Haven't been responded to
-          // 4. Are recent (within 5 minutes) - prevents showing old alerts on app reopen
-          final alertAge = DateTime.now().difference(alert.createdAt);
-          final isRecent = alertAge.inMinutes < 5;
+          // 4. Are recent (within 20 minutes) - accounts for network delay and user focus
+          // Using UTC time for robust cross-device comparison
+          final now = DateTime.now().toUtc();
+          final alertCreatedAt = alert.createdAt.toUtc();
+          final alertAge = now.difference(alertCreatedAt);
+          final isRecent = alertAge.inMinutes < 20;
 
           if (!_shownAlertIds.contains(alert.id) &&
               alert.readAt == null &&
@@ -1207,7 +1297,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             _shownAlertIds.add(alert.id); // Mark as shown
           } else {
             if (!isRecent) {
-              debugPrint('ℹ️ Alert ${alert.id} is ${alertAge.inMinutes}min old - skipping banner (too old)');
+              debugPrint('ℹ️ Alert ${alert.id} is ${alertAge.inMinutes}min old - skipping banner (UTC comparison)');
             } else {
               debugPrint('ℹ️ Alert ${alert.id} already shown, read, or responded to - skipping');
             }
@@ -1217,16 +1307,26 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         },
         onError: (error) {
           debugPrint('❌ Alert stream error: $error');
+          // Retry logic: wait 5 seconds and restart subscription
+          Future.delayed(const Duration(seconds: 5), () {
+            if (mounted && _currentUserId != null) {
+              debugPrint('🔄 Retrying alert stream subscription...');
+              _startListeningForAlerts();
+            }
+          });
         },
+        cancelOnError: true,
       );
     } catch (e) {
       debugPrint('❌ Failed to start alert listening: $e');
     }
   }
 
-  /// Start monitoring sent alerts for acknowledgments
+  /// Start monitoring sent alerts for acknowledgments with retry logic
   void _startMonitoringSentAlerts() {
     if (_currentUserId == null) return;
+
+    _sentAlertsStreamSubscription?.cancel();
 
     try {
       _sentAlertsStreamSubscription =
@@ -1251,7 +1351,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         },
         onError: (error) {
           debugPrint('❌ Sent alerts stream error: $error');
+          // Retry logic: wait 10 seconds and restart subscription
+          // Slightly longer delay for this secondary stream
+          Future.delayed(const Duration(seconds: 10), () {
+            if (mounted && _currentUserId != null) {
+              debugPrint('🔄 Retrying sent alerts stream subscription...');
+              _startMonitoringSentAlerts();
+            }
+          });
         },
+        cancelOnError: true,
       );
     } catch (e) {
       debugPrint('❌ Failed to start sent alerts monitoring: $e');
@@ -1276,6 +1385,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
         // Show notification for the response
         _showResponseNotification(alert);
+
+        // Audible feedback for sender: simple positive ping
+        _playResponseAcknowledgmentSound();
 
         // Mark as acknowledged and immediately refresh counter when done
         _unacknowledgedAlertService.markAlertAcknowledged(alert.id).then((_) {
@@ -1382,19 +1494,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       senderAlias = 'Anonymous';
     }
 
-    // Extract emoji and urgency from alert message
+    // Get urgency level from alert object (more reliable than parsing message)
+    final urgency = alert.urgencyLevel.substring(0, 1).toUpperCase() + 
+                   alert.urgencyLevel.substring(1).toLowerCase();
+
+    // Extract emoji from alert message for UI feed visibility
     String? emoji;
-    String urgency = 'Normal';
     if (alert.message != null && alert.message!.isNotEmpty) {
       final match = _emojiRegex.firstMatch(alert.message!);
       if (match != null) {
         emoji = match.group(0);
-      }
-      // Parse urgency level from message (e.g., "Low alert:", "High alert:")
-      if (alert.message!.toLowerCase().startsWith('low')) {
-        urgency = 'Low';
-      } else if (alert.message!.toLowerCase().startsWith('high')) {
-        urgency = 'High';
       }
     }
 
@@ -1411,19 +1520,18 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       _loadUserStats(); // Refresh stats display
     });
 
-    // Play premium alert sound (sender's chosen sound)
-    _playPremiumAlertSound(alertSoundPath: alert.soundPath);
+    // Play premium alert sound (sender's chosen sound OR receiver's urgency preference)
+    _playPremiumAlertSound(
+      alertSoundPath: alert.soundPath, 
+      urgencyLevel: urgency,
+    );
 
-    // Only show system notification when app is NOT in foreground
-    // (for lock screen, background, other apps - not when user is in the app)
-    if (_appLifecycleState != AppLifecycleState.resumed) {
-      _notificationService.showAlertNotification(
-        title: urgency == 'High' ? 'Urgent Alert' : 'New Alert',
-        body: '$senderAlias needs you to move',
-        payload: alert.id,
-        playSound: true,
-        vibrate: true,
-      );
+    // UNIFIED ALERT SYSTEM: 
+    // 1. The in-app banner is already showing (via setState above)
+    // 2. The BackgroundAlertService handles the system notification if app is hidden
+    // We no longer trigger _notificationService here to prevent duplicates
+    if (kDebugMode && _appLifecycleState != AppLifecycleState.resumed) {
+      debugPrint('ℹ️ Main App: Alert received while backgrounded. Background isolate will handle the system notification.');
     }
 
     // Urgency-based haptic feedback patterns
@@ -1485,19 +1593,39 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   }
 
   /// Respond to alert with acknowledgment
-  Future<void> _respondToAlert(String response) async {
-    if (_currentIncomingAlert == null) return;
+  /// Works for both top-banner and inline activity feed responses
+  Future<void> _respondToAlert(String response, {Alert? targetAlert}) async {
+    final alert = targetAlert ?? _currentIncomingAlert;
+    if (alert == null) return;
 
-    // Cancel auto-dismiss timer
-    _alertAutoDismissTimer?.cancel();
+    // Cancel auto-dismiss timer if it was the current banner alert
+    if (_currentIncomingAlert?.id == alert.id) {
+      _alertAutoDismissTimer?.cancel();
+    }
 
-    debugPrint(
-        '🔄 Attempting to respond to alert: ${_currentIncomingAlert!.id} with response: $response');
+    debugPrint('🔄 Attempting to respond to alert: ${alert.id} with response: $response');
+
+    // OPTIMISTIC UI UPDATE: Update local list immediately so buttons disappear
+    setState(() {
+      final index = _recentReceivedAlerts.indexWhere((a) => a.id == alert.id);
+      if (index != -1) {
+        _recentReceivedAlerts[index] = alert.copyWith(
+          response: response,
+          responseAt: DateTime.now(),
+          readAt: DateTime.now(),
+        );
+      }
+      
+      // If this was the banner alert, start closing the banner
+      if (_currentIncomingAlert?.id == alert.id) {
+        _showingAlertBanner = false;
+      }
+    });
 
     try {
       // Send response via alert service (this will also mark as read)
       final success = await _alertService.sendResponse(
-        alertId: _currentIncomingAlert!.id,
+        alertId: alert.id,
         response: response,
       );
 
@@ -1508,23 +1636,25 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         // Get updated stats for display
         final updatedStats = await _statsService.getStats();
 
-        setState(() {
-          _userStats = updatedStats;
-          _showingAlertBanner = false;
-          _currentIncomingAlert = null;
-          _currentSenderAlias = null;
-          _currentAlertEmoji = null;
-        });
+        if (mounted) {
+          setState(() {
+            _userStats = updatedStats;
+            if (_currentIncomingAlert?.id == alert.id) {
+              _currentIncomingAlert = null;
+              _currentSenderAlias = null;
+              _currentAlertEmoji = null;
+            }
+          });
+        }
 
-        // Stop shake animation
-        if (_shakeController.isAnimating) {
+        // Stop shake animation if it was active
+        if (_currentIncomingAlert?.id == alert.id && _shakeController.isAnimating) {
           _shakeController.stop();
           _shakeController.reset();
         }
 
         debugPrint('✅ Responded to alert: $response');
-        debugPrint(
-            '📡 Response should now appear on sender\'s device via real-time stream');
+        debugPrint('📡 Response should now appear on sender\'s device via real-time stream');
 
         // Show premium confirmation snackbar with enhanced animations
         if (mounted) {
@@ -2208,7 +2338,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     final recentThreshold = now.subtract(const Duration(minutes: 15));
 
     for (final alert in _recentReceivedAlerts) {
-      if (alert.createdAt.isAfter(recentThreshold)) return true;
+      final isVisibleInBanner = _showingAlertBanner && _currentIncomingAlert?.id == alert.id;
+      if (alert.createdAt.isAfter(recentThreshold) && !isVisibleInBanner) return true;
     }
     for (final alert in _recentSentAlerts) {
       if (alert.createdAt.isAfter(recentThreshold)) return true;
@@ -2227,8 +2358,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     final allAlerts = <_ActivityItem>[];
 
     for (final alert in _recentReceivedAlerts) {
-      // Only include if within time threshold
-      if (alert.createdAt.isAfter(recentThreshold)) {
+      // Only include if:
+      // 1. Within time threshold
+      // 2. NOT currently being shown in the top banner (prevents visual redundancy)
+      final isVisibleInBanner = _showingAlertBanner && _currentIncomingAlert?.id == alert.id;
+      if (alert.createdAt.isAfter(recentThreshold) && !isVisibleInBanner) {
         allAlerts.add(_ActivityItem(
           alert: alert,
           isReceived: true,
@@ -2384,16 +2518,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
   }
 
-  /// Extract emoji from alert message
-  String? _extractEmojiFromAlert(Alert alert) {
-    if (alert.message != null && alert.message!.isNotEmpty) {
-      final match = _emojiRegex.firstMatch(alert.message!);
-      if (match != null) {
-        return match.group(0);
-      }
-    }
-    return null;
-  }
+
 
   /// Build a single activity item - compact and clear
   Widget _buildActivityItem(_ActivityItem item, bool isTablet) {
@@ -2471,9 +2596,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       child: InkWell(
         onTap: () {
           HapticFeedback.lightImpact();
-          if (needsAction) {
-            _quickRespondToAlert(alert);
-          } else if (_currentUserId != null) {
+          if (_currentUserId != null) {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => AlertHistoryScreen(userId: _currentUserId!),
@@ -2482,10 +2605,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           }
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: needsAction
-                ? Colors.orange.withValues(alpha: 0.08)
+                ? Colors.orange.withValues(alpha: 0.05)
                 : showResponseHighlight
                     ? statusColor.withValues(alpha: 0.12)
                     : null,
@@ -2496,110 +2619,145 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                       width: 3,
                     ),
                   )
-                : null,
+                : needsAction 
+                  ? Border(
+                      left: BorderSide(
+                        color: Colors.orange.shade400,
+                        width: 3,
+                      ),
+                    )
+                  : null,
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Status icon
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  item.isReceived ? Icons.call_received_rounded : Icons.call_made_rounded,
-                  color: statusColor,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 12),
+              Row(
+                children: [
+                  // Status icon
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      item.isReceived ? Icons.call_received_rounded : Icons.call_made_rounded,
+                      color: statusColor,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
 
-              // Content - use Expanded to constrain width
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Title row with proper overflow handling
-                    Row(
+                  // Content - use Expanded to constrain width
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Title takes remaining space, shrinks if needed
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: needsAction ? FontWeight.w700 : FontWeight.w500,
-                              color: needsAction ? Colors.orange.shade800 : PremiumTheme.primaryTextColor,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                        // NEW badge for recent responses
-                        if (showResponseHighlight) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: statusColor,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'NEW',
-                              style: TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-
+                        // Title row with proper overflow handling
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Title takes remaining space, shrinks if needed
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: needsAction ? FontWeight.w700 : FontWeight.w500,
+                                  color: needsAction ? Colors.orange.shade900 : PremiumTheme.primaryTextColor,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
+                            // NEW badge for recent responses
+                            if (showResponseHighlight) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: statusColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'NEW',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_formatTimeAgo(item.time)}  $statusText',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: statusColor,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${_formatTimeAgo(item.time)} · $statusText',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: statusColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                  ),
+
+                  const SizedBox(width: 8),
+                  // Small indicator
+                  if (!needsAction)
+                    Icon(
+                      statusIcon,
+                      color: statusColor,
+                      size: 16,
+                    ),
+                ],
+              ),
+              
+              // INLINE ACTION BUTTONS
+              if (needsAction) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildCompactResponseChip(
+                      label: 'Moving',
+                      icon: Icons.directions_car_rounded,
+                      isPrimary: true,
+                      onTap: () => _respondToAlert('moving_now', targetAlert: alert),
+                      isTablet: isTablet,
+                    ),
+                    const SizedBox(width: 6),
+                    _buildCompactResponseChip(
+                      label: '5 min',
+                      icon: Icons.schedule_rounded,
+                      isPrimary: false,
+                      onTap: () => _respondToAlert('5_minutes', targetAlert: alert),
+                      isTablet: isTablet,
+                    ),
+                    const SizedBox(width: 6),
+                    _buildCompactResponseChip(
+                      label: "Can't",
+                      icon: Icons.block_rounded,
+                      isPrimary: false,
+                      onTap: () => _respondToAlert('cant_move', targetAlert: alert),
+                      isTablet: isTablet,
+                    ),
+                    const SizedBox(width: 6),
+                    _buildCompactResponseChip(
+                      label: "Wrong",
+                      icon: Icons.help_outline_rounded,
+                      isPrimary: false,
+                      onTap: () => _respondToAlert('wrong_car', targetAlert: alert),
+                      isTablet: isTablet,
                     ),
                   ],
                 ),
-              ),
-
-              const SizedBox(width: 8),
-              // Action indicator - constrained to prevent overflow
-              if (needsAction)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'Reply',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              else
-                Icon(
-                  statusIcon,
-                  color: statusColor,
-                  size: 16,
-                ),
+              ],
             ],
           ),
         ),
@@ -2607,182 +2765,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
   }
 
-  /// Quick respond dialog for home screen
-  void _quickRespondToAlert(Alert alert) {
-    HapticFeedback.mediumImpact();
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: PremiumTheme.surfaceColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: PremiumTheme.dividerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Text(
-              'Quick Response',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: PremiumTheme.primaryTextColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Response buttons
-            Row(
-              children: [
-                Expanded(
-                  child: _buildQuickResponseButton(
-                    alert: alert,
-                    label: 'Moving now',
-                    response: 'moving_now',
-                    color: Colors.green,
-                    icon: Icons.directions_car,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildQuickResponseButton(
-                    alert: alert,
-                    label: '5 min',
-                    response: '5_minutes',
-                    color: Colors.orange,
-                    icon: Icons.timer,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildQuickResponseButton(
-                    alert: alert,
-                    label: "Can't move",
-                    response: 'cant_move',
-                    color: Colors.red,
-                    icon: Icons.block,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildQuickResponseButton(
-                    alert: alert,
-                    label: 'Wrong car',
-                    response: 'wrong_car',
-                    color: Colors.grey,
-                    icon: Icons.error_outline,
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickResponseButton({
-    required Alert alert,
-    required String label,
-    required String response,
-    required Color color,
-    required IconData icon,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: () async {
-        Navigator.pop(context);
-
-        try {
-          final success = await _alertService.sendResponse(
-            alertId: alert.id,
-            response: response,
-          );
-
-          if (success && mounted) {
-            HapticFeedback.mediumImpact();
-            await _statsService.incrementCarsFreed();
-
-            // Dismiss the alert banner if it's showing this same alert
-            if (_showingAlertBanner && _currentIncomingAlert?.id == alert.id) {
-              _alertAutoDismissTimer?.cancel();
-              setState(() {
-                _showingAlertBanner = false;
-                _currentIncomingAlert = null;
-                _currentSenderAlias = null;
-                _currentAlertEmoji = null;
-              });
-            }
-
-            // Update the local received alerts list immediately for responsive UI
-            setState(() {
-              final index = _recentReceivedAlerts.indexWhere((a) => a.id == alert.id);
-              if (index != -1) {
-                // Create updated alert with response
-                final updatedAlert = Alert(
-                  id: alert.id,
-                  senderId: alert.senderId,
-                  receiverId: alert.receiverId,
-                  plateHash: alert.plateHash,
-                  message: alert.message,
-                  response: response,
-                  responseMessage: null,
-                  createdAt: alert.createdAt,
-                  readAt: DateTime.now(),
-                  responseAt: DateTime.now(),
-                );
-                _recentReceivedAlerts[index] = updatedAlert;
-              }
-            });
-
-            _showPremiumSnackBar(
-              message: 'Response sent!',
-              isSuccess: true,
-              icon: Icons.check_circle_outline,
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            _showPremiumSnackBar(
-              message: 'Failed to respond',
-              isSuccess: false,
-              icon: Icons.error_outline,
-            );
-          }
-        }
-      },
-      icon: Icon(icon, size: 16),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color.withValues(alpha: 0.1),
-        foregroundColor: color,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: color.withValues(alpha: 0.3)),
-        ),
-      ),
-    );
-  }
 
   String _formatTimeAgo(DateTime time) {
     final diff = DateTime.now().difference(time);
@@ -3423,44 +3406,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     });
   }
 
-  // Legacy handler for direct alert mode toggle
-  void _handleAlertTapLegacy() async {
-    // Check if user can send alert (subscription limit check)
-    if (!await _subscriptionService.canSendAlert()) {
-      HapticFeedback.mediumImpact();
-      if (mounted) {
-        PaywallDialog.show(context, remainingAlerts: 0);
-      }
-      return;
-    }
 
-    // Toggle inline alert mode
-    HapticFeedback.lightImpact();
-
-    if (_isAlertModeActive) {
-      // Collapse alert mode
-      _alertModeController.reverse().then((_) {
-        if (mounted) {
-          setState(() {
-            _isAlertModeActive = false;
-            _alertPlateController.clear();
-            _alertUrgencyLevel = 'Normal';
-            _alertSelectedEmoji = '🚗';
-          });
-        }
-      });
-    } else {
-      // Expand alert mode
-      setState(() {
-        _isAlertModeActive = true;
-      });
-      _alertModeController.forward();
-      // Focus on plate input after animation
-      Future.delayed(const Duration(milliseconds: 350), () {
-        if (mounted) _alertPlateFocusNode.requestFocus();
-      });
-    }
-  }
 
   void _closeAlertMode() {
     HapticFeedback.lightImpact();
@@ -3532,7 +3478,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       );
 
       if (mounted) {
-        if (result.success) {
+        if (result.success && result.recipients > 0) {
           HapticFeedback.heavyImpact();
 
           // Track this plate to prevent duplicates
@@ -3552,8 +3498,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             duration: const Duration(milliseconds: 2500),
           );
         } else {
+          final errorMessage = result.recipients == 0 
+              ? 'Plate not found. Ensure it\'s registered.' 
+              : (result.error ?? 'Failed to send alert');
+              
           _showPremiumSnackBar(
-            message: result.error ?? 'Failed to send alert',
+            message: errorMessage,
             isSuccess: false,
             icon: Icons.error_outline_rounded,
             duration: const Duration(milliseconds: 3000),
@@ -4010,12 +3960,20 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   /// Compact stats icon for header - premium style
   Widget _buildCompactStatsIcon(bool isTablet) {
-    final totalImpact = _userStats.carsFreed + _userStats.situationsResolved;
-    final hasStats = totalImpact > 0;
+    final hasNewStats = _unseenImpactCount > 0;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         HapticFeedback.lightImpact();
+
+        // 1. Await background persistence to avoid race conditions with refresh
+        await _resetUnseenImpact();
+
+        // 2. Clear UI count immediately
+        if (mounted) {
+          setState(() => _unseenImpactCount = 0);
+        }
+
         _showStatsDialog();
       },
       child: Stack(
@@ -4027,7 +3985,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: hasStats
+                colors: hasNewStats
                     ? [
                         Colors.green.shade500.withValues(alpha: 0.15),
                         Colors.green.shade600.withValues(alpha: 0.08),
@@ -4039,14 +3997,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               ),
               shape: BoxShape.circle,
               border: Border.all(
-                color: hasStats
+                color: hasNewStats
                     ? Colors.green.withValues(alpha: 0.2)
                     : PremiumTheme.accentColor.withValues(alpha: 0.1),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: hasStats
+                  color: hasNewStats
                       ? Colors.green.withValues(alpha: 0.1)
                       : PremiumTheme.accentColor.withValues(alpha: 0.05),
                   blurRadius: 8,
@@ -4058,14 +4016,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             child: Icon(
               Icons.trending_up,
               size: isTablet ? 20 : 18,
-              color: hasStats
+              color: hasNewStats
                   ? Colors.green.shade700
                   : PremiumTheme.tertiaryTextColor,
             ),
           ),
 
           // Badge positioned cleanly outside the icon at top-right corner
-          if (hasStats)
+          if (hasNewStats)
             Positioned(
               top: -4,
               right: -4,
@@ -4099,7 +4057,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                 ),
                 child: Center(
                   child: Text(
-                    totalImpact > 99 ? '99+' : '$totalImpact',
+                    _unseenImpactCount > 99 ? '99+' : '$_unseenImpactCount',
                     style: TextStyle(
                       fontSize: isTablet ? 13 : 12,
                       fontWeight: FontWeight.w600,
@@ -4416,9 +4374,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   /// Compact notification icon for header - premium style
   Widget _buildCompactNotificationIcon(bool isTablet) {
-    // Count unresponded received alerts (alerts where YOU are blocking someone)
+    // Count unread received alerts that haven't been responded to
     final unrespondedReceivedCount = _recentReceivedAlerts
-        .where((alert) => !alert.hasResponse)
+        .where((alert) => alert.readAt == null && !alert.hasResponse)
         .length;
 
     // Total actionable items: sent alerts waiting + received alerts needing response
@@ -4434,21 +4392,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       onTap: () async {
         HapticFeedback.lightImpact();
 
-        // Navigate to alert history
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => AlertHistoryScreen(
-              userId: _currentUserId!,
-            ),
-          ),
-        );
+        // CLEAR NOTIFICATION COUNT BEFORE NAVIGATING (Fixes race condition)
+        // 1. Await persistent reset
+        await _resetUnseenAlerts();
 
-        // CLEAR NOTIFICATION COUNT ON CLICK
-        // 1. Instant UI update
+        // 2. Instant UI update to make badge disappear immediately
         if (mounted) {
           setState(() {
             _unacknowledgedAlertsCount = 0;
-            // Mark recent alerts as read locally
+            _unseenAlertsCount = 0;
+            // Mark recent alerts as read locally so they don't count towards the badge
             for (int i = 0; i < _recentReceivedAlerts.length; i++) {
               if (_recentReceivedAlerts[i].readAt == null) {
                 _recentReceivedAlerts[i] = _recentReceivedAlerts[i].copyWith(readAt: DateTime.now());
@@ -4457,26 +4410,36 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           });
         }
 
-        // 2. Persistent database update (background)
+        // 3. Persistent database update for read status
         try {
           // Collect all unread alert IDs from current local lists
-          final List<String> unreadIds = [
-            ..._recentReceivedAlerts.where((a) => a.readAt == null).map((a) => a.id),
-          ];
+          final List<String> unreadIds = _recentReceivedAlerts
+              .where((a) => a.readAt == null)
+              .map((a) => a.id)
+              .toList();
           
           if (unreadIds.isNotEmpty) {
-            await Future.wait(unreadIds.map((id) => _alertService.markAlertRead(id)));
+            unawaited(Future.wait(unreadIds.map((id) => _alertService.markAlertRead(id))));
           }
 
           // Clear the local unacknowledged service cache (sent alerts)
           await _unacknowledgedAlertService.clearAllAlerts();
-          
-          // Force a re-fetch of count to confirm it's 0
-          if (mounted) {
-            _loadUnacknowledgedAlertsCount();
-          }
         } catch (e) {
           debugPrint('⚠️ Error resetting notification count: $e');
+        }
+
+        // 4. Navigate to alert history
+        if (mounted) {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => AlertHistoryScreen(
+                userId: _currentUserId!,
+              ),
+            ),
+          );
+          
+          // Refresh after returning to be absolutely sure
+          _refreshAllData();
         }
       },
       child: Stack(
@@ -4574,6 +4537,24 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         ],
       ),
     );
+  }
+
+  // --- Helpers for unseen counters ---
+
+
+
+
+
+  Future<void> _resetUnseenAlerts() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('unseen_alerts_count', 0);
+    if (mounted) setState(() => _unseenAlertsCount = 0);
+  }
+
+  Future<void> _resetUnseenImpact() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('unseen_impact_count', 0);
+    if (mounted) setState(() => _unseenImpactCount = 0);
   }
 
   /// Show notification statistics in a premium dialog
@@ -4851,89 +4832,103 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         // Check if we have very limited vertical space or activity feed is shown
-        final isVeryCompact = constraints.maxHeight < 550;
         final hasActivityFeed = _hasRecentAlerts();
+        final isVeryCompact = constraints.maxHeight < 550;
+        
+        // Decide if we should enable scrolling and disable "footer pushing"
+        final isScrollingActive = isVeryCompact || hasActivityFeed;
+
+        Widget content = Column(
+          children: [
+            // Subtle app identity
+            _buildAppHeader(theme, isTablet),
+
+            // Flexible space above - reduced to push content up
+            if (isScrollingActive)
+              SizedBox(height: isCompact ? 12 : 24)
+            else
+              Expanded(flex: isCompact ? 1 : 2, child: const SizedBox()),
+
+            // MAIN CONTENT: Hero button when not in alert mode
+            ...[
+              // Hero button - the centerpiece
+              _buildHeroButton(theme, isTablet),
+
+              // Stats and notification icons with labels - animated entrance
+              SizedBox(height: isCompact ? 12 : (isTablet ? 28 : 20)),
+              AnimatedBuilder(
+                animation: _entranceController,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(0, _iconsSlideAnimation.value),
+                    child: Opacity(
+                      opacity: _iconsFadeAnimation.value,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildLabeledIcon(
+                      icon: _buildCompactStatsIcon(isTablet),
+                      label: 'History',
+                      isTablet: isTablet,
+                    ),
+                    const SizedBox(width: 32),
+                    _buildLabeledIcon(
+                      icon: _buildCompactNotificationIcon(isTablet),
+                      label: 'Alerts',
+                      isTablet: isTablet,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Subscription usage badge
+              SizedBox(height: isCompact ? 8 : 12),
+              _buildSubscriptionBadge(),
+
+              // Active vehicle display OR setup hint
+              SizedBox(height: isCompact ? 8 : (isTablet ? 24 : 16)),
+              if (_primaryPlate != null)
+                _buildActiveVehicleDisplay(isTablet)
+              else
+                _buildSetupHint(isTablet),
+
+              // Recent activity feed (only shows last 15 minutes)
+              if (hasActivityFeed) ...[
+                SizedBox(height: isCompact ? 12 : 20),
+                _buildRecentActivityFeed(isTablet),
+              ],
+            ],
+
+            // Spacer pushes footer to absolute bottom
+            if (isScrollingActive)
+              SizedBox(height: isCompact ? 24 : 40)
+            else
+              Expanded(flex: isCompact ? 1 : 2, child: const SizedBox()),
+
+            // DezeTingz branding at the very bottom
+            _buildBranding(),
+          ],
+        );
+
+        // Wrap with IntrinsicHeight only if NOT scrolling, to allow Expanded to work
+        if (!isScrollingActive) {
+          content = IntrinsicHeight(child: content);
+        }
 
         return SingleChildScrollView(
-          physics: (isVeryCompact || hasActivityFeed)
+          physics: isScrollingActive
               ? const BouncingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: constraints.maxHeight,
             ),
-            child: IntrinsicHeight(
-              child: Column(
-                children: [
-                  // Subtle app identity
-                  _buildAppHeader(theme, isTablet),
-
-                  // Flexible space above - reduced to push content up
-                  Expanded(flex: isCompact ? 1 : 2, child: const SizedBox()),
-
-                  // MAIN CONTENT: Hero button when not in alert mode
-                  ...[
-                    // Hero button - the centerpiece
-                    _buildHeroButton(theme, isTablet),
-
-                    // Stats and notification icons with labels - animated entrance
-                    SizedBox(height: isCompact ? 12 : (isTablet ? 28 : 20)),
-                    AnimatedBuilder(
-                      animation: _entranceController,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(0, _iconsSlideAnimation.value),
-                          child: Opacity(
-                            opacity: _iconsFadeAnimation.value,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildLabeledIcon(
-                            icon: _buildCompactStatsIcon(isTablet),
-                            label: 'History',
-                            isTablet: isTablet,
-                          ),
-                          const SizedBox(width: 32),
-                          _buildLabeledIcon(
-                            icon: _buildCompactNotificationIcon(isTablet),
-                            label: 'Alerts',
-                            isTablet: isTablet,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Subscription usage badge
-                    SizedBox(height: isCompact ? 8 : 12),
-                    _buildSubscriptionBadge(),
-
-                    // Active vehicle display OR setup hint
-                    SizedBox(height: isCompact ? 8 : (isTablet ? 24 : 16)),
-                    if (_primaryPlate != null)
-                      _buildActiveVehicleDisplay(isTablet)
-                    else
-                      _buildSetupHint(isTablet),
-
-                    // Recent activity feed (only shows last 15 minutes)
-                    if (_hasRecentAlerts()) ...[
-                      SizedBox(height: isCompact ? 12 : 20),
-                      _buildRecentActivityFeed(isTablet),
-                    ],
-                  ],
-
-                  // Spacer pushes footer to absolute bottom
-                  Expanded(flex: isCompact ? 1 : 2, child: const SizedBox()),
-
-                  // DezeTingz branding at the very bottom
-                  _buildBranding(),
-                ],
-              ),
-            ),
+            child: content,
           ),
         );
       },
@@ -5180,61 +5175,78 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Premium header with centered emoji
+                      // Mirror Native Header Style
                       Padding(
                         padding: EdgeInsets.fromLTRB(
-                          isTablet ? 16 : 12,
-                          isTablet ? 14 : 12,
+                          isTablet ? 16 : 14,
+                          isTablet ? 16 : 14,
                           isTablet ? 12 : 8,
-                          10,
+                          12,
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Emoji as centerpiece (or default icon)
+                            // App Icon mirroring native behavior
                             Container(
-                              width: isTablet ? 44 : 40,
-                              height: isTablet ? 44 : 40,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
-                                color: _getUrgencyPrimaryColor(_currentAlertUrgency).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
+                                color: PremiumTheme.surfaceColor,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                  ),
+                                ],
                               ),
-                              child: Center(
-                                child: _currentAlertEmoji != null
-                                    ? Text(
-                                        _currentAlertEmoji!,
-                                        style: TextStyle(fontSize: isTablet ? 24 : 22),
-                                      )
-                                    : Icon(
-                                        Icons.directions_car_rounded,
-                                        color: _getUrgencyPrimaryColor(_currentAlertUrgency),
-                                        size: isTablet ? 22 : 20,
-                                      ),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/images/app_icon.png',
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            // Title and sender
+                            const SizedBox(width: 14),
+                            // Title row mirroring system style: [Emoji] Move Request
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Move Request',
-                                    style: TextStyle(
-                                      fontSize: isTablet ? 15 : 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: PremiumTheme.primaryTextColor,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _currentAlertEmoji != null 
+                                            ? '${_currentAlertEmoji!} Move Request' 
+                                            : 'Move Request',
+                                        style: TextStyle(
+                                          fontSize: isTablet ? 15 : 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: PremiumTheme.primaryTextColor,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        'Just now',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: PremiumTheme.tertiaryTextColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 4),
+                                  // Body: [Alias] needs you to move.
                                   Text(
                                     _currentSenderAlias != null
-                                        ? 'From ${_aliasService.formatAliasForDisplay(_currentSenderAlias!)}'
-                                        : 'New request',
+                                        ? '${_currentSenderAlias!} needs you to move.'
+                                        : 'Someone needs you to move.',
                                     style: TextStyle(
-                                      fontSize: isTablet ? 12 : 11,
+                                      fontSize: isTablet ? 13 : 12,
                                       color: PremiumTheme.secondaryTextColor,
+                                      height: 1.3,
                                     ),
-                                    maxLines: 1,
+                                    maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
@@ -5245,16 +5257,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                               onTap: _dismissCurrentAlert,
                               behavior: HitTestBehavior.opaque,
                               child: Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: PremiumTheme.dividerColor.withValues(alpha: 0.5),
-                                  shape: BoxShape.circle,
-                                ),
+                                padding: const EdgeInsets.all(4),
                                 child: Icon(
                                   Icons.close_rounded,
-                                  color: PremiumTheme.secondaryTextColor,
-                                  size: isTablet ? 16 : 14,
+                                  color: PremiumTheme.tertiaryTextColor,
+                                  size: 18,
                                 ),
                               ),
                             ),
@@ -5262,45 +5269,37 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         ),
                       ),
 
-                      // Compact response buttons in single row
+                      // Response buttons row matching native actions
                       Container(
                         padding: EdgeInsets.fromLTRB(
                           isTablet ? 12 : 8,
                           0,
                           isTablet ? 12 : 8,
-                          isTablet ? 12 : 10,
+                          12,
                         ),
                         child: Row(
                           children: [
                             _buildCompactResponseChip(
-                              label: 'Moving',
+                              label: 'Moving Now',
                               icon: Icons.directions_car_rounded,
                               isPrimary: true,
                               onTap: () => _respondToAlert('moving_now'),
                               isTablet: isTablet,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             _buildCompactResponseChip(
-                              label: '5 min',
+                              label: '5 Minutes',
                               icon: Icons.schedule_rounded,
                               isPrimary: false,
                               onTap: () => _respondToAlert('5_minutes'),
                               isTablet: isTablet,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             _buildCompactResponseChip(
-                              label: "Can't",
+                              label: "Can't Move",
                               icon: Icons.block_rounded,
                               isPrimary: false,
                               onTap: () => _respondToAlert('cant_move'),
-                              isTablet: isTablet,
-                            ),
-                            const SizedBox(width: 6),
-                            _buildCompactResponseChip(
-                              label: 'Wrong',
-                              icon: Icons.help_outline_rounded,
-                              isPrimary: false,
-                              onTap: () => _respondToAlert('wrong_car'),
                               isTablet: isTablet,
                             ),
                           ],
@@ -5385,71 +5384,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
   }
 
-  Widget _buildResponseButton({
-    required String label,
-    required IconData icon,
-    required bool isPrimary,
-    required VoidCallback onTap,
-    required bool isTablet,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.mediumImpact();
-          onTap();
-        },
-        borderRadius: BorderRadius.circular(12),
-        splashColor: isPrimary
-            ? PremiumTheme.accentColor.withValues(alpha: 0.2)
-            : Colors.white.withValues(alpha: 0.2),
-        highlightColor: isPrimary
-            ? PremiumTheme.accentColor.withValues(alpha: 0.1)
-            : Colors.white.withValues(alpha: 0.1),
-        child: Ink(
-          padding: EdgeInsets.symmetric(
-            vertical: isTablet ? 12.0 : 10.0,
-            horizontal: isTablet ? 16.0 : 12.0,
-          ),
-          decoration: BoxDecoration(
-            color: isPrimary ? Colors.white : Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: !isPrimary
-                ? Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    width: 1,
-                  )
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: isPrimary ? PremiumTheme.accentColor : Colors.white,
-                size: isTablet ? 16 : 14,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: isTablet ? 13 : 12,
-                    fontWeight: FontWeight.w600,
-                    color: isPrimary ? PremiumTheme.accentColor : Colors.white,
 
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // ===== INLINE ALERT MODE UI (Steve Jobs - One Screen) =====
 

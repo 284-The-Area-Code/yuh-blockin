@@ -391,7 +391,7 @@ get_header();
         <div class="yb-footer__column">
           <h4 class="yb-footer__heading">Contact</h4>
           <ul class="yb-footer__list">
-            <li><a href="mailto:dev@dezetingz.ai" class="yb-footer__link">dev@dezetingz.ai</a></li>
+            <li><a href="https://deze-tingz.github.io/yuh-blockin/support.html" class="yb-footer__link">Support</a></li>
             <li><span class="yb-footer__text">Road Town, Tortola</span></li>
             <li><span class="yb-footer__text">British Virgin Islands</span></li>
           </ul>

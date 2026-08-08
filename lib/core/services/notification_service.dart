@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'sound_preferences_service.dart';
+import 'background_alert_service.dart';
 
 /// Comprehensive Notification Service
 ///
@@ -57,7 +60,8 @@ class NotificationService {
     await _notifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationResponse,
-      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationResponse,
+      // Pass top-level function for background response handling
+      onDidReceiveBackgroundNotificationResponse: onBackgroundNotificationResponse,
     );
 
     // Create/update notification channel with custom sound (Android only)
@@ -67,6 +71,12 @@ class NotificationService {
 
     // Request permissions
     await _requestPermissions();
+
+    // Check full-screen intent permission on Android 14+
+    // Note: This won't show anything to the user if already granted
+    if (_isAndroid) {
+      unawaited(requestFullScreenIntentPermission());
+    }
 
     _isInitialized = true;
     debugPrint('NotificationService initialized');
@@ -95,6 +105,40 @@ class NotificationService {
     return true;
   }
 
+  /// Check and request full-screen intent permission (Android 14+)
+  /// This permission allows notifications to show full-screen when the device is locked.
+  /// On Android 14+, if not approved by Google Play for auto-grant, this opens system settings.
+  Future<bool> requestFullScreenIntentPermission() async {
+    if (!_isAndroid) return true;
+
+    try {
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidPlugin == null) return true;
+
+      final result = await androidPlugin.requestFullScreenIntentPermission();
+      return result ?? true;
+    } catch (e) {
+      debugPrint('Error requesting full-screen intent permission: $e');
+      return true;
+    }
+  }
+
+  /// Check if full-screen intent permission is granted (Android 14+)
+  Future<bool> canUseFullScreenIntent() async {
+    if (!_isAndroid) return true;
+
+    try {
+      const channel = MethodChannel('com.yuhblockin.v1/notifications');
+      final bool? result = await channel.invokeMethod<bool>('canUseFullScreenIntent');
+      return result ?? true;
+    } catch (e) {
+      debugPrint('Error checking full-screen intent permission: $e');
+      return true;
+    }
+  }
+
   /// Create notification channel with custom sound for alerts
   Future<void> _createNotificationChannel() async {
     final androidPlugin = _notifications
@@ -121,14 +165,37 @@ class NotificationService {
 
 
   /// Handle notification tap
-  void _onNotificationResponse(NotificationResponse response) {
+  void _onNotificationResponse(NotificationResponse response) async {
+    final actionId = response.actionId;
+    final alertId = response.payload;
+
+    if (actionId != null && alertId != null && actionId != 'respond') {
+      if (kDebugMode) debugPrint('📩 Foreground Action: $actionId for alert $alertId');
+      
+      try {
+        final timestamp = DateTime.now().toIso8601String();
+        await Supabase.instance.client
+            .from('alerts')
+            .update({
+              'response': actionId,
+              'response_at': timestamp,
+              'read_at': timestamp,
+            })
+            .eq('id', alertId);
+        if (kDebugMode) debugPrint('✅ Foreground response sent: $actionId');
+      } catch (e) {
+        if (kDebugMode) debugPrint('❌ Failed to send foreground response: $e');
+      }
+    }
+
     debugPrint('Notification tapped: ${response.payload}');
     _onNotificationTapped?.call(response.payload);
   }
 
-  /// Handle background notification tap
+  /// Handle background notification tap (Stub - usually handled by onBackgroundNotificationResponse)
   @pragma('vm:entry-point')
   static void _onBackgroundNotificationResponse(NotificationResponse response) {
+    // This is redirected to the top-level onBackgroundNotificationResponse
     debugPrint('Background notification tapped: ${response.payload}');
   }
 
@@ -159,6 +226,18 @@ class NotificationService {
     // For iOS, just the filename with extension
     final iosSoundFileName = selectedSoundPath.split('/').last;
 
+    // Extract emoji from body/message for title visibility
+    String? emoji;
+    final RegExp emojiRegex = RegExp(
+        '[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]',
+        unicode: true);
+    final match = emojiRegex.firstMatch(body);
+    if (match != null) {
+      emoji = match.group(0);
+    }
+    
+    final displayTitle = emoji != null ? '$emoji $title' : title;
+
     if (kDebugMode) {
       debugPrint('Playing notification sound: $soundFileName (urgency: $urgencyLevel)');
     }
@@ -181,9 +260,8 @@ class NotificationService {
       600,  // Long final buzz
     ]);
 
-    // Android: Use a channel ID specific to this sound file
-    // This is required because Android caches channel settings including sound
-    final channelId = 'yuh_blockin_alert_$soundFileName';
+    // Android: Use a fresh channel ID to ensure action buttons are updated
+    final channelId = 'yuh_blockin_alert_${soundFileName}_v2';
 
     // Create the notification channel for this specific sound
     if (_isAndroid) {
@@ -193,7 +271,7 @@ class NotificationService {
         final channel = AndroidNotificationChannel(
           channelId,
           'Yuh Blockin Alerts',
-          description: 'Parking alert notifications',
+          description: 'Parking alert notifications with actions',
           importance: Importance.max,
           playSound: true,
           sound: RawResourceAndroidNotificationSound(soundFileName),
@@ -229,6 +307,26 @@ class NotificationService {
         contentTitle: title,
         summaryText: "Yuh Blockin'",
       ),
+      actions: [
+        const AndroidNotificationAction(
+          'moving_now',
+          'Moving Now',
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+        const AndroidNotificationAction(
+          '5_minutes',
+          '5 Minutes',
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+        const AndroidNotificationAction(
+          'cant_move',
+          "Can't Move",
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
+      ],
     );
 
     // iOS notification details
@@ -241,6 +339,7 @@ class NotificationService {
       threadIdentifier: 'yuh_blockin_alerts',
       subtitle: subtitle,
       sound: playSound ? iosSoundFileName : null,
+      categoryIdentifier: 'yuh_blockin_alerts_category',
     );
 
 
@@ -249,13 +348,84 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _notifications.show(
-      DateTime.now().millisecondsSinceEpoch.remainder(100000), // Unique ID
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+    // CRITICAL: Trigger vibration BEFORE attempting notification for instant response
+    if (vibrate) {
+      unawaited(_vibrateForSilentMode());
+    }
+
+    try {
+      await _notifications.show(
+        DateTime.now().millisecondsSinceEpoch.remainder(100000), // Unique ID
+        displayTitle,
+        body,
+        details,
+        payload: payload,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Notification failed with custom sound: $e');
+        debugPrint('🔄 Falling back to known-good alert_sound...');
+      }
+
+      // FALLBACK 1: Known-good alert_sound
+      try {
+        final fallbackDetails = NotificationDetails(
+          android: AndroidNotificationDetails(
+            'yuh_blockin_alerts_safe',
+            'Yuh Blockin Alerts',
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
+            sound: const RawResourceAndroidNotificationSound('alert_sound'),
+            enableVibration: true,
+            actions: androidDetails.actions,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+            sound: 'alert_sound.wav',
+            categoryIdentifier: iosDetails.categoryIdentifier,
+          ),
+        );
+
+        await _notifications.show(
+          DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          displayTitle,
+          body,
+          fallbackDetails,
+          payload: payload,
+        );
+      } catch (e2) {
+        // FALLBACK 2: Standard system notification
+        try {
+          final systemDetails = NotificationDetails(
+            android: AndroidNotificationDetails(
+              'yuh_blockin_alerts_system',
+              'Yuh Blockin Alerts',
+              importance: Importance.max,
+              priority: Priority.max,
+              playSound: true,
+              enableVibration: true,
+              actions: androidDetails.actions,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentSound: true,
+            ),
+          );
+
+          await _notifications.show(
+            DateTime.now().millisecondsSinceEpoch.remainder(100000),
+            displayTitle,
+            body,
+            systemDetails,
+            payload: payload,
+          );
+        } catch (e3) {
+           if (kDebugMode) debugPrint('❌ Critical: Main isolate fallback also failed: $e3');
+        }
+      }
+    }
 
     // Additional vibration for silent mode
     if (vibrate) {

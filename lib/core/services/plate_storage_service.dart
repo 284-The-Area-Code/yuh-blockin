@@ -177,7 +177,7 @@ class PlateStorageService {
   }
 
   /// Get a secure hash of a license plate for backend communication
-  /// Uses caching to avoid recomputing SHA256 for the same plates
+  /// MUST match simple_alert_service._hashPlate() for database compatibility
   String getPlateHash(String plateNumber) {
     final normalizedPlate = plateNumber.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '');
 
@@ -186,9 +186,10 @@ class PlateStorageService {
       return _hashCache[normalizedPlate]!;
     }
 
-    final bytes = utf8.encode('$normalizedPlate$_encryptionSalt');
+    // CRITICAL: Database uses full unsalted SHA256 for cross-user privacy
+    final bytes = utf8.encode(normalizedPlate);
     final digest = sha256.convert(bytes);
-    final hash = digest.toString().substring(0, 16); // First 16 characters
+    final hash = digest.toString();
 
     // Cache the hash (with size limit to prevent memory issues)
     if (_hashCache.length >= _maxHashCacheSize) {
@@ -420,7 +421,7 @@ class PlateStorageService {
         final supabase = Supabase.instance.client;
         dbResult = await supabase
             .from('plates')
-            .select('plate_number, hashed_plate')
+            .select('plate_hash')
             .eq('user_id', userId)
             .timeout(const Duration(seconds: 10));
       } catch (e) {
@@ -437,25 +438,22 @@ class PlateStorageService {
         );
       }
 
-      final dbPlates = <String>{};
-      final dbPlatesList = <String>[];
-
-      for (final row in dbResult) {
-        if (row['plate_number'] != null) {
-          final plate = (row['plate_number'] as String).toUpperCase();
-          dbPlates.add(plate);
-          dbPlatesList.add(plate);
-        }
+      // Compute hashes for all local plates for comparison
+      final localHashes = <String, String>{};
+      for (final plate in localPlates) {
+        localHashes[getPlateHash(plate)] = plate;
       }
+
+      final dbHashes = dbResult.map((row) => row['plate_hash'] as String).toSet();
 
       // === EDGE CASE 1: Remove local plates not in DB ===
       final platesToRemove = <String>[];
       for (final localPlate in localPlates) {
-        final normalizedPlate = localPlate.toUpperCase();
-        if (!dbPlates.contains(normalizedPlate)) {
+        final hash = getPlateHash(localPlate);
+        if (!dbHashes.contains(hash)) {
           platesToRemove.add(localPlate);
           if (kDebugMode) {
-            debugPrint('🗑️ Plate not in DB, will remove: $localPlate');
+            debugPrint('🗑️ Plate hash not in DB, will remove: $localPlate');
           }
         }
       }
@@ -467,31 +465,20 @@ class PlateStorageService {
         }
       }
 
-      // === EDGE CASE 2: Restore DB plates not in local ===
-      final localPlatesNormalized = localPlates.map((p) => p.toUpperCase()).toSet();
-      final platesToRestore = <String>[];
-
-      for (final dbPlate in dbPlatesList) {
-        if (!localPlatesNormalized.contains(dbPlate) && !platesToRemove.contains(dbPlate)) {
-          platesToRestore.add(dbPlate);
-          if (kDebugMode) {
-            debugPrint('📥 Plate in DB but not local, will restore: $dbPlate');
-          }
+      // === EDGE CASE 2: DB plates not in local ===
+      // Note: We cannot "restore" raw plate numbers from hashes because the DB 
+      // intentionally does not store them for privacy. 
+      // If a plate is in the DB but not locally, the user must re-add it manually 
+      // or use the recovery key.
+      int missingLocally = 0;
+      for (final dbHash in dbHashes) {
+        if (!localHashes.containsKey(dbHash)) {
+          missingLocally++;
         }
       }
 
-      for (final plate in platesToRestore) {
-        try {
-          await addPlate(plate);
-          if (kDebugMode) {
-            debugPrint('✅ Restored plate from DB: $plate');
-          }
-        } catch (e) {
-          // May fail if at max limit - that's ok
-          if (kDebugMode) {
-            debugPrint('⚠️ Could not restore plate $plate: $e');
-          }
-        }
+      if (kDebugMode && missingLocally > 0) {
+        debugPrint('ℹ️ $missingLocally plates exist in DB but are missing locally (cannot restore raw numbers from hashes)');
       }
 
       // Build result message
@@ -499,8 +486,8 @@ class PlateStorageService {
       if (platesToRemove.isNotEmpty) {
         messages.add('removed ${platesToRemove.length}');
       }
-      if (platesToRestore.isNotEmpty) {
-        messages.add('restored ${platesToRestore.length}');
+      if (missingLocally > 0) {
+        messages.add('$missingLocally missing locally');
       }
       final message = messages.isEmpty ? 'All plates synced' : messages.join(', ');
 
@@ -512,8 +499,8 @@ class PlateStorageService {
         synced: true,
         removedCount: platesToRemove.length,
         removedPlates: platesToRemove,
-        restoredCount: platesToRestore.length,
-        restoredPlates: platesToRestore,
+        restoredCount: 0, // Cannot restore raw numbers from hashes
+        restoredPlates: const [],
         message: message,
       );
 

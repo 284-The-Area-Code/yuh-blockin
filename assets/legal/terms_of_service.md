@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last Updated: December 10, 2024**
+**Last Updated: December 10, 2025**
 
 Welcome to Yuh Blockin'! These Terms of Service ("Terms") govern your use of the Yuh Blockin' mobile application ("App") operated by DezeTingz ("we," "our," or "us").
 
@@ -216,4 +216,4 @@ Location: British Virgin Islands
 
 ---
 
-*These Terms of Service are effective as of December 10, 2024.*
+*These Terms of Service are effective as of December 10, 2025.*

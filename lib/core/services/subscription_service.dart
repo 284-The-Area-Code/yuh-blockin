@@ -390,21 +390,22 @@ class SubscriptionService {
     try {
       final supabase = Supabase.instance.client;
       final result = await supabase
-          .from('subscriptions')
-          .select('status, plan_type, expires_at')
+          .from('ath_monthly_subscriptions')
+          .select('renewal_status, current_period_end')
           .eq('user_id', _currentUserId!)
           .maybeSingle();
 
       if (result != null) {
-        _subscriptionStatus = result['status'] ?? 'free';
-        _isPremium = _subscriptionStatus != 'free';
+        final status = result['renewal_status'] as String?;
+        _subscriptionStatus = status ?? 'free';
+        _isPremium = _subscriptionStatus == 'active' || _subscriptionStatus == 'grace_period';
 
         // Check if subscription has expired
-        if (result['expires_at'] != null) {
-          final expiresAt = DateTime.parse(result['expires_at']);
+        if (result['current_period_end'] != null) {
+          final expiresAt = DateTime.parse(result['current_period_end']);
           if (expiresAt.isBefore(DateTime.now())) {
             _isPremium = false;
-            _subscriptionStatus = 'free';
+            _subscriptionStatus = 'expired';
           }
         }
       }
@@ -420,9 +421,9 @@ class SubscriptionService {
   Future<void> _syncToServer() async {
     try {
       final supabase = Supabase.instance.client;
-      await supabase.from('subscriptions').upsert({
+      await supabase.from('ath_monthly_subscriptions').upsert({
         'user_id': _currentUserId,
-        'status': _subscriptionStatus,
+        'renewal_status': _subscriptionStatus,
         'updated_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {

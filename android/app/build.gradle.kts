@@ -45,20 +45,37 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["applicationName"] = "io.flutter.app.FlutterApplication"
     }
 
     buildTypes {
         release {
             // signingConfig = signingConfigs.getByName("release")
             signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+// Fix for Build Analyzer warning regarding overlapping output directories
+// between copyFlutterAssets and mergeAssets tasks in AGP 8.x
+tasks.whenTaskAdded {
+    if (name.startsWith("copyFlutterAssets")) {
+        val variantName = name.removePrefix("copyFlutterAssets")
+        tasks.findByName("merge${variantName}Assets")?.let { mergeTask ->
+            dependsOn(mergeTask)
+        }
+    }
 }
 
 dependencies {

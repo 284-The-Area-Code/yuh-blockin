@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Premium Backend Service for Yuh Blockin'
 ///
@@ -52,7 +53,8 @@ class PremiumBackendService {
     _ensureInitialized();
 
     try {
-      final userId = _generateUserId();
+      // Use real Auth identity if available, otherwise fallback to simulated ID
+      final userId = Supabase.instance.client.auth.currentUser?.id ?? _generateUserId();
 
       // Hash license plates for privacy
       final hashedPlates = <String, String>{};

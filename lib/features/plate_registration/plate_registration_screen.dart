@@ -193,6 +193,9 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
   Future<void> _registerPlate() async {
     if (!_isValidPlate || _isRegistering) return;
 
+    // UX OPTIMIZATION: Dismiss keyboard immediately to signal start of process
+    FocusScope.of(context).unfocus();
+    
     setState(() => _isRegistering = true);
     HapticFeedback.mediumImpact();
 
@@ -218,12 +221,27 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
           debugPrint('🔍 Verifying user exists in database...');
         }
 
-        bool userExistsInDB = await _alertService.userExists(userId);
-        if (!userExistsInDB) {
+        final bool? existsResult = await _alertService.userExists(userId);
+        if (existsResult == false) {
           if (kDebugMode) {
-            debugPrint('⚠️ User ID exists in prefs but NOT in database! Need to create user.');
+            debugPrint('⚠️ User ID exists in prefs but explicitly NOT in database! Need to create user.');
           }
           needsNewUser = true;
+        } else if (existsResult == null) {
+          // Network error - don't force new user, but show error
+          if (kDebugMode) {
+            debugPrint('📡 Network error verifying user - cannot proceed safely');
+          }
+          setState(() => _isRegistering = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Network error. Please check your connection and try again.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
         } else {
           if (kDebugMode) {
             debugPrint('✅ User verified to exist in database: $userId');

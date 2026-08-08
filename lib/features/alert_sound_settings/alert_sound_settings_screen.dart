@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/sound_preferences_service.dart';
+import '../../core/services/notification_service.dart';
 
 /// Premium alert sound settings screen
 /// Allows users to customize alert sounds for Low, Normal, and High urgency levels
@@ -215,6 +217,11 @@ class _AlertSoundSettingsScreenState extends State<AlertSoundSettingsScreen> {
 
               const SizedBox(height: 32),
 
+              // Troubleshooting section
+              _buildTroubleshootingSection(),
+
+              const SizedBox(height: 32),
+
               // Footer
               Center(
                 child: Column(
@@ -249,6 +256,132 @@ class _AlertSoundSettingsScreenState extends State<AlertSoundSettingsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTroubleshootingSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: PremiumTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: PremiumTheme.dividerColor.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.settings_suggest_outlined,
+                    color: PremiumTheme.accentColor, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Troubleshoot Notifications',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: PremiumTheme.primaryTextColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: PremiumTheme.dividerColor),
+          _buildPermissionTile(
+            title: 'Push Notifications',
+            subtitle: 'Required to receive alerts',
+            checkAction: () async =>
+                await NotificationService().areNotificationsEnabled(),
+            requestAction: () async {
+              HapticFeedback.mediumImpact();
+              final status = await Permission.notification.status;
+              if (status.isPermanentlyDenied) {
+                return await openAppSettings();
+              }
+              final result = await Permission.notification.request();
+              if (result.isPermanentlyDenied) {
+                return await openAppSettings();
+              }
+              return result.isGranted;
+            },
+          ),
+          if (Theme.of(context).platform == TargetPlatform.android)
+            _buildPermissionTile(
+              title: 'Full-screen Alerts',
+              subtitle: 'Required to see alerts on lock screen',
+              checkAction: () async =>
+                  await NotificationService().canUseFullScreenIntent(),
+              requestAction: () async {
+                HapticFeedback.mediumImpact();
+                return await NotificationService()
+                    .requestFullScreenIntentPermission();
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionTile({
+    required String title,
+    required String subtitle,
+    required Future<bool> Function() checkAction,
+    required Future<bool> Function() requestAction,
+  }) {
+    return FutureBuilder<bool>(
+      future: checkAction(),
+      builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+        final isGranted = snapshot.data ?? false;
+
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          onTap: isGranted
+              ? null
+              : () async {
+                  await requestAction();
+                  setState(() {});
+                },
+          title: Text(title,
+              style: TextStyle(
+                  color: PremiumTheme.primaryTextColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500)),
+          subtitle: Text(subtitle,
+              style: TextStyle(
+                  color: PremiumTheme.secondaryTextColor, fontSize: 12)),
+          trailing: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : isGranted
+                  ? Icon(Icons.check_circle, color: _lowColor, size: 22)
+                  : ElevatedButton(
+                      onPressed: () async {
+                        await requestAction();
+                        setState(() {});
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: PremiumTheme.accentColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        minimumSize: Size.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('Fix', style: TextStyle(fontSize: 12)),
+                    ),
+        );
+      },
     );
   }
 

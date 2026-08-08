@@ -63,6 +63,7 @@ class PremiumConfig {
   static const String supportEmail = isPremium
       ? 'premium@yuhblockin.com'
       : 'support@yuhblockin.com';
+  static const String supportUrl = 'https://deze-tingz.github.io/yuh-blockin/support.html';
   static const String supportLevel = isPremium ? 'premium' : 'standard';
 
   // Feature Availability Checks

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/subscription_service.dart';
-import '../../main.dart';
+import '../../core/theme/theme_notifier.dart';
 
 /// Premium theme settings screen
 /// Allows users to switch between Light, Dark, Caribbean Sunset, and Premium themes

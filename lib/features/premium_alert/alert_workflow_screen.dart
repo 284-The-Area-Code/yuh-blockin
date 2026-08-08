@@ -1145,7 +1145,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
       );
 
       if (mounted) {
-        if (result.success) {
+        if (result.success && result.recipients > 0) {
           debugPrint('✅ Alert sent successfully to ${result.recipients} users');
 
           // Record alert timing for payment tier limits
@@ -1193,7 +1193,11 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
           );
         } else {
           // Show detailed error message based on failure reason
-          final errorMessage = _getDetailedErrorMessage(result.error);
+          String? error = result.error;
+          if (result.recipients == 0 && error == null) {
+            error = 'License plate not registered';
+          }
+          final errorMessage = _getDetailedErrorMessage(error);
           _showErrorDialog(errorMessage);
           setState(() => _isLoading = false);
         }

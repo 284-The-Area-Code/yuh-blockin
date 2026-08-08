@@ -2,7 +2,7 @@ name: yuh_blockin # Renamed for clarity, you can keep yuh_blockin_web if you pre
 description: "A Flutter project for Yuh Blockin'."
 publish_to: 'none'
 
-version: 1.0.0+2
+version: 1.0.0+4
 
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -31,7 +31,6 @@ dependencies:
 
   # Background service for reliable notifications when locked
   flutter_background_service: ^5.0.5
-  flutter_background_service_android: ^6.2.3
   device_info_plus: ^10.1.0
 
   # In-app purchases via RevenueCat
@@ -42,6 +41,7 @@ dependencies:
   url_launcher: ^6.2.5
   qr_flutter: ^4.1.0
   webview_flutter: ^4.13.0
+  flutter_app_badger: ^1.5.0
 
   # Optional: Keep these only if you want advanced state management
   # hooks_riverpod: ^2.5.1

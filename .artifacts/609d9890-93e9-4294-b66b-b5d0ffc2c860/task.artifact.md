@@ -1,15 +1,15 @@
-- [ ] Dependencies & Configuration
-    - [ ] Remove `firebase_core` and `firebase_messaging` from `pubspec.yaml`
-    - [ ] Delete `lib/firebase_options.dart`
-    - [ ] Delete `android/app/google-services.json`
-    - [ ] Delete `ios/Runner/GoogleService-Info.plist`
-- [ ] Android Manifest & Build
-    - [ ] Remove Firebase blocks from `android/app/src/main/AndroidManifest.xml`
-- [ ] Flutter Logic
-    - [ ] Delete `lib/core/services/push_notification_service.dart`
-    - [ ] Remove Firebase code from `lib/main.dart`
-- [ ] iOS Cleanup
-    - [ ] Remove Firebase flags from `ios/Runner/Info.plist`
-- [ ] Verification
-    - [ ] Run `flutter pub get`
-    - [ ] Run `flutter build apk --release -t lib/main_premium.dart`
+- [x] Unified Main Entry Point
+    - [x] Update `lib/main.dart` with edge-to-edge and premium scroll physics
+    - [x] Delete `lib/main_premium.dart`
+- [x] Badge & Logic Fixes
+    - [x] Fix History badge reset in `lib/main.dart`
+    - [x] Fix Alerts badge reset in `lib/main.dart`
+- [x] Feature Imports Cleanup
+    - [x] Update `lib/features/onboarding/onboarding_flow.dart`
+    - [x] Update `lib/features/account_recovery/login_with_key_screen.dart`
+    - [x] Update `lib/features/plate_registration/plate_registration_screen.dart`
+    - [x] Update `lib/features/theme_settings/theme_settings_screen.dart`
+- [x] Verification
+    - [x] Run `flutter clean`
+    - [x] Build and run app (`main.dart`)
+    - [x] Test badge clearing

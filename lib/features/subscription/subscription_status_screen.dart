@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/subscription_service.dart';
-import '../../config/payment_config.dart';
-import '../legal/legal_document_screen.dart';
 import 'upgrade_screen.dart';
 
 /// Subscription status and management screen
@@ -60,11 +58,6 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
 
               // Actions
               _buildActionsCard(isPremium),
-
-              const SizedBox(height: 20),
-
-              // Help Section
-              _buildHelpCard(),
             ],
           ),
         ),
@@ -307,9 +300,11 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
             _buildActionTile(
               icon: CupertinoIcons.gear_alt_fill,
               title: 'Manage Subscription',
-              subtitle: 'View or cancel in App Store',
+              subtitle: PremiumTheme.isIOS 
+                  ? 'View or cancel in App Store'
+                  : 'View or cancel in Google Play',
               iconColor: CupertinoColors.systemGreen,
-              onTap: _openAppStoreSubscriptions,
+              onTap: _manageSubscription,
               showDivider: false,
             ),
 
@@ -317,9 +312,11 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
             _buildActionTile(
               icon: CupertinoIcons.gear_alt_fill,
               title: 'Manage Subscription',
-              subtitle: 'View in App Store',
+              subtitle: PremiumTheme.isIOS
+                  ? 'View in App Store'
+                  : 'View in Google Play',
               iconColor: CupertinoColors.systemGreen,
-              onTap: _openAppStoreSubscriptions,
+              onTap: _manageSubscription,
               showDivider: false,
             ),
         ],
@@ -403,75 +400,6 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     );
   }
 
-  Widget _buildHelpCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: PremiumTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PremiumTheme.dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Need Help?',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: PremiumTheme.primaryTextColor,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildHelpLink(
-            icon: CupertinoIcons.mail_solid,
-            label: 'Contact Support',
-            onTap: _contactSupport,
-          ),
-          const SizedBox(height: 8),
-          _buildHelpLink(
-            icon: CupertinoIcons.doc_text_fill,
-            label: 'Terms of Service',
-            onTap: _openTerms,
-          ),
-          const SizedBox(height: 8),
-          _buildHelpLink(
-            icon: CupertinoIcons.shield_fill,
-            label: 'Privacy Policy',
-            onTap: _openPrivacy,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHelpLink({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: PremiumTheme.secondaryTextColor,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: PremiumTheme.secondaryTextColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _getStatusDescription(String status) {
     switch (status) {
       case 'lifetime':
@@ -538,20 +466,25 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
     }
   }
 
-  Future<void> _openAppStoreSubscriptions() async {
-    // Deep link to App Store subscriptions
-    final uri = Uri.parse('https://apps.apple.com/account/subscriptions');
+  Future<void> _manageSubscription() async {
+    // Deep link to platform-specific subscription management
+    final url = PremiumTheme.isIOS
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions';
+        
+    final uri = Uri.parse(url);
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
       if (mounted) {
+        final storeName = PremiumTheme.isIOS ? 'App Store' : 'Google Play';
         showCupertinoDialog(
           context: context,
           builder: (context) => CupertinoAlertDialog(
-            title: const Text('Could Not Open App Store'),
-            content: const Text('Please open the App Store and navigate to your subscriptions.'),
+            title: Text('Could Not Open $storeName'),
+            content: Text('Please open the $storeName and navigate to your subscriptions.'),
             actions: [
               CupertinoDialogAction(
                 child: const Text('OK'),
@@ -562,40 +495,5 @@ class _SubscriptionStatusScreenState extends State<SubscriptionStatusScreen> {
         );
       }
     }
-  }
-
-  Future<void> _contactSupport() async {
-    final uri = Uri.parse('mailto:${PaymentConfig.supportEmail}?subject=Yuh Blockin Support');
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email: ${PaymentConfig.supportEmail}')),
-        );
-      }
-    }
-  }
-
-  void _openTerms() {
-    Navigator.of(context).push(
-      CupertinoPageRoute(
-        builder: (_) => const LegalDocumentScreen(
-          documentType: LegalDocumentType.termsOfService,
-        ),
-      ),
-    );
-  }
-
-  void _openPrivacy() {
-    Navigator.of(context).push(
-      CupertinoPageRoute(
-        builder: (_) => const LegalDocumentScreen(
-          documentType: LegalDocumentType.privacyPolicy,
-        ),
-      ),
-    );
   }
 }

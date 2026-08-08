@@ -1,0 +1,3 @@
+- [ ] Update `SimpleAlertService.userExists` to return `bool?` for safe error handling
+- [ ] Update `AppInitializer._checkOnboardingStatus` in `lib/main.dart` to handle network errors without wiping data
+- [ ] Verify build succeeds

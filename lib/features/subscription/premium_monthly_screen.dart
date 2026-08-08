@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/services/subscription_service.dart';
+import '../../config/payment_config.dart';
 
 /// iOS-ONLY App Store-compliant Premium Monthly subscription screen.
 /// Designed for App Store Connect screenshot submission.
@@ -117,10 +119,43 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
     );
   }
 
+  Future<void> _openTermsOfService() async {
+    final uri = Uri.parse(PaymentConfig.termsOfServiceUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching terms: $e');
+    }
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse(PaymentConfig.privacyPolicyUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching privacy: $e');
+    }
+  }
+
+  Future<void> _openContactSupport() async {
+    final uri = Uri.parse(PaymentConfig.supportUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching support: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Guard: Only show on iOS
-    if (!isIOS) {
+    if (!PremiumMonthlyScreen.isIOS) {
       return const Scaffold(
         body: Center(
           child: Text('This screen is only available on iOS'),
@@ -353,18 +388,86 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
   }
 
   Widget _buildDisclaimer() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: Text(
-        'Subscription will be charged to your Apple ID account and will automatically renew unless cancelled at least 24 hours before the end of the current period.',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w400,
-          color: _textSecondary,
-          height: 1.5,
-          decoration: TextDecoration.none,
-        ),
-        textAlign: TextAlign.center,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          const Text(
+            'Subscription will be charged to your Apple ID account and will automatically renew unless cancelled at least 24 hours before the end of the current period.',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: _textSecondary,
+              height: 1.5,
+              decoration: TextDecoration.none,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: _openTermsOfService,
+                child: const Text(
+                  'Terms of Service',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: _teal,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '|',
+                  style: TextStyle(
+                    color: _textSecondary,
+                    fontSize: 11,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: _openPrivacyPolicy,
+                child: const Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: _teal,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '|',
+                  style: TextStyle(
+                    color: _textSecondary,
+                    fontSize: 11,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: _openContactSupport,
+                child: const Text(
+                  'Contact Support',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: _teal,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/services/ath_movil_service.dart';
 import '../../config/payment_config.dart';
-import '../legal/legal_document_screen.dart';
 import 'ath_payment_dialog.dart';
 
 /// Full screen upgrade/purchase UI
@@ -56,25 +56,39 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   }
 
   /// Open Terms of Service
-  void _openTermsOfService() {
-    Navigator.of(context).push(
-      CupertinoPageRoute(
-        builder: (_) => const LegalDocumentScreen(
-          documentType: LegalDocumentType.termsOfService,
-        ),
-      ),
-    );
+  Future<void> _openTermsOfService() async {
+    final uri = Uri.parse(PaymentConfig.termsOfServiceUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching terms: $e');
+    }
   }
 
   /// Open Privacy Policy
-  void _openPrivacyPolicy() {
-    Navigator.of(context).push(
-      CupertinoPageRoute(
-        builder: (_) => const LegalDocumentScreen(
-          documentType: LegalDocumentType.privacyPolicy,
-        ),
-      ),
-    );
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse(PaymentConfig.privacyPolicyUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching privacy: $e');
+    }
+  }
+
+  /// Open Contact Support
+  Future<void> _openContactSupport() async {
+    final uri = Uri.parse(PaymentConfig.supportUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching support: $e');
+    }
   }
 
   @override
@@ -266,14 +280,6 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
               label: PremiumTheme.isIOS ? 'App Store' : 'Google Play',
             ),
           ),
-          if (PaymentConfig.isDemoMode)
-            Expanded(
-              child: _buildPaymentMethodButton(
-                id: 'demo',
-                icon: CupertinoIcons.lab_flask_solid,
-                label: 'Demo Mode',
-              ),
-            ),
           Expanded(
             child: _buildPaymentMethodButton(
               id: 'ath_movil',
@@ -796,24 +802,27 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     return Column(
       children: [
         Text(
-          'Subscriptions auto-renew unless cancelled.',
+          PremiumTheme.isIOS
+              ? 'Payment will be charged to your Apple Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Account will be charged for renewal within 24-hours prior to the end of the current period. Manage subscriptions in your Account Settings.'
+              : 'Payment will be charged to your Google Play Account at confirmation of purchase. Subscription automatically renews unless auto-renew is turned off at least 24-hours before the end of the current period. Account will be charged for renewal within 24-hours prior to the end of the current period. Manage subscriptions in your Google Play Store settings.',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 10,
             color: PremiumTheme.tertiaryTextColor,
+            height: 1.3,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CupertinoButton(
               onPressed: _openTermsOfService,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                'Terms',
+                'Terms of Service',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   color: PremiumTheme.secondaryTextColor,
                 ),
               ),
@@ -821,17 +830,35 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
             Text(
               '|',
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 color: PremiumTheme.tertiaryTextColor,
               ),
             ),
             CupertinoButton(
               onPressed: _openPrivacyPolicy,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
-                'Privacy',
+                'Privacy Policy',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
+                  color: PremiumTheme.secondaryTextColor,
+                ),
+              ),
+            ),
+            Text(
+              '|',
+              style: TextStyle(
+                fontSize: 10,
+                color: PremiumTheme.tertiaryTextColor,
+              ),
+            ),
+            CupertinoButton(
+              onPressed: _openContactSupport,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                'Contact Support',
+                style: TextStyle(
+                  fontSize: 10,
                   color: PremiumTheme.secondaryTextColor,
                 ),
               ),
@@ -846,9 +873,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     if (_selectedPlan == null) return;
 
     // Route to appropriate payment method
-    if (_paymentMethod == 'demo') {
-      await _purchaseWithDemoMode();
-    } else if (_paymentMethod == 'ath_movil') {
+    if (_paymentMethod == 'ath_movil') {
       // ATH Móvil is coming soon - shouldn't reach here but just in case
       _showErrorSnackbar('ATH Móvil coming soon! Please use ${PremiumTheme.isIOS ? "App Store" : "Google Play"}.');
       return;
@@ -881,38 +906,6 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
       }
       if (mounted) {
         _showErrorSnackbar('An error occurred. Please try again.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _purchaseWithDemoMode() async {
-    setState(() => _isLoading = true);
-
-    try {
-      // Small delay for realism
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      PurchaseResult result;
-      if (_selectedPlan == 'monthly') {
-        result = await _subscriptionService.purchaseMonthly();
-      } else {
-        result = await _subscriptionService.purchaseLifetime();
-      }
-
-      if (!mounted) return;
-
-      if (result.success) {
-        _showSuccessDialog();
-      } else {
-        _showErrorSnackbar(result.error ?? 'Demo purchase failed');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackbar('An error occurred during demo purchase.');
       }
     } finally {
       if (mounted) {

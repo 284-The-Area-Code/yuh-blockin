@@ -78,8 +78,9 @@ class PaymentConfig {
   static const int premiumDailyAlertLimit = 200; // Effectively unlimited
 
   /// URLs for Terms and Privacy (kept for backwards compatibility)
-  static const String termsOfServiceUrl = 'https://yuhblockin.com/terms';
-  static const String privacyPolicyUrl = 'https://yuhblockin.com/privacy';
+  static const String termsOfServiceUrl = 'https://deze-tingz.github.io/yuh-blockin/terms.html';
+  static const String privacyPolicyUrl = 'https://deze-tingz.github.io/yuh-blockin/privacy.html';
+  static const String supportUrl = 'https://deze-tingz.github.io/yuh-blockin/support.html';
 
   /// Support email
   static const String supportEmail = 'dev@dezetingz.ai';

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +17,9 @@ class SimpleAlertService {
 
   late SupabaseClient _supabase;
   bool _isInitialized = false;
+  
+  // Realtime stability tracking
+  bool _isRealtimeConnected = false;
 
   // Hash cache to avoid recomputing SHA256 for the same plates
   final Map<String, String> _hashCache = {};
@@ -24,52 +29,132 @@ class SimpleAlertService {
     if (_isInitialized) return;
 
     try {
-      // Check if Supabase is already initialized (e.g., from main.dart)
-      // If not, initialize it
+      // 1. Reuse global instance if available (initialized in main.dart)
       try {
         _supabase = Supabase.instance.client;
         if (kDebugMode) {
-          debugPrint('✅ Supabase already initialized, reusing instance');
+          debugPrint('✅ Simple Alert Service: Reusing global Supabase instance');
         }
       } catch (e) {
-        // Supabase not initialized yet, initialize it now
+        // Fallback for isolated tests or if main.dart init failed
         if (kDebugMode) {
-          debugPrint('🔧 Initializing Supabase...');
+          debugPrint('🔧 Simple Alert Service: Initializing dedicated Supabase instance...');
         }
         await Supabase.initialize(
           url: SupabaseConfig.url,
           anonKey: SupabaseConfig.anonKey,
+          realtimeClientOptions: const RealtimeClientOptions(
+            eventsPerSecond: 10,
+          ),
         );
         _supabase = Supabase.instance.client;
       }
 
-      // Try to sign in anonymously for 'authenticated' role
-      // If captcha/auth fails, continue with anon role (tables have RLS for anon)
-      if (_supabase.auth.currentUser == null) {
-        try {
-          await _supabase.auth.signInAnonymously();
-          if (kDebugMode) {
-            debugPrint('🔐 Signed in anonymously');
-          }
-        } catch (authError) {
-          // Captcha or other auth error - continue without authenticated role
-          if (kDebugMode) {
-            debugPrint('⚠️ Anonymous sign-in failed (captcha?): $authError');
-            debugPrint('⚠️ Continuing with anon role...');
-          }
+      // 2. Optimized Authentication Liveness check
+      // If we have a session that is NOT expired, we are already "logged in"
+      final currentSession = _supabase.auth.currentSession;
+      final isSessionValid = currentSession != null && 
+          !currentSession.isExpired;
+
+      if (isSessionValid) {
+        if (kDebugMode) {
+          debugPrint('🔐 Simple Alert Service: Valid session found (no re-auth needed)');
         }
+      } else {
+        // Only sign in anonymously if we don't have a valid session
+        if (kDebugMode) {
+          debugPrint('🔐 Simple Alert Service: No valid session, signing in anonymously...');
+        }
+        await _signInWithRetry();
       }
+
+      // 3. Realtime Resiliency: Listen for disconnects and force reconnect
+      _setupRealtimeMonitor();
 
       _isInitialized = true;
-
-      if (kDebugMode) {
-        debugPrint('✅ Simple Alert Service initialized');
-      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to initialize service: $e');
       }
       rethrow;
+    }
+  }
+
+  void _setupRealtimeMonitor() {
+    // 1. Register state change callbacks
+    _supabase.realtime.onOpen(() {
+      if (kDebugMode) debugPrint('📡 Realtime Status: Connected');
+      _isRealtimeConnected = true;
+    });
+
+    _supabase.realtime.onClose((_) {
+      if (kDebugMode) debugPrint('📡 Realtime Status: Disconnected');
+      _isRealtimeConnected = false;
+      
+      // Auto-reconnect on unexpected close
+      if (_isInitialized) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (!_isRealtimeConnected) {
+            if (kDebugMode) debugPrint('🔄 Realtime reconnecting...');
+            // ignore: invalid_use_of_internal_member
+            _supabase.realtime.connect();
+          }
+        });
+      }
+    });
+
+    _supabase.realtime.onError((error) {
+      if (kDebugMode) debugPrint('📡 Realtime Status: Error ($error)');
+      _isRealtimeConnected = false;
+    });
+  }
+
+  /// Explicitly refresh connection - call this on App Lifecycle 'resumed'
+  void refreshConnection() {
+    if (!_isInitialized) return;
+    
+    if (kDebugMode) {
+      debugPrint('⚡ Refreshing Supabase connection (App Resumed)');
+    }
+    
+    // Ensure auth session is valid (checks local JWT and refreshes if needed)
+    final session = _supabase.auth.currentSession;
+    if (session != null && session.isExpired) {
+      _supabase.auth.refreshSession();
+    }
+    
+    // Ensure realtime is connected
+    if (!_isRealtimeConnected || !_supabase.realtime.isConnected) {
+      // ignore: invalid_use_of_internal_member
+      _supabase.realtime.connect();
+    }
+  }
+
+  /// Internal retry logic for sign-in
+  Future<void> _signInWithRetry() async {
+    int retryCount = 0;
+    const maxRetries = 3;
+    bool signedIn = false;
+
+    while (!signedIn && retryCount < maxRetries) {
+      try {
+        await _supabase.auth.signInAnonymously();
+        signedIn = true;
+        if (kDebugMode) {
+          debugPrint('🔐 Signed in anonymously (Attempt ${retryCount + 1})');
+        }
+      } catch (authError) {
+        retryCount++;
+        if (kDebugMode) {
+          debugPrint('⚠️ Anon sign-in attempt $retryCount failed: $authError');
+        }
+        if (retryCount < maxRetries) {
+          await Future.delayed(Duration(seconds: math.pow(2, retryCount - 1).toInt()));
+        } else {
+          // All retries failed
+          throw Exception('Authentication failed after $maxRetries attempts: $authError');
+        }
+      }
     }
   }
 
@@ -81,49 +166,65 @@ class SimpleAlertService {
 
     _ensureInitialized();
 
-    final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+    // Use the Supabase Auth UUID as the primary identity
+    final authUserId = _supabase.auth.currentUser!.id;
 
     if (kDebugMode) {
-      debugPrint('🔍 Generated userId: $userId');
-      debugPrint('🔍 About to insert into users table...');
+      debugPrint('🔍 Identity (Auth UID): $authUserId');
+      debugPrint('🔍 About to register user in profile table...');
     }
 
     try {
-      final result = await _supabase.from('users').insert({'id': userId});
+      // Upsert into users table to ensure profile exists for RLS
+      await _supabase.from('users').upsert({'id': authUserId});
 
       if (kDebugMode) {
-        debugPrint('🔍 Insert result: $result');
-        debugPrint('👤 ✅ Created user: $userId');
+        debugPrint('👤 ✅ User registered: $authUserId');
       }
 
-      return userId;
+      return authUserId;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ User creation failed: $e');
-        debugPrint('❌ Error type: ${e.runtimeType}');
-        debugPrint('❌ Error details: $e');
+        debugPrint('❌ User registration failed: $e');
       }
-      rethrow; // Re-throw so calling code knows it failed
+      rethrow;
     }
   }
 
   /// Check if a user exists in the database
-  Future<bool> userExists(String userId) async {
+  /// Returns:
+  /// - true: User definitely exists
+  /// - false: User definitely does NOT exist
+  /// - null: Error occurred (network/timeout) - existence is unknown
+  Future<bool?> userExists(String userId) async {
     try {
       _ensureInitialized();
+
+      // OPTIMIZATION: Trust local JWT claims if session is valid and matches userId
+      final currentSession = _supabase.auth.currentSession;
+      if (currentSession != null && !currentSession.isExpired) {
+        if (currentSession.user.id == userId) {
+          if (kDebugMode) {
+            debugPrint('⚡ Fast-path: Verified user existence via local JWT claims');
+          }
+          return true;
+        }
+      }
 
       final result = await _supabase
           .from('users')
           .select('id')
           .eq('id', userId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 8));
 
       return result != null;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Error checking user existence: $e');
+        debugPrint('⚠️ Network error or timeout checking user existence: $e');
       }
-      return false;
+      // Return null to indicate we don't know if the user exists
+      return null;
     }
   }
 
