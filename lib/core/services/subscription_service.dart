@@ -368,11 +368,14 @@ class SubscriptionService {
   }
 
   Future<void> _handleCustomerInfoUpdate(CustomerInfo customerInfo) async {
-    final entitlements = customerInfo.entitlements.active;
+    final activeEntitlements = customerInfo.entitlements.active;
+    final premiumEntitlement = activeEntitlements['premium'];
 
-    if (entitlements.containsKey('premium') || entitlements.containsKey('lifetime')) {
+    if (premiumEntitlement != null) {
       _isPremium = true;
-      _subscriptionStatus = entitlements.containsKey('lifetime') ? 'lifetime' : 'premium';
+      // Determine status from product ID (Monthly vs Lifetime share the 'premium' entitlement)
+      final productId = premiumEntitlement.productIdentifier;
+      _subscriptionStatus = productId.toLowerCase().contains('lifetime') ? 'lifetime' : 'premium';
     } else {
       _isPremium = false;
       _subscriptionStatus = 'free';

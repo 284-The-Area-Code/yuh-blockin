@@ -67,7 +67,6 @@ class PaymentConfig {
 
   /// Entitlement identifiers - Must match RevenueCat dashboard
   static const String premiumEntitlement = 'premium';
-  static const String lifetimeEntitlement = 'lifetime';
 
   /// Free tier configuration
   static const int freeDailyAlertLimit = 1;
