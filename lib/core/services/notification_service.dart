@@ -302,6 +302,7 @@ class NotificationService {
       category: AndroidNotificationCategory.alarm,
       visibility: NotificationVisibility.public, // Show on lock screen
       ticker: 'New alert received',
+      tag: payload, // Use alert_id as tag to deduplicate
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
@@ -355,7 +356,7 @@ class NotificationService {
 
     try {
       await _notifications.show(
-        DateTime.now().millisecondsSinceEpoch.remainder(100000), // Unique ID
+        payload?.hashCode ?? DateTime.now().millisecondsSinceEpoch.remainder(100000),
         displayTitle,
         body,
         details,

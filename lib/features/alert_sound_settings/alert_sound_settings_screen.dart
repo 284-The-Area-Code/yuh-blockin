@@ -361,7 +361,7 @@ class _AlertSoundSettingsScreenState extends State<AlertSoundSettingsScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : isGranted
-                  ? Icon(Icons.check_circle, color: _lowColor, size: 22)
+                  ? const Icon(Icons.check_circle, color: _lowColor, size: 22)
                   : ElevatedButton(
                       onPressed: () async {
                         await requestAction();

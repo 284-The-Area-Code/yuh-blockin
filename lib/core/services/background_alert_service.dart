@@ -307,7 +307,7 @@ void onStart(ServiceInstance service) async {
             if (shownAlertIds.contains(alertId)) continue;
 
             // Check if this is a new unread alert
-            if (alert['read_at'] == null && alert['response'] == null) {
+            if (alert['read_at'] == null && alert['response'] == null && alert['push_sent'] != true) {
               // Use UTC for all background comparisons to avoid clock drift issues
               final createdAt = DateTime.tryParse(alert['created_at'] ?? '')?.toUtc();
               final now = DateTime.now().toUtc();
@@ -526,6 +526,7 @@ Future<void> _showAlertNotification(
     category: AndroidNotificationCategory.alarm,
     visibility: NotificationVisibility.public,
     ticker: title,
+    tag: alertId, // Use alert_id as tag to deduplicate with FCM
     styleInformation: BigTextStyleInformation(
       body,
       contentTitle: title,
@@ -601,7 +602,7 @@ Future<void> _showAlertNotification(
           enableVibration: true,
           actions: androidDetails.actions,
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentSound: true,
           sound: 'alert_sound.wav',

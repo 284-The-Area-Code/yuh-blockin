@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
 
@@ -19,6 +20,7 @@ import 'core/services/simple_alert_service.dart';
 import 'core/services/unacknowledged_alert_service.dart';
 import 'core/services/user_alias_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/background_alert_service.dart';
 import 'config/premium_config.dart';
@@ -43,7 +45,15 @@ import 'features/account_recovery/view_my_keys_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Initialize Supabase as early as possible (Global Instance)
+  // 1. Initialize Firebase for reliable push notifications
+  try {
+    await Firebase.initializeApp();
+    debugPrint('🚀 Firebase Initialization Complete');
+  } catch (e) {
+    debugPrint('⚠️ Firebase Init Warning: $e');
+  }
+
+  // 2. Initialize Supabase as early as possible (Global Instance)
   // This reduces TTFB (Time To First Byte) for all subsequent service calls
   try {
     await Supabase.initialize(
@@ -139,6 +149,8 @@ class _AppInitializerState extends State<AppInitializer>
   bool _showShimmer = false;
   bool _isExiting = false;
 
+  final PushNotificationService _pushNotificationService = PushNotificationService();
+
   // Brand colors
   static const Color _teal = Color(0xFF0B6E7D);
   static const Color _coral = Color(0xFFFF847C);
@@ -227,7 +239,8 @@ class _AppInitializerState extends State<AppInitializer>
     // Register lifecycle observer
     WidgetsBinding.instance.addObserver(this);
     
-    // Initial foreground status for background service
+    // Initial foreground status for services
+    _pushNotificationService.setAppInForeground(true);
     FlutterBackgroundService().invoke('setForeground', {'foreground': true});
 
     _controller.forward();
@@ -256,10 +269,12 @@ class _AppInitializerState extends State<AppInitializer>
       // Re-establish Supabase connections when app returns from background
       SimpleAlertService().refreshConnection();
       
-      // Update background service: main app is in foreground
+      // Update services: app is in foreground
+      _pushNotificationService.setAppInForeground(true);
       FlutterBackgroundService().invoke('setForeground', {'foreground': true});
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Update background service: main app is in background
+      // Update services: app is in background
+      _pushNotificationService.setAppInForeground(false);
       FlutterBackgroundService().invoke('setForeground', {'foreground': false});
     }
   }
@@ -292,7 +307,7 @@ class _AppInitializerState extends State<AppInitializer>
       bool? userExistsResult;
       if (hasUserId) {
         // This call is now "Fast-path" optimized in SimpleAlertService
-        userExistsResult = await alertService.userExists(userId!);
+        userExistsResult = await alertService.userExists(userId);
         
         if (userExistsResult == false) {
           debugPrint('⚠️ Stored user_id explicitly NOT FOUND in DB - clearing stale flags');
@@ -621,6 +636,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   // System notification and connectivity services
   final NotificationService _notificationService = NotificationService();
+  final PushNotificationService _pushNotificationService = PushNotificationService();
   final ConnectivityService _connectivityService = ConnectivityService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final BackgroundAlertService _backgroundAlertService = BackgroundAlertService();
@@ -885,6 +901,15 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       },
     );
 
+    // Initialize cloud push notifications (FCM/APNs)
+    await _pushNotificationService.initialize(
+      onTap: (payload) {
+        if (kDebugMode) {
+          debugPrint('Push notification tapped with payload: $payload');
+        }
+        // Handle tap - navigate if needed
+      },
+    );
 
     // Initialize background alert service for reliable locked-screen notifications
     try {
@@ -1216,7 +1241,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       // Update background service with user ID for reliable locked-screen alerts
       await _backgroundAlertService.setUserId(userId);
 
-      // Update push notification service with user ID
+      // Update push notification service with user ID for cloud delivery
+      await _pushNotificationService.updateUserId(userId);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to ensure user exists: $e');
