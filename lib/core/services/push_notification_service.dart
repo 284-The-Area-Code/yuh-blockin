@@ -117,22 +117,38 @@ class PushNotificationService {
       },
     );
 
-    // Create notification channel for Android with custom sound
+    // Create notification channels for Android with custom sounds
     if (Platform.isAndroid) {
-      const channel = AndroidNotificationChannel(
-        'yuh_blockin_alerts', // Same channel ID as NotificationService
-        'Yuh Blockin Alerts',
-        description: 'Push notifications for parking alerts',
-        importance: Importance.max,
-        playSound: true,
-        sound: RawResourceAndroidNotificationSound('alert_sound'),
-        enableVibration: true,
-        enableLights: true,
-      );
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      
+      if (androidPlugin != null) {
+        // List of all possible alert sounds in assets/sounds
+        final alertSounds = [
+          'low_alert_1', 'low_alert_2', 'low_alert_3',
+          'normal_alert',
+          'high_alert_1', 'high_alert_2',
+          'alert_sound'
+        ];
 
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+        for (final soundName in alertSounds) {
+          final channel = AndroidNotificationChannel(
+            'yuh_blockin_alert_${soundName}_v2',
+            'Yuh Blockin Alerts',
+            description: 'Critical parking alert notifications',
+            importance: Importance.max,
+            playSound: true,
+            sound: RawResourceAndroidNotificationSound(soundName),
+            enableVibration: true,
+            enableLights: true,
+          );
+          await androidPlugin.createNotificationChannel(channel);
+        }
+        
+        if (kDebugMode) {
+          debugPrint('✅ Android: ${alertSounds.length} alert channels pre-created');
+        }
+      }
     }
   }
 

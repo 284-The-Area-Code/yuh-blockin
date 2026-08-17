@@ -191,12 +191,12 @@ Deno.serve(async (req: Request) => {
           priority: 'high',
           notification: {
             sound: androidSound,
-            channel_id: `yuh_blockin_alert_${androidSound}`,
+            channel_id: `yuh_blockin_alert_${androidSound}_v2`,
           }
         };
       }
 
-      // Add iOS-specific config with explicit aps.alert
+      // Add iOS-specific config with explicit aps.alert and custom sound
       if (platform === 'ios') {
         fcmMessage.apns = {
           headers: {
@@ -209,7 +209,7 @@ Deno.serve(async (req: Request) => {
                 title: "Yuh Blockin'",
                 body: message || "Someone needs you to move your car!"
               },
-              sound: "default",
+              sound: soundFile,
               badge: 1
             }
           }
