@@ -149,8 +149,6 @@ class _AppInitializerState extends State<AppInitializer>
   bool _showShimmer = false;
   bool _isExiting = false;
 
-  final PushNotificationService _pushNotificationService = PushNotificationService();
-
   // Brand colors
   static const Color _teal = Color(0xFF0B6E7D);
   static const Color _coral = Color(0xFFFF847C);
@@ -240,7 +238,7 @@ class _AppInitializerState extends State<AppInitializer>
     WidgetsBinding.instance.addObserver(this);
     
     // Initial foreground status for services
-    _pushNotificationService.setAppInForeground(true);
+    PushNotificationService().setAppInForeground(true);
     FlutterBackgroundService().invoke('setForeground', {'foreground': true});
 
     _controller.forward();
@@ -270,11 +268,11 @@ class _AppInitializerState extends State<AppInitializer>
       SimpleAlertService().refreshConnection();
       
       // Update services: app is in foreground
-      _pushNotificationService.setAppInForeground(true);
+      PushNotificationService().setAppInForeground(true);
       FlutterBackgroundService().invoke('setForeground', {'foreground': true});
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       // Update services: app is in background
-      _pushNotificationService.setAppInForeground(false);
+      PushNotificationService().setAppInForeground(false);
       FlutterBackgroundService().invoke('setForeground', {'foreground': false});
     }
   }
@@ -636,7 +634,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   // System notification and connectivity services
   final NotificationService _notificationService = NotificationService();
-  final PushNotificationService _pushNotificationService = PushNotificationService();
   final ConnectivityService _connectivityService = ConnectivityService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final BackgroundAlertService _backgroundAlertService = BackgroundAlertService();
@@ -902,7 +899,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
 
     // Initialize cloud push notifications (FCM/APNs)
-    await _pushNotificationService.initialize(
+    await PushNotificationService().initialize(
       onTap: (payload) {
         if (kDebugMode) {
           debugPrint('Push notification tapped with payload: $payload');
@@ -1242,7 +1239,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       await _backgroundAlertService.setUserId(userId);
 
       // Update push notification service with user ID for cloud delivery
-      await _pushNotificationService.updateUserId(userId);
+      await PushNotificationService().updateUserId(userId);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to ensure user exists: $e');

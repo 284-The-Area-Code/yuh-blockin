@@ -31,7 +31,7 @@ class PushNotificationService {
   factory PushNotificationService() => _instance;
   PushNotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  late final FirebaseMessaging _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   bool _isAppInForeground = true;
@@ -43,6 +43,8 @@ class PushNotificationService {
   Future<void> initialize({Function(String?)? onTap}) async {
     if (_initialized) return;
 
+    // Initialize messaging after Firebase is ready
+    _messaging = FirebaseMessaging.instance;
     onNotificationTapped = onTap;
 
     try {
