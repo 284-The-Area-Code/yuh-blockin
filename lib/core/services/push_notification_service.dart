@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -13,7 +14,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Ensure Firebase is initialized in background isolate
   await Firebase.initializeApp();
   if (kDebugMode) {
-    debugPrint('Background push message: ${message.messageId}');
+    debugPrint('[FCM] Background push message: ${message.messageId}');
   }
 }
 
@@ -48,10 +49,13 @@ class PushNotificationService {
     onNotificationTapped = onTap;
 
     try {
+      if (kDebugMode) debugPrint('[FCM] Initializing service...');
+      
       // Set up the background handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
       // Request permissions (iOS)
+      if (kDebugMode) debugPrint('[FCM] Requesting notification permission...');
       final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
@@ -61,7 +65,7 @@ class PushNotificationService {
       );
 
       if (kDebugMode) {
-        debugPrint('Push permission status: ${settings.authorizationStatus}');
+        debugPrint('[FCM] Push permission status: ${settings.authorizationStatus}');
       }
 
       // Initialize local notifications for foreground display
@@ -87,11 +91,11 @@ class PushNotificationService {
 
       _initialized = true;
       if (kDebugMode) {
-        debugPrint('PushNotificationService initialized');
+        debugPrint('[FCM] PushNotificationService initialized');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Failed to initialize push notifications: $e');
+        debugPrint('[FCM] Failed to initialize push notifications: $e');
       }
     }
   }
@@ -152,68 +156,83 @@ class PushNotificationService {
     }
   }
 
+  /// Wait for APNs token on iOS with bounded retry
+  Future<bool> _waitForAPNSToken() async {
+    if (!Platform.isIOS) return true;
+
+    if (kDebugMode) debugPrint('[FCM] Waiting for APNs token...');
+    
+    int retryCount = 0;
+    const maxRetries = 20; // 20 seconds total
+
+    while (retryCount < maxRetries) {
+      try {
+        final apnsToken = await _messaging.getAPNSToken();
+        if (apnsToken != null) {
+          if (kDebugMode) debugPrint('[FCM] APNs token available after ${retryCount}s');
+          return true;
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[FCM] APNs check error: $e');
+      }
+      
+      retryCount++;
+      await Future.delayed(const Duration(seconds: 1));
+      if (kDebugMode && retryCount % 5 == 0) {
+        debugPrint('[FCM] Still waiting for APNs... ($retryCount/${maxRetries}s)');
+      }
+    }
+
+    if (kDebugMode) debugPrint('[FCM] ❌ Error: APNs token never appeared after ${maxRetries}s');
+    return false;
+  }
+
   /// Save FCM token to Supabase
   Future<void> _saveToken() async {
     try {
-      // On iOS, try to get APNs token first (with timeout)
-      if (Platform.isIOS) {
-        try {
-          final apnsToken = await _messaging.getAPNSToken().timeout(
-            const Duration(seconds: 3),
-            onTimeout: () => null,
-          );
-          if (apnsToken == null) {
-            if (kDebugMode) {
-              debugPrint('APNs token not available yet - will retry later');
-            }
-            // Don't block - FCM might still work or we'll retry later
-          } else {
-            if (kDebugMode) {
-              debugPrint('APNs token obtained');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('APNs token error: $e');
-          }
-        }
+      // 1. identity check
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      if (userId == null || userId.isEmpty) {
+        if (kDebugMode) debugPrint('[FCM] No user ID available yet, skipping token registration');
+        return;
       }
 
-      // Get FCM token with timeout
-      final token = await _messaging.getToken().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => null,
-      );
+      // 2. iOS APNs handshake
+      if (Platform.isIOS) {
+        final ready = await _waitForAPNSToken();
+        if (!ready) return;
+      }
+
+      // 3. Get FCM registration token
+      if (kDebugMode) debugPrint('[FCM] Requesting FCM registration token...');
+      final token = await _messaging.getToken();
+      
       if (token == null) {
-        if (kDebugMode) {
-          debugPrint('FCM token is null');
-        }
+        if (kDebugMode) debugPrint('[FCM] ❌ Error: FCM token is null');
         return;
       }
 
       // ===== FCM TOKEN FOR TESTING =====
       // Print full token so it can be copied for push notification testing
-      debugPrint('');
-      debugPrint('╔══════════════════════════════════════════════════════════════╗');
-      debugPrint('║                    FCM TOKEN FOR TESTING                     ║');
-      debugPrint('╠══════════════════════════════════════════════════════════════╣');
-      debugPrint('║ $token');
-      debugPrint('╚══════════════════════════════════════════════════════════════╝');
-      debugPrint('');
-      // ==================================
+      if (kDebugMode) {
+        debugPrint('');
+        debugPrint('╔══════════════════════════════════════════════════════════════╗');
+        debugPrint('║                    FCM TOKEN FOR TESTING                     ║');
+        debugPrint('╠══════════════════════════════════════════════════════════════╣');
+        debugPrint('║ $token');
+        debugPrint('╚══════════════════════════════════════════════════════════════╝');
+        debugPrint('');
+      }
 
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id');
-      if (userId == null) {
-        if (kDebugMode) {
-          debugPrint('No user ID found, skipping token save');
-        }
-        return;
+      if (kDebugMode) {
+        debugPrint('[FCM] FCM token acquired');
+        debugPrint('[FCM] Saving ${Platform.isIOS ? "iOS" : "Android"} token to Supabase...');
       }
 
       final platform = Platform.isIOS ? 'ios' : 'android';
 
-      // Save to Supabase device_tokens table
+      // 4. Supabase Persistence
       await Supabase.instance.client.from('device_tokens').upsert({
         'user_id': userId,
         'fcm_token': token,
@@ -222,20 +241,18 @@ class PushNotificationService {
       }, onConflict: 'user_id, fcm_token');
 
       if (kDebugMode) {
-        debugPrint('FCM Token saved: ${token.substring(0, 20)}...');
+        debugPrint('[FCM] ✅ Registration successful for User: $userId');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Failed to save FCM token: $e');
+        debugPrint('[FCM] ❌ Failed to save FCM token: $e');
       }
     }
   }
 
   /// Handle token refresh
   void _onTokenRefresh(String token) {
-    if (kDebugMode) {
-      debugPrint('FCM token refreshed');
-    }
+    if (kDebugMode) debugPrint('[FCM] Token refreshed');
     _saveToken();
   }
 
