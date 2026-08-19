@@ -23,12 +23,10 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:usesCleartextTraffic="true"
         android:label="Yuh Blockin"
-        android:name="io.flutter.app.FlutterApplication"
-        tools:ignore="Deprecated"
         android:icon="@mipmap/ic_launcher">
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.yuhblockin.v1.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
