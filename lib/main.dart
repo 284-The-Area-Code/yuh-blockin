@@ -150,10 +150,6 @@ class _AppInitializerState extends State<AppInitializer>
   bool _showShimmer = false;
   bool _isExiting = false;
 
-  // Diagnostic tap counter
-  int _diagnosticTapCount = 0;
-  Timer? _diagnosticTapTimer;
-
   // Brand colors
   static const Color _teal = Color(0xFF0B6E7D);
   static const Color _coral = Color(0xFFFF847C);
@@ -400,23 +396,6 @@ class _AppInitializerState extends State<AppInitializer>
     );
   }
 
-  void _handleFooterTap() {
-    _diagnosticTapTimer?.cancel();
-    _diagnosticTapCount++;
-
-    if (_diagnosticTapCount >= 3) {
-      _diagnosticTapCount = 0;
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const PushDiagnosticScreen()),
-      );
-      return;
-    }
-
-    _diagnosticTapTimer = Timer(const Duration(milliseconds: 500), () {
-      _diagnosticTapCount = 0;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -512,12 +491,9 @@ class _AppInitializerState extends State<AppInitializer>
                           offset: Offset(0, _footerSlide.value),
                           child: FadeTransition(
                             opacity: _footerFade,
-                            child: GestureDetector(
-                              onTap: _handleFooterTap,
-                              behavior: HitTestBehavior.opaque,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
                                 // "from" with decorative lines
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -581,7 +557,6 @@ class _AppInitializerState extends State<AppInitializer>
                           ),
                         ),
                       ),
-                    ),
                     ],
                   ),
                 ),
@@ -674,6 +649,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   // Animation controller for shake effect
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
+
+  // Diagnostic tap counter
+  int _diagnosticTapCount = 0;
+  Timer? _diagnosticTapTimer;
 
   // ===== INLINE ALERT MODE (Steve Jobs style - one screen) =====
   bool _isAlertModeActive = false;
@@ -1089,6 +1068,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     _taglineDelayTimer?.cancel();
     _shakeStopTimer?.cancel();
     _acknowledgeRefreshTimer?.cancel();
+    _diagnosticTapTimer?.cancel();
 
     // Dispose animation controllers
     _breathingController.dispose();
@@ -2342,41 +2322,62 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
   }
 
-  Widget _buildBranding() {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Animated tagline
-          AnimatedOpacity(
-            opacity: _showTagline ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 500),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                'Move with respect.',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w400,
-                  color: PremiumTheme.tertiaryTextColor.withValues(alpha: 0.7),
+  void _handleFooterTap() {
+    _diagnosticTapTimer?.cancel();
+    _diagnosticTapCount++;
 
-                  fontStyle: FontStyle.italic,
+    if (_diagnosticTapCount >= 3) {
+      _diagnosticTapCount = 0;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PushDiagnosticScreen()),
+      );
+      return;
+    }
+
+    _diagnosticTapTimer = Timer(const Duration(milliseconds: 500), () {
+      _diagnosticTapCount = 0;
+    });
+  }
+
+  Widget _buildBranding() {
+    return GestureDetector(
+      onTap: _handleFooterTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Animated tagline
+            AnimatedOpacity(
+              opacity: _showTagline ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 500),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'Move with respect.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: PremiumTheme.tertiaryTextColor.withValues(alpha: 0.7),
+
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
             ),
-          ),
-          // Copyright - more subtle
-          Text(
-            'DezeTingz © 2026',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-              color: PremiumTheme.tertiaryTextColor.withValues(alpha: 0.5),
+            // Copyright - more subtle
+            Text(
+              'DezeTingz © 2026',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: PremiumTheme.tertiaryTextColor.withValues(alpha: 0.5),
 
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
