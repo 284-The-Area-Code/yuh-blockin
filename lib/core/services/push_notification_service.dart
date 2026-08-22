@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../models/push_diagnostic_model.dart';
 import 'sound_preferences_service.dart';
 
 /// Background message handler - must be top-level function
@@ -37,6 +38,10 @@ class PushNotificationService {
   bool _initialized = false;
   bool _isAppInForeground = true;
 
+  /// Diagnostic report notifier
+  final ValueNotifier<PushRegistrationReport> diagnosticReport =
+      ValueNotifier<PushRegistrationReport>(const PushRegistrationReport());
+
   /// Callback when notification is tapped
   Function(String? alertId)? onNotificationTapped;
 
@@ -48,20 +53,36 @@ class PushNotificationService {
     _messaging = FirebaseMessaging.instance;
     onNotificationTapped = onTap;
 
+    diagnosticReport.value = diagnosticReport.value.copyWith(
+      lastAttempt: DateTime.now(),
+    );
+
     try {
       if (kDebugMode) debugPrint('[FCM] Initializing service...');
-      
+
       // Set up the background handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
       // Request permissions (iOS)
       if (kDebugMode) debugPrint('[FCM] Requesting notification permission...');
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        permission: PushDiagnosticState.pending,
+      );
+
       final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
         provisional: false,
         criticalAlert: true,
+      );
+
+      final isAuthorized = settings.authorizationStatus == AuthorizationStatus.authorized ||
+                          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        permission: isAuthorized ? PushDiagnosticState.available : PushDiagnosticState.missing,
       );
 
       if (kDebugMode) {
@@ -97,6 +118,9 @@ class PushNotificationService {
       if (kDebugMode) {
         debugPrint('[FCM] Failed to initialize push notifications: $e');
       }
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        lastError: 'INIT_ERROR: ${e.toString().split(':').first}',
+      );
     }
   }
 
@@ -125,7 +149,7 @@ class PushNotificationService {
     if (Platform.isAndroid) {
       final androidPlugin = _localNotifications
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      
+
       if (androidPlugin != null) {
         // List of all possible alert sounds in assets/sounds
         final alertSounds = [
@@ -148,7 +172,7 @@ class PushNotificationService {
           );
           await androidPlugin.createNotificationChannel(channel);
         }
-        
+
         if (kDebugMode) {
           debugPrint('✅ Android: ${alertSounds.length} alert channels pre-created');
         }
@@ -161,7 +185,12 @@ class PushNotificationService {
     if (!Platform.isIOS) return true;
 
     if (kDebugMode) debugPrint('[FCM] Waiting for APNs token...');
-    
+
+    diagnosticReport.value = diagnosticReport.value.copyWith(
+      apnsRegistration: PushDiagnosticState.pending,
+      apnsToken: PushDiagnosticState.pending,
+    );
+
     int retryCount = 0;
     const maxRetries = 20; // 20 seconds total
 
@@ -170,12 +199,16 @@ class PushNotificationService {
         final apnsToken = await _messaging.getAPNSToken();
         if (apnsToken != null) {
           if (kDebugMode) debugPrint('[FCM] APNs token available after ${retryCount}s');
+          diagnosticReport.value = diagnosticReport.value.copyWith(
+            apnsRegistration: PushDiagnosticState.available,
+            apnsToken: PushDiagnosticState.available,
+          );
           return true;
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[FCM] APNs check error: $e');
       }
-      
+
       retryCount++;
       await Future.delayed(const Duration(seconds: 1));
       if (kDebugMode && retryCount % 5 == 0) {
@@ -184,15 +217,28 @@ class PushNotificationService {
     }
 
     if (kDebugMode) debugPrint('[FCM] ❌ Error: APNs token never appeared after ${maxRetries}s');
+    diagnosticReport.value = diagnosticReport.value.copyWith(
+      apnsRegistration: PushDiagnosticState.timeout,
+      apnsToken: PushDiagnosticState.missing,
+    );
     return false;
   }
 
   /// Save FCM token to Supabase
   Future<void> _saveToken() async {
     try {
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        lastAttempt: DateTime.now(),
+      );
+
       // 1. identity check
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        userId: userId != null ? PushDiagnosticState.available : PushDiagnosticState.missing,
+      );
+
       if (userId == null || userId.isEmpty) {
         if (kDebugMode) debugPrint('[FCM] No user ID available yet, skipping token registration');
         return;
@@ -206,8 +252,17 @@ class PushNotificationService {
 
       // 3. Get FCM registration token
       if (kDebugMode) debugPrint('[FCM] Requesting FCM registration token...');
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        fcmToken: PushDiagnosticState.pending,
+      );
+
       final token = await _messaging.getToken();
-      
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        fcmToken: token != null ? PushDiagnosticState.available : PushDiagnosticState.missing,
+      );
+
       if (token == null) {
         if (kDebugMode) debugPrint('[FCM] ❌ Error: FCM token is null');
         return;
@@ -233,21 +288,48 @@ class PushNotificationService {
       final platform = Platform.isIOS ? 'ios' : 'android';
 
       // 4. Supabase Persistence
-      await Supabase.instance.client.from('device_tokens').upsert({
-        'user_id': userId,
-        'fcm_token': token,
-        'platform': platform,
-        'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'user_id, fcm_token');
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        supabaseSync: PushDiagnosticState.pending,
+      );
 
-      if (kDebugMode) {
-        debugPrint('[FCM] ✅ Registration successful for User: $userId');
+      try {
+        await Supabase.instance.client.from('device_tokens').upsert({
+          'user_id': userId,
+          'fcm_token': token,
+          'platform': platform,
+          'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'user_id, fcm_token');
+
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          supabaseSync: PushDiagnosticState.success,
+        );
+
+        if (kDebugMode) {
+          debugPrint('[FCM] ✅ Registration successful for User: $userId');
+        }
+      } catch (e) {
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          supabaseSync: PushDiagnosticState.failed,
+          lastError: 'SUPABASE_ERROR: ${e.toString().split(':').first}',
+        );
+        rethrow;
       }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('[FCM] ❌ Failed to save FCM token: $e');
       }
+      if (diagnosticReport.value.lastError == null) {
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          lastError: 'SAVE_ERROR: ${e.toString().split(':').first}',
+        );
+      }
     }
+  }
+
+  /// Manually retry the registration process
+  Future<void> retryRegistration() async {
+    _initialized = false; // Reset to allow initialize() to run again
+    await initialize();
   }
 
   /// Handle token refresh
@@ -262,7 +344,7 @@ class PushNotificationService {
       debugPrint('Foreground push message received: ${message.notification?.title}');
     }
 
-    // IMPORTANT: If app is in foreground, the main app's stream listener 
+    // IMPORTANT: If app is in foreground, the main app's stream listener
     // will show the high-fidelity in-app alert banner.
     // We skip the system notification here to prevent duplicates in foreground.
     if (_isAppInForeground) {

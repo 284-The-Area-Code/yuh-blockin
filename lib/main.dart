@@ -38,6 +38,7 @@ import 'core/services/sound_preferences_service.dart';
 import 'core/services/account_recovery_service.dart';
 import 'features/alert_sound_settings/alert_sound_settings_screen.dart';
 import 'features/account_recovery/view_my_keys_screen.dart';
+import 'features/debug/push_diagnostic_screen.dart';
 
 /// Premium flagship-quality Yuh Blockin' app
 /// Inspired by Uber, Airbnb, Apple Human Interface guidelines
@@ -148,6 +149,10 @@ class _AppInitializerState extends State<AppInitializer>
   bool _goToHome = false;
   bool _showShimmer = false;
   bool _isExiting = false;
+
+  // Diagnostic tap counter
+  int _diagnosticTapCount = 0;
+  Timer? _diagnosticTapTimer;
 
   // Brand colors
   static const Color _teal = Color(0xFF0B6E7D);
@@ -395,6 +400,23 @@ class _AppInitializerState extends State<AppInitializer>
     );
   }
 
+  void _handleFooterTap() {
+    _diagnosticTapTimer?.cancel();
+    _diagnosticTapCount++;
+
+    if (_diagnosticTapCount >= 3) {
+      _diagnosticTapCount = 0;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PushDiagnosticScreen()),
+      );
+      return;
+    }
+
+    _diagnosticTapTimer = Timer(const Duration(milliseconds: 500), () {
+      _diagnosticTapCount = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -490,9 +512,12 @@ class _AppInitializerState extends State<AppInitializer>
                           offset: Offset(0, _footerSlide.value),
                           child: FadeTransition(
                             opacity: _footerFade,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                            child: GestureDetector(
+                              onTap: _handleFooterTap,
+                              behavior: HitTestBehavior.opaque,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                                 // "from" with decorative lines
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -556,6 +581,7 @@ class _AppInitializerState extends State<AppInitializer>
                           ),
                         ),
                       ),
+                    ),
                     ],
                   ),
                 ),
