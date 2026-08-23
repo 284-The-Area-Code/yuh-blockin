@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -31,7 +32,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class PushNotificationService {
   static final PushNotificationService _instance = PushNotificationService._internal();
   factory PushNotificationService() => _instance;
-  PushNotificationService._internal();
+
+  PushNotificationService._internal() {
+    if (Platform.isIOS) {
+      _diagnosticChannel.setMethodCallHandler(_handleNativeMethodCall);
+    }
+  }
+
+  static const MethodChannel _diagnosticChannel = MethodChannel('com.yuhblockin.v1/push_diagnostics');
+
+  Future<void> _handleNativeMethodCall(MethodCall call) async {
+    if (call.method == 'onNativeRegistrationError') {
+      final String? error = call.arguments['error'];
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        apnsRegistration: PushDiagnosticState.failed,
+        lastError: 'NATIVE_APNS_ERROR: $error',
+      );
+    }
+  }
 
   late final FirebaseMessaging _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
@@ -49,62 +67,65 @@ class PushNotificationService {
   Future<void> initialize({Function(String?)? onTap}) async {
     if (_initialized) return;
 
-    // Initialize messaging after Firebase is ready
+    // 1. Core initialization
     _messaging = FirebaseMessaging.instance;
     onNotificationTapped = onTap;
 
     diagnosticReport.value = diagnosticReport.value.copyWith(
       lastAttempt: DateTime.now(),
+      lastError: null,
     );
 
     try {
       if (kDebugMode) debugPrint('[FCM] Initializing service...');
 
-      // Set up the background handler
+      // 2. Set up the background handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-      // Request permissions (iOS)
-      if (kDebugMode) debugPrint('[FCM] Requesting notification permission...');
+      // 3. Request permissions (iOS)
+      if (Platform.isIOS) {
+        if (kDebugMode) debugPrint('[FCM] Requesting notification permission...');
 
-      diagnosticReport.value = diagnosticReport.value.copyWith(
-        permission: PushDiagnosticState.pending,
-      );
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          permission: PushDiagnosticState.pending,
+        );
 
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-        criticalAlert: true,
-      );
+        final settings = await _messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+          criticalAlert: true,
+        );
 
-      final isAuthorized = settings.authorizationStatus == AuthorizationStatus.authorized ||
-                          settings.authorizationStatus == AuthorizationStatus.provisional;
+        final status = settings.authorizationStatus;
+        final isAuthorized = status == AuthorizationStatus.authorized ||
+                            status == AuthorizationStatus.provisional;
 
-      diagnosticReport.value = diagnosticReport.value.copyWith(
-        permission: isAuthorized ? PushDiagnosticState.available : PushDiagnosticState.missing,
-      );
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          permission: isAuthorized ? PushDiagnosticState.available : PushDiagnosticState.missing,
+        );
 
-      if (kDebugMode) {
-        debugPrint('[FCM] Push permission status: ${settings.authorizationStatus}');
+        if (!isAuthorized) {
+          if (kDebugMode) debugPrint('[FCM] Push permission denied: $status');
+          diagnosticReport.value = diagnosticReport.value.copyWith(
+            lastError: 'PERMISSION_DENIED: $status',
+          );
+        }
       }
 
-      // Initialize local notifications for foreground display
+      // 4. Initialize local notifications for foreground display
       await _initializeLocalNotifications();
 
-      // Get and save FCM token
+      // 5. Get and save FCM token (includes APNs wait on iOS)
       await _saveToken();
 
-      // Listen for token refresh
+      // 6. Setup listeners
       _messaging.onTokenRefresh.listen(_onTokenRefresh);
-
-      // Handle foreground messages
       FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-
-      // Handle notification tap (app in background)
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
-      // Check if app was opened from a notification
+      // 7. Check for initial message
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
         _handleNotificationTap(initialMessage);
@@ -115,11 +136,10 @@ class PushNotificationService {
         debugPrint('[FCM] PushNotificationService initialized');
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[FCM] Failed to initialize push notifications: $e');
-      }
+      final errorStr = e.toString();
+      if (kDebugMode) debugPrint('[FCM] Initialization failed: $errorStr');
       diagnosticReport.value = diagnosticReport.value.copyWith(
-        lastError: 'INIT_ERROR: ${e.toString().split(':').first}',
+        lastError: 'INIT_FAILED: ${errorStr.length > 50 ? errorStr.substring(0, 50) : errorStr}',
       );
     }
   }
@@ -231,27 +251,33 @@ class PushNotificationService {
         lastAttempt: DateTime.now(),
       );
 
-      // 1. identity check
+      // 1. Identity Check
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
 
       diagnosticReport.value = diagnosticReport.value.copyWith(
-        userId: userId != null ? PushDiagnosticState.available : PushDiagnosticState.missing,
+        userId: (userId != null && userId.isNotEmpty)
+            ? PushDiagnosticState.available
+            : PushDiagnosticState.missing,
       );
 
       if (userId == null || userId.isEmpty) {
-        if (kDebugMode) debugPrint('[FCM] No user ID available yet, skipping token registration');
+        if (kDebugMode) debugPrint('[FCM] No user ID available, skipping registration');
         return;
       }
 
-      // 2. iOS APNs handshake
+      // 2. iOS-Specific: Explicit APNs Handshake
       if (Platform.isIOS) {
-        final ready = await _waitForAPNSToken();
-        if (!ready) return;
+        // Ensure we wait for the native token handoff
+        final apnsReady = await _waitForAPNSToken();
+        if (!apnsReady) {
+          if (kDebugMode) debugPrint('[FCM] Aborting: APNs token not available');
+          return;
+        }
       }
 
-      // 3. Get FCM registration token
-      if (kDebugMode) debugPrint('[FCM] Requesting FCM registration token...');
+      // 3. Request FCM Token from Firebase
+      if (kDebugMode) debugPrint('[FCM] Requesting registration token...');
 
       diagnosticReport.value = diagnosticReport.value.copyWith(
         fcmToken: PushDiagnosticState.pending,
@@ -259,38 +285,31 @@ class PushNotificationService {
 
       final token = await _messaging.getToken();
 
-      diagnosticReport.value = diagnosticReport.value.copyWith(
-        fcmToken: token != null ? PushDiagnosticState.available : PushDiagnosticState.missing,
-      );
-
       if (token == null) {
-        if (kDebugMode) debugPrint('[FCM] ❌ Error: FCM token is null');
+        if (kDebugMode) debugPrint('[FCM] ❌ Error: FCM token is NULL');
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          fcmToken: PushDiagnosticState.missing,
+          lastError: 'FCM_TOKEN_NULL',
+        );
         return;
       }
 
-      // ===== FCM TOKEN FOR TESTING =====
-      // Print full token so it can be copied for push notification testing
-      if (kDebugMode) {
-        debugPrint('');
-        debugPrint('╔══════════════════════════════════════════════════════════════╗');
-        debugPrint('║                    FCM TOKEN FOR TESTING                     ║');
-        debugPrint('╠══════════════════════════════════════════════════════════════╣');
-        debugPrint('║ $token');
-        debugPrint('╚══════════════════════════════════════════════════════════════╝');
-        debugPrint('');
-      }
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        fcmToken: PushDiagnosticState.available,
+      );
 
+      // Log masked token for debugging in non-production
       if (kDebugMode) {
-        debugPrint('[FCM] FCM token acquired');
-        debugPrint('[FCM] Saving ${Platform.isIOS ? "iOS" : "Android"} token to Supabase...');
+        final masked = '${token.substring(0, 8)}...${token.substring(token.length - 4)}';
+        debugPrint('[FCM] FCM Token: $masked');
       }
-
-      final platform = Platform.isIOS ? 'ios' : 'android';
 
       // 4. Supabase Persistence
       diagnosticReport.value = diagnosticReport.value.copyWith(
         supabaseSync: PushDiagnosticState.pending,
       );
+
+      final platform = Platform.isIOS ? 'ios' : 'android';
 
       try {
         await Supabase.instance.client.from('device_tokens').upsert({
@@ -302,34 +321,25 @@ class PushNotificationService {
 
         diagnosticReport.value = diagnosticReport.value.copyWith(
           supabaseSync: PushDiagnosticState.success,
+          lastError: null,
         );
 
-        if (kDebugMode) {
-          debugPrint('[FCM] ✅ Registration successful for User: $userId');
-        }
-      } catch (e) {
+        if (kDebugMode) debugPrint('[FCM] ✅ Registration successful for $platform');
+      } catch (supabaseError) {
+        final errorStr = supabaseError.toString();
+        if (kDebugMode) debugPrint('[FCM] ❌ Supabase upsert failed: $errorStr');
         diagnosticReport.value = diagnosticReport.value.copyWith(
           supabaseSync: PushDiagnosticState.failed,
-          lastError: 'SUPABASE_ERROR: ${e.toString().split(':').first}',
+          lastError: 'SUPABASE_SYNC_FAILED: ${errorStr.length > 40 ? errorStr.substring(0, 40) : errorStr}',
         );
-        rethrow;
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[FCM] ❌ Failed to save FCM token: $e');
-      }
-      if (diagnosticReport.value.lastError == null) {
-        diagnosticReport.value = diagnosticReport.value.copyWith(
-          lastError: 'SAVE_ERROR: ${e.toString().split(':').first}',
-        );
-      }
+      final errorStr = e.toString();
+      if (kDebugMode) debugPrint('[FCM] ❌ Registration chain failed: $errorStr');
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        lastError: 'CHAIN_FAILED: ${errorStr.length > 40 ? errorStr.substring(0, 40) : errorStr}',
+      );
     }
-  }
-
-  /// Manually retry the registration process
-  Future<void> retryRegistration() async {
-    _initialized = false; // Reset to allow initialize() to run again
-    await initialize();
   }
 
   /// Handle token refresh
@@ -518,5 +528,11 @@ class PushNotificationService {
     if (kDebugMode) {
       debugPrint('📱 Push: Foreground status updated: $_isAppInForeground');
     }
+  }
+
+  /// Manually retry the registration process (diagnostic utility)
+  Future<void> retryRegistration() async {
+    _initialized = false; // Allow re-initialization
+    await initialize();
   }
 }
