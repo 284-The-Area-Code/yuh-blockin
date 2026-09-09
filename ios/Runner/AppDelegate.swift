@@ -70,17 +70,25 @@ import FirebaseMessaging
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
 
-    // 1. Initialize the Flutter super class engine first
-    // This wakes up the plugins and communication channels
+    // 1. Register Flutter plugins BEFORE starting the engine.
+    // FlutterAppDelegate does NOT do this for you - Flutter's own iOS template
+    // registers explicitly, and omitting it leaves every plugin's platform channel
+    // without a receiver. Removing this line previously broke shared_preferences,
+    // firebase_messaging, permission_handler and every other plugin on iOS:
+    //   PlatformException(channel-error, Unable to establish connection on channel:
+    //   "dev.flutter.pigeon.shared_preferences_foundation.LegacyUserDefaultsApi.getAll")
+    GeneratedPluginRegistrant.register(with: self)
+
+    // 2. Start the Flutter engine.
     let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
 
-    // 2. Initialize Firebase natively
+    // 3. Initialize Firebase natively
     if FirebaseApp.app() == nil {
       FirebaseApp.configure()
       print("🚀 Native: Firebase initialized")
     }
 
-    // 3. T0: request notification authorization, then register with APNs from the
+    // 4. T0: request notification authorization, then register with APNs from the
     // authorization callback. Apple documents that without authorization for user-facing
     // notification interactions, remote notifications are delivered silently.
     if #available(iOS 10.0, *) {
