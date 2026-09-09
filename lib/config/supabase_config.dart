@@ -1,11 +1,16 @@
 /// Supabase Configuration for Yuh Blockin'
 ///
+/// Uses the NEW Supabase API key format (`sb_publishable_...`).
+/// The legacy `anon` JWT key is no longer used: legacy API keys have been
+/// disabled on this project. Supabase is deprecating `anon` / `service_role`
+/// keys by the end of 2026.
+///
 /// IMPORTANT: For production, set these values via environment variables:
 ///
 ///   flutter run --dart-define=SUPABASE_URL=https://xxx.supabase.co
-///   flutter run --dart-define=SUPABASE_ANON_KEY=eyJxxx...
+///   flutter run --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
 ///
-/// For development, you can use the default values below.
+/// For development, the default values below are used.
 class SupabaseConfig {
   SupabaseConfig._();
 
@@ -18,16 +23,21 @@ class SupabaseConfig {
     defaultValue: 'https://oazxwglbvzgpehsckmfb.supabase.co',
   );
 
-  /// Supabase Anonymous Key
+  /// Supabase Publishable Key (`sb_publishable_...`)
   ///
-  /// This is the public anon key - safe to include in app but should
-  /// still be provided via environment variable for production.
+  /// This is the public, browser-safe key that replaces the legacy `anon` key.
+  /// It relies on Row Level Security, so it is safe to ship inside the app —
+  /// but prefer providing it via environment variable:
   ///
-  /// Set via environment variable:
-  /// --dart-define=SUPABASE_ANON_KEY=eyJxxx...
-  static const String anonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9henh3Z2xidnpncGVoc2NrbWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNzkzMjEsImV4cCI6MjA3ODc1NTMyMX0.Ia6ccZ1zp4r1mi5mgvQk9wfK5MGp0S3TDhyWngz8Z54',
+  /// --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
+  ///
+  /// Note: this key is NOT a JWT. The Supabase Dart SDK sends it on the
+  /// `apikey` header (and, for auth/database calls, also as a Bearer token,
+  /// which the server tolerates — verified against /auth/v1/settings and
+  /// /rest/v1 before migrating).
+  static const String publishableKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
+    defaultValue: 'sb_publishable_xxOljXZiqvnQJYpFetJg9Q_cZpKOB5D',
   );
 
   /// Check if using environment-provided credentials (more secure)
@@ -36,13 +46,15 @@ class SupabaseConfig {
     const defaultUrl = 'https://oazxwglbvzgpehsckmfb.supabase.co';
     return url != defaultUrl ||
            const bool.hasEnvironment('SUPABASE_URL') ||
-           const bool.hasEnvironment('SUPABASE_ANON_KEY');
+           const bool.hasEnvironment('SUPABASE_PUBLISHABLE_KEY');
   }
 
   /// Validate configuration
   static bool get isValid {
     return url.isNotEmpty &&
-           anonKey.isNotEmpty &&
+           publishableKey.isNotEmpty &&
+           publishableKey != 'PASTE_YOUR_SB_PUBLISHABLE_KEY_HERE' &&
+           publishableKey.startsWith('sb_publishable_') &&
            url.startsWith('https://') &&
            url.contains('supabase.co');
   }

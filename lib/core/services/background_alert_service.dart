@@ -159,7 +159,7 @@ void onBackgroundNotificationResponse(NotificationResponse response) async {
     try {
       await Supabase.initialize(
         url: SupabaseConfig.url,
-        anonKey: SupabaseConfig.anonKey,
+        publishableKey: SupabaseConfig.publishableKey,
       );
     } catch (_) {
       // Already initialized or fallback
@@ -243,7 +243,7 @@ void onStart(ServiceInstance service) async {
       // 2. Background isolates need their own initialization
       await Supabase.initialize(
         url: SupabaseConfig.url,
-        anonKey: SupabaseConfig.anonKey,
+        publishableKey: SupabaseConfig.publishableKey,
         realtimeClientOptions: const RealtimeClientOptions(
           eventsPerSecond: 10,
         ),

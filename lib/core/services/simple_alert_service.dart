@@ -42,7 +42,7 @@ class SimpleAlertService {
         }
         await Supabase.initialize(
           url: SupabaseConfig.url,
-          anonKey: SupabaseConfig.anonKey,
+          publishableKey: SupabaseConfig.publishableKey,
           realtimeClientOptions: const RealtimeClientOptions(
             eventsPerSecond: 10,
           ),
