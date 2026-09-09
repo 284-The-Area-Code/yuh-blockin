@@ -58,3 +58,10 @@ docs/yuh-blockin-firebase-adminsdk*.json
 
 # Marketing / Screenshots
 assets/images/phone_screenshots/
+
+# Node tooling (supabase CLI devDependency)
+node_modules/
+package-lock.json
+
+# Supabase CLI local state
+supabase/.temp/

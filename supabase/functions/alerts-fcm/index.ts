@@ -1,4 +1,12 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.28.0';
+// NOTE: createClient is no longer called - the privileged client now comes from
+// ctx.supabaseAdmin. The import is retained deliberately to pin the version of
+// @supabase/supabase-js that the bundler resolves: @supabase/server has a
+// non-optional peer dependency on it and imports its `./cors` subpath. Pinning
+// 2.28.0 here previously caused ERR_MODULE_NOT_FOUND -> BOOT_ERROR because that
+// version predates subpath exports. Remove only after confirming the function
+// still boots without it.
+import { createClient } from 'npm:@supabase/supabase-js@2.116.0';
+import { createSupabaseContext } from 'npm:@supabase/server';
 import { SignJWT, importPKCS8 } from 'npm:jose@5.2.0';
 
 // FCM error codes that indicate invalid/expired tokens
@@ -45,7 +53,6 @@ async function sendFcmMessage(accessToken: string, projectId: string, message: a
   const body = JSON.stringify({ message });
 
   console.log('FCM URL:', url);
-  console.log('Access token (first 50 chars):', accessToken.substring(0, 50) + '...');
   console.log('Request body:', body.substring(0, 200));
 
   const response = await fetch(url, {
@@ -78,6 +85,21 @@ async function sendFcmMessage(accessToken: string, projectId: string, message: a
 
 Deno.serve(async (req: Request) => {
   try {
+    // Caller authentication (service-to-service).
+    // Validates the `apikey` header against the project's secret key named
+    // 'alerts_fcm_trigger'. Runs before the body is parsed, so an unauthorized caller
+    // reaches no credential read, no Supabase client, no device_tokens query and no
+    // FCM call. The returned context also provides ctx.supabaseAdmin, used below
+    // as the privileged database client.
+    const { data: ctx, error: authError } = await createSupabaseContext(req, {
+      auth: 'secret:alerts_fcm_trigger',
+    });
+    if (authError) {
+      // Deliberately opaque: do not disclose why the key was rejected.
+      console.warn('alerts-fcm: rejected unauthorized caller');
+      return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 });
+    }
+
     const body = await req.json();
     const { alert_id, receiver_id, message, sound_path, urgency_level = 'normal' } = body;
 
@@ -116,13 +138,12 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'auth failed', details: e.message }), { status: 500 });
     }
 
-    // Initialize Supabase client
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(JSON.stringify({ error: 'missing supabase env vars' }), { status: 500 });
-    }
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+    // Privileged Supabase client, taken from the authenticated context.
+    // Replaces the legacy SUPABASE_SERVICE_ROLE_KEY path: legacy API keys are
+    // disabled on this project, and Supabase deprecates them by end of 2026.
+    // ctx.supabaseAdmin bypasses RLS and is derived from the project's
+    // new-format secret keys, so no key is read or held in this code.
+    const supabase = ctx.supabaseAdmin;
 
     // Query device tokens by user_id
     const { data: tokenData, error: tokenError } = await supabase
