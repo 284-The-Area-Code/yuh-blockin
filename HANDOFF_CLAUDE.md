@@ -4,33 +4,32 @@
 **Supersedes:** `HANDOFF.md` (written by Gemini — retained, but contains six documented
 inaccuracies; see `HANDOFF_AUDIT.md` §5)
 **Companions:** `HANDOFF_AUDIT.md` (read-only takeover audit), `T0_DIFF_FOR_REVIEW.md`
-**Status:** 🎯 **PUSH DELIVERY CONFIRMED WORKING ON ANDROID, END TO END.** A notification
-was delivered to a real device, displayed, and tapped. The original symptom was
-**entirely server-side** — four stacked defects, all now fixed. The project has also been
-migrated off legacy API keys. The only untested layer left is APNs → iOS presentation.
+**Status:** 🎯 **MISSION OBJECTIVE MET — TEST B AND TEST C BOTH PASS ON iOS.**
+Build 23 delivered a user-visible APNs alert to a real iPhone 14 (iOS 16.4) **on the Lock
+Screen**, and to Notification Center while backgrounded. Android delivery confirmed
+separately. **One defect remains: notification sound.** Six root causes were found and
+fixed; none of them was the authorization/presentation hypothesis the investigation
+started from.
 
 ---
 
-## 0. Current next steps — iOS leg only
+## 0. Current next steps — sound only
 
-The Android end-to-end test **passed** (see §2b). Everything server-side is proven. What
-remains is APNs → iOS presentation.
+TEST B and TEST C both pass (see §2c). `pubspec.yaml` is at **`1.0.0+24`**.
 
-1. **Build 22 for iOS.** `pubspec.yaml` is at `1.0.0+22`. Build via the **normal Codemagic
-   GUI workflow**. Build 21 **cannot work** — it has the legacy anon key compiled in and
-   legacy keys are disabled.
-2. **Install via TestFlight** on a BrowserStack device. A direct `.ipa` upload fails: the
-   profile has no provisioned devices, which is what produced the earlier
-   `NATIVE_APNS_ERROR: no valid 'aps-environment' entitlement` — that was BrowserStack's
-   re-signing, not a defect in the build.
-3. **Read T0's `[APNS-DIAG] settings[didBecomeActive]`.** One line settles H0 and H1.
-   Note both are now *likely moot* — they were inferred from "FCM reports success", but
-   FCM was never actually reached until 2026-09-08.
-4. **Confirm an iOS row appears in `device_tokens`**, then fire one alert at that user.
-5. **TEST B** (backgrounded) and **TEST C** (locked) — the original acceptance criteria.
-6. If notifications appear but are silent, that is **H3**: the `.wav` files are packaged
-   under `flutter_assets` where `aps.sound` cannot resolve them (confirmed at artifact
-   level in §4). Fix is bundling them as main-bundle resources or sending `"default"`.
+1. **Build 24** via the normal Codemagic GUI workflow. It contains the sound fix:
+   `ios/Runner.xcodeproj/project.pbxproj` now adds all seven `.wav` files to the Runner
+   target's Copy Bundle Resources phase (28 lines added, 0 removed, backup at
+   `/tmp/pbxproj.backup`).
+2. **Verify in the shipped IPA before device testing** — this is checkable without a device:
+   ```
+   unzip -l <build24.ipa> | grep -E "Payload/Runner.app/[a-z_0-9]+\.wav"
+   ```
+   Seven `.wav` files must appear at **bundle root**, not under `flutter_assets/`.
+3. **On device:** fire an alert and confirm audio plays on the Lock Screen. The iOS log
+   error `Failed to find sound "high_alert_1.wav"` must be **gone**.
+4. If sound still fails, fall back to sending `"default"` from `alerts-fcm`'s `soundMap` —
+   a one-line server change requiring no rebuild.
 
 `/tmp/fcm_validate.py` is a ready-made `validate_only` FCM probe if a no-delivery test of
 a specific token is ever needed.
@@ -39,23 +38,26 @@ a specific token is ever needed.
 
 ## 1. Repository state
 
-- Branch `firebase-production-push`, HEAD **`9793066`** ("Instrument iOS APNs
-  authorization for Build 21"), in sync with origin.
-- `pubspec.yaml` = `1.0.0+21`. T0 and the Build 20 leftover were committed together in
-  `9793066`, so handoff decisions 1 and 2 from the previous revision are **closed**.
+- Branch `firebase-production-push`, HEAD **`976a561`** ("Restore
+  GeneratedPluginRegistrant; bump to 1.0.0+23"), in sync with origin.
+- `pubspec.yaml` = **`1.0.0+24`** (uncommitted) — Build 24 carries the sound fix.
+- Commit history this session: `2ba3f5e` server push fix, `93d2b39` publishable-key
+  migration, `a65c3e4` handoff docs, `976a561` GeneratedPluginRegistrant restore.
 - `ios/Runner/Runner.entitlements` = `aps-environment = production` (untouched).
 - **Production/distribution builds use the normal Codemagic GUI workflow, as Build 20
   did.** `codemagic.yaml` holds only the temporary `ios-apns-forensic` diagnostic
   workflow. It is **not** the production path, **not** a blocker, and must **not** be
   modified. `codemagic.yaml.apns-diagnostic.backup` must **not** be restored.
 
-**Uncommitted, this session:**
-- `supabase/functions/alerts-fcm/index.ts` (M) — auth gate, supabase-js pin bump, log removal
-- `supabase/migrations/20260908_secure_alert_push_trigger_auth.sql` (new)
-- `supabase/migrations/20260908_drop_duplicate_alert_push_triggers.sql` (new)
+**Uncommitted right now:**
+- `ios/Runner.xcodeproj/project.pbxproj` — seven `.wav` files added to the Runner target's
+  Copy Bundle Resources phase (28 lines added, 0 removed; backup `/tmp/pbxproj.backup`)
+- `pubspec.yaml` — `1.0.0+24`
+- `HANDOFF_CLAUDE.md` — this file
 
-Both migrations have been **applied to the database manually via the SQL Editor**. The
-function has been **deployed via CLI**. Neither is committed to git.
+Both migrations were **applied to the database manually via the SQL Editor** and are
+committed in `2ba3f5e`. The Edge Function is **deployed via CLI** with
+`--no-verify-jwt`.
 
 ---
 
@@ -185,6 +187,57 @@ client omits it). A pre-migration probe of `/auth/v1/settings` with the key on b
 
 ---
 
+## 2c. iOS — TEST B AND TEST C PASSED (2026-09-09, Build 23)
+
+**Device:** iPhone 14, iOS 16.4, via BrowserStack App Live, TestFlight install.
+
+**TEST C — locked iPhone: PASS.** Screenshot shows the Lock Screen displaying:
+`Yuh Blockin — Move Request — MegaFox59 needs you to move.` plus a second stacked alert.
+
+**TEST B — backgrounded: PASS.** Badge set to 1, alerts present in Notification Center.
+
+### iOS's own log is the authoritative evidence
+
+```
+[com.yuhblockin.v1] Requesting authorization with options 7          (alert|sound|badge)
+[com.yuhblockin.v1] Received remote notification request 03B5-953D
+    [ waking: 0, hasAlertContent: 1, hasSound: 1 hasBadge: 1 ]
+[com.yuhblockin.v1] Badge can be set ... [ canBadge: 1 badgeNumber: 1 ]
+[com.yuhblockin.v1] Delivered user visible push notification 03B5-953D
+[com.yuhblockin.v1] Adding notification 03B5-953D
+    [ hasAlertContent: 1, shouldPresentAlert: 1 hasSound: 1 shouldPlaySound: 1 ]
+BBDataProviderProxy com.yuhblockin.v1 has enqueued a bulletin request
+<Error>: [com.yuhblockin.v1] Failed to find sound "high_alert_1.wav"     ← ONLY DEFECT
+```
+
+**H0 and H1 are DISPROVEN.** `shouldPresentAlert: 1` and *"Delivered user visible push
+notification"* prove authorization was granted and presentation enabled. The hypotheses
+that drove Build 21 and T0 were never the problem.
+
+**H3 is CONFIRMED and is the only remaining defect.** Root cause located precisely: all
+seven `.wav` files exist in `ios/Runner/`, but `project.pbxproj` contained **zero** `.wav`
+references — they were never added to the target, so they never reached `Runner.app/`.
+Forensics on the Build 21 IPA had already shown no `.wav` at bundle root.
+
+### T0's instrumentation could not be used — design flaw
+
+T0 logs via Swift `print()`, which writes to stdout. **iOS device syslog does not capture
+stdout** — only `NSLog`/`os_log`. A 113,862-line device log contained **zero**
+`[APNS-DIAG]` lines, and zero of the pre-existing AppDelegate prints. Flutter's
+`debugPrint` does reach syslog, which is why Dart lines appeared.
+
+If native diagnostics are needed again, use `NSLog`. In this case SpringBoard's
+`UserNotificationsServer` logging proved more informative than the instrumentation would
+have been.
+
+### Also observed
+
+`willPresentNotification delivery succeeded` fired for a second notification — that is the
+**foreground** path, which `push_notification_service.dart:360` suppresses by design. Not
+a defect.
+
+---
+
 ## 3. Configuration created this session (operator-managed, not in git)
 
 | Where | Name | Notes |
@@ -240,6 +293,29 @@ defect, not a visibility defect); App Store profile with **no provisioned device
 
 ---
 
+## 4b. ROOT CAUSES — the complete list
+
+Six independent defects. Fixing any one alone would have changed nothing observable,
+which is why the symptom appeared intractable.
+
+| # | Defect | Layer | Fixed in |
+|---|---|---|---|
+| 1 | `notify_alert_push()` built its auth header from `current_setting('supabase.service_role_key')`, a GUC never set → NULL header → 401, Edge Function never ran | server | `2ba3f5e` |
+| 2 | Three duplicate AFTER INSERT triggers on `alerts`, all calling alerts-fcm | server | `2ba3f5e` |
+| 3 | `FIREBASE_SERVICE_ACCOUNT_JSON` truncated (~95 base64 chars lost in a paste) | server | operator |
+| 4 | `@supabase/supabase-js` pinned at 2.28.0, which predates the `./cors` subpath `@supabase/server` requires → BOOT_ERROR | server | `2ba3f5e` |
+| 5 | `GeneratedPluginRegistrant.register(with: self)` removed from AppDelegate → every iOS plugin's platform channel dead → `shared_preferences` failed → `_saveToken()` read a null `user_id` → **no iOS token was ever stored** | client | Build 23 |
+| 6 | Seven `.wav` files present in `ios/Runner/` but absent from `project.pbxproj` → never copied into the bundle → `aps.sound` unresolvable | client | Build 24 |
+
+Plus the deliberate migration off legacy `anon`/`service_role` keys, which were disabled
+mid-investigation and broke every existing install until the publishable-key build shipped.
+
+**None of these was H0 or H1.** The investigation began from "iOS notifications don't
+appear when backgrounded or locked", which pointed at device-side authorization. That was
+a reasonable inference from "FCM reports success" — but FCM was never actually reached.
+
+---
+
 ## 5. Hypothesis register
 
 | ID | Hypothesis | Status |
@@ -248,8 +324,8 @@ defect, not a visibility defect); App Store profile with **no provisioned device
 | **F2** | `onConflict: 'user_id, fcm_token'` contains a space; PostgREST may reject it, so no iOS token is ever stored | ❌ **DISPROVEN.** 6 iOS + 10 Android rows existed, all written the same day. Upserts work. |
 | **F5** | No `device_tokens` DDL/RLS in the repo; a missing unique constraint or a blocking RLS policy would make every upsert fail silently | ❌ **DISPROVEN.** Writes succeed. |
 | **F3** | `THIRD_PARTY_AUTH_ERROR` unhandled — FCM's error for an APNs credential problem in the Firebase project | ❌ **Not reproduced.** Firebase holds a production APNs auth key, Key ID `XR7X7N6KLS`, Team ID `KPHP66W43B`, matching the signed artifact. FCM has now been called successfully many times (Android) with no such error. Remains theoretically possible on the APNs leg only. |
-| **H0** | Authorization never reaches a granted state, so iOS delivers silently | **Likely moot.** Inferred from "FCM reports success" — but FCM was never reached until 2026-09-08, so the premise never held. Android delivery now proves the server side. Confirm on device rather than assume. |
-| **H1** | Authorization granted but presentation settings disabled (Lock Screen / Deliver Quietly / Scheduled Summary) | **Likely moot**, same reasoning. Confirm via T0's `settings[didBecomeActive]`. |
+| **H0** | Authorization never reaches a granted state, so iOS delivers silently | ❌ **DISPROVEN.** iOS logged `Requesting authorization with options 7` and `Delivered user visible push notification`. Authorization was granted throughout. |
+| **H1** | Authorization granted but presentation settings disabled (Lock Screen / Deliver Quietly / Scheduled Summary) | ❌ **DISPROVEN.** `shouldPresentAlert: 1`, bulletin enqueued, alert visible on the Lock Screen. |
 | **H4** | Stale/duplicate `device_tokens` rows | ❌ **DISPROVEN.** 6 iOS tokens across 6 distinct users, exactly 1 each, all fresh. No accumulation. |
 | **H5** | APNs environment mismatch | Weakened — artifact and profile agree on `production` |
 | **H2** | `criticalAlert: true` without the entitlement | Settled at artifact level: no critical-alerts entitlement exists. Runtime effect answered by T0's `criticalAlertSetting` read. |

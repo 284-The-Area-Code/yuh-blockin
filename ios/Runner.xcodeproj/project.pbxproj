@@ -15,6 +15,13 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		D10D42E5210D42E10064400E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D10D42E4210D42E10064400E /* GoogleService-Info.plist */; };
+		B903C884C3FAB5F459D6C510 /* alert_sound.wav in Resources */ = {isa = PBXBuildFile; fileRef = B46B25482E33D4CEAB98C287 /* alert_sound.wav */; };
+		783C2B534A79C28DBF06DD23 /* high_alert_1.wav in Resources */ = {isa = PBXBuildFile; fileRef = 15AEDB4676754EC85958B643 /* high_alert_1.wav */; };
+		0AA4249C6F82B47FCA793D3F /* high_alert_2.wav in Resources */ = {isa = PBXBuildFile; fileRef = 05E4E02A5078BA6538110C98 /* high_alert_2.wav */; };
+		C525629B26D3F33726396D3D /* low_alert_1.wav in Resources */ = {isa = PBXBuildFile; fileRef = C1319193CDE389A3B5654AA1 /* low_alert_1.wav */; };
+		B6B6CA139001948C128D267D /* low_alert_2.wav in Resources */ = {isa = PBXBuildFile; fileRef = 185DAC399EBBC322A62CF4A8 /* low_alert_2.wav */; };
+		F59C5C491BAFE1A862F4036D /* low_alert_3.wav in Resources */ = {isa = PBXBuildFile; fileRef = AC84161BE7EEA8B8BF43699F /* low_alert_3.wav */; };
+		2EAE82E83B57DE0B75B93C20 /* normal_alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = 84C53AA4193DCDF1E0DE569F /* normal_alert.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +65,13 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D10D42E4210D42E10064400E /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		B46B25482E33D4CEAB98C287 /* alert_sound.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = alert_sound.wav; sourceTree = "<group>"; };
+		15AEDB4676754EC85958B643 /* high_alert_1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = high_alert_1.wav; sourceTree = "<group>"; };
+		05E4E02A5078BA6538110C98 /* high_alert_2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = high_alert_2.wav; sourceTree = "<group>"; };
+		C1319193CDE389A3B5654AA1 /* low_alert_1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = low_alert_1.wav; sourceTree = "<group>"; };
+		185DAC399EBBC322A62CF4A8 /* low_alert_2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = low_alert_2.wav; sourceTree = "<group>"; };
+		AC84161BE7EEA8B8BF43699F /* low_alert_3.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = low_alert_3.wav; sourceTree = "<group>"; };
+		84C53AA4193DCDF1E0DE569F /* normal_alert.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = normal_alert.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +136,13 @@
 				D10D42E1210D42E10064400E /* Runner.entitlements */,
 				D10D42E4210D42E10064400E /* GoogleService-Info.plist */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				B46B25482E33D4CEAB98C287 /* alert_sound.wav */,
+				15AEDB4676754EC85958B643 /* high_alert_1.wav */,
+				05E4E02A5078BA6538110C98 /* high_alert_2.wav */,
+				C1319193CDE389A3B5654AA1 /* low_alert_1.wav */,
+				185DAC399EBBC322A62CF4A8 /* low_alert_2.wav */,
+				AC84161BE7EEA8B8BF43699F /* low_alert_3.wav */,
+				84C53AA4193DCDF1E0DE569F /* normal_alert.wav */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -227,6 +248,13 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				D10D42E5210D42E10064400E /* GoogleService-Info.plist in Resources */,
+				B903C884C3FAB5F459D6C510 /* alert_sound.wav in Resources */,
+				783C2B534A79C28DBF06DD23 /* high_alert_1.wav in Resources */,
+				0AA4249C6F82B47FCA793D3F /* high_alert_2.wav in Resources */,
+				C525629B26D3F33726396D3D /* low_alert_1.wav in Resources */,
+				B6B6CA139001948C128D267D /* low_alert_2.wav in Resources */,
+				F59C5C491BAFE1A862F4036D /* low_alert_3.wav in Resources */,
+				2EAE82E83B57DE0B75B93C20 /* normal_alert.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
