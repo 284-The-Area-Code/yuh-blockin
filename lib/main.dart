@@ -2357,6 +2357,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   }
 
   void _handleFooterTap() {
+    // The hidden push-diagnostics screen is a development tool. It was added to
+    // investigate APNs delivery; that investigation is closed. Shipping a hidden
+    // diagnostics screen in a consumer release is a support and privacy liability,
+    // so it is gated to debug builds on both platforms.
+    if (!kDebugMode) return;
+
     _diagnosticTapTimer?.cancel();
     _diagnosticTapCount++;
 
