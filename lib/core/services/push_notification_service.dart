@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -357,7 +358,12 @@ class PushNotificationService {
     // IMPORTANT: If app is in foreground, the main app's stream listener
     // will show the high-fidelity in-app alert banner.
     // We skip the system notification here to prevent duplicates in foreground.
-    if (_isAppInForeground) {
+    //
+    // Ask the framework rather than trusting _isAppInForeground alone. That flag was
+    // only ever updated by the splash screen's lifecycle observer, which is removed in
+    // its dispose(), so after leaving the splash it stayed frozen at its initial `true`
+    // and suppressed notifications while the app was actually backgrounded.
+    if (_isCurrentlyForeground) {
       if (kDebugMode) {
         debugPrint('ℹ️ Push: Skipping system notification (app is in foreground)');
       }
@@ -522,11 +528,26 @@ class PushNotificationService {
     return await _messaging.getToken();
   }
 
-  /// Update foreground status to suppress duplicate notifications
+  /// Whether the app is genuinely on screen right now.
+  ///
+  /// Prefers the framework's own lifecycle state, which cannot go stale. Falls back to
+  /// the manually-maintained [_isAppInForeground] flag only when the framework has not
+  /// reported a state yet (very early startup).
+  bool get _isCurrentlyForeground {
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state == null) return _isAppInForeground;
+    return state == AppLifecycleState.resumed;
+  }
+
+  /// Update foreground status to suppress duplicate notifications.
+  ///
+  /// Kept for the existing call sites, but it is no longer the source of truth —
+  /// see [_isCurrentlyForeground].
   void setAppInForeground(bool isInForeground) {
     _isAppInForeground = isInForeground;
     if (kDebugMode) {
-      debugPrint('📱 Push: Foreground status updated: $_isAppInForeground');
+      debugPrint('📱 Push: Foreground status updated: $_isAppInForeground '
+          '(framework says: ${WidgetsBinding.instance.lifecycleState})');
     }
   }
 
