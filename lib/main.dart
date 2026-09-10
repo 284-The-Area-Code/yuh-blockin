@@ -1055,12 +1055,59 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         });
       }
 
+      // Reconcile the alert lists against the database.
+      //
+      // These lists are otherwise maintained only by the Realtime streams, which use
+      // cancelOnError and do die in practice (RealtimeSubscribeException, close code
+      // 1006) while the app is backgrounded. A response recorded from a notification
+      // action - or from the user's other device - also happens entirely outside the
+      // widget tree. Without this, the Activity feed can show "Waiting..." for an
+      // alert that was answered minutes ago, and the badges stay stale with it.
+      await _reconcileAlertsFromServer();
+
       // Refresh subscription entitlements if needed (hourly check)
       if (_subscriptionService.shouldRefreshEntitlements) {
         unawaited(_subscriptionService.refreshEntitlements());
       }
     } catch (e) {
       // Handle silently - data refresh is optional
+    }
+  }
+
+  /// Re-fetch sent and received alerts from the server and rebuild the lists and
+  /// badge counts from that data, rather than trusting locally accumulated state.
+  Future<void> _reconcileAlertsFromServer() async {
+    if (_currentUserId == null) return;
+
+    try {
+      final results = await Future.wait([
+        _alertService.getSentAlerts(_currentUserId!),
+        _alertService.getReceivedAlerts(_currentUserId!),
+      ]);
+      if (!mounted) return;
+
+      final sent = results[0];
+      final received = results[1];
+
+      setState(() {
+        _recentSentAlerts = sent.take(5).toList();
+        _recentReceivedAlerts = received.take(5).toList();
+
+        // Derive badges from the freshly fetched rows so a response recorded
+        // anywhere - in-app, notification action, another device - is reflected.
+        _unacknowledgedAlertsCount =
+            sent.where((a) => !a.hasResponse).length;
+        _unseenAlertsCount =
+            received.where((a) => a.readAt == null && !a.hasResponse).length;
+      });
+
+      if (kDebugMode) {
+        debugPrint('🔄 Reconciled alerts: ${sent.length} sent, '
+            '${received.length} received, '
+            'badges $_unacknowledgedAlertsCount/$_unseenAlertsCount');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Alert reconciliation failed: $e');
     }
   }
 

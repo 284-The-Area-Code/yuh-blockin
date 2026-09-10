@@ -349,7 +349,7 @@ class SubscriptionService {
         'user_id': _currentUserId,
         'status': _subscriptionStatus,
         'plan_type': productId == lifetimeProductId ? 'lifetime' : 'monthly',
-        'started_at': DateTime.now().toIso8601String(),
+        'started_at': DateTime.now().toUtc().toIso8601String(),
         'expires_at': productId == lifetimeProductId
             ? null
             : DateTime.now().add(const Duration(days: 30)).toIso8601String(),
@@ -427,7 +427,7 @@ class SubscriptionService {
       await supabase.from('ath_monthly_subscriptions').upsert({
         'user_id': _currentUserId,
         'renewal_status': _subscriptionStatus,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
     } catch (e) {
       if (kDebugMode) {

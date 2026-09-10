@@ -168,7 +168,7 @@ void onBackgroundNotificationResponse(NotificationResponse response) async {
     final supabase = Supabase.instance.client;
 
     // 2. Send response to database
-    final timestamp = DateTime.now().toIso8601String();
+    final timestamp = DateTime.now().toUtc().toIso8601String();
     await supabase
         .from('alerts')
         .update({

@@ -245,7 +245,7 @@ class PlateVerificationService {
         'user_id': userId,
         'verification_status': statusVerified,
         'ownership_key_hash': keyHash,
-        'verified_at': DateTime.now().toIso8601String(),
+        'verified_at': DateTime.now().toUtc().toIso8601String(),
       });
 
       // Save key locally
@@ -312,7 +312,7 @@ class PlateVerificationService {
               .update({
                 'user_id': userId,
                 'verification_status': statusVerified,
-                'verified_at': DateTime.now().toIso8601String(),
+                'verified_at': DateTime.now().toUtc().toIso8601String(),
               })
               .eq('id', record['id']);
 
@@ -426,7 +426,7 @@ class PlateVerificationService {
             .update({
               'user_id': challengerId,
               'verification_status': statusVerified,
-              'verified_at': DateTime.now().toIso8601String(),
+              'verified_at': DateTime.now().toUtc().toIso8601String(),
             })
             .eq('id', existing['id']);
 
@@ -508,7 +508,7 @@ class PlateVerificationService {
           .from('plates')
           .update({
             'ownership_key_hash': newKeyHash,
-            'updated_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', record['id']);
 

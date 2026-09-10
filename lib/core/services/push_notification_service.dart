@@ -93,7 +93,7 @@ class PushNotificationService {
     if (actionId == 'respond') return; // legacy generic button
 
     try {
-      final timestamp = DateTime.now().toIso8601String();
+      final timestamp = DateTime.now().toUtc().toIso8601String();
       await Supabase.instance.client.from('alerts').update({
         'response': actionId,
         'response_at': timestamp,
@@ -375,7 +375,7 @@ class PushNotificationService {
           'user_id': userId,
           'fcm_token': token,
           'platform': platform,
-          'updated_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'user_id, fcm_token');
 
         diagnosticReport.value = diagnosticReport.value.copyWith(

@@ -484,7 +484,7 @@ class SimpleAlertService {
 
     await _supabase
         .from('alerts')
-        .update({'read_at': DateTime.now().toIso8601String()})
+        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', alertId);
   }
 
@@ -502,8 +502,8 @@ class SimpleAlertService {
           .update({
             'response': response,
             'response_message': responseMessage,
-            'response_at': DateTime.now().toIso8601String(),
-            'read_at': DateTime.now().toIso8601String(), // Also mark as read
+            'response_at': DateTime.now().toUtc().toIso8601String(),
+            'read_at': DateTime.now().toUtc().toIso8601String(), // Also mark as read
           })
           .eq('id', alertId);
 
@@ -549,6 +549,34 @@ class SimpleAlertService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Error getting sent alerts: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get snapshot of alerts I've received.
+  ///
+  /// Counterpart to [getSentAlerts]. Used to reconcile local state against the
+  /// database on app resume: the Realtime stream can die while backgrounded
+  /// (RealtimeSubscribeException / close code 1006), and a response recorded from
+  /// a notification action happens entirely outside the widget tree, so the lists
+  /// and badges must be re-derived from the server rather than trusted.
+  Future<List<Alert>> getReceivedAlerts(String userId) async {
+    _ensureInitialized();
+
+    try {
+      final response = await _supabase
+          .from('alerts')
+          .select()
+          .eq('receiver_id', userId)
+          .order('created_at', ascending: false);
+
+      return (response as List<dynamic>)
+          .map((item) => Alert.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Error getting received alerts: $e');
       }
       return [];
     }
