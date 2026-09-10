@@ -905,11 +905,45 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
     // Initialize cloud push notifications (FCM/APNs)
     await PushNotificationService().initialize(
-      onTap: (payload) {
+      onTap: (payload) async {
         if (kDebugMode) {
           debugPrint('Push notification tapped with payload: $payload');
         }
-        // Handle tap - navigate if needed
+
+        // A single tap on a notification always launches the app - on iOS the action
+        // buttons are only reachable by long-press or swipe, which is system
+        // behaviour an app cannot change. So bring the user straight to the alert,
+        // where the Moving Now / 5 Minutes / Can't Move options are already shown.
+        if (payload == null || payload.isEmpty) return;
+
+        try {
+          final alert = await _alertService.getAlertById(payload);
+          if (!mounted) return;
+
+          if (alert == null) {
+            if (kDebugMode) {
+              debugPrint('⚠️ Tapped notification for unknown alert: $payload');
+            }
+            return;
+          }
+
+          // Already answered - for example the user long-pressed the notification and
+          // used an action button, then tapped the notification again. Showing the
+          // live banner would offer buttons for a decision already made, and let them
+          // silently overwrite it. Confirm what was sent instead.
+          if (alert.hasResponse) {
+            _showPremiumSnackBar(
+              message: 'Already responded: '
+                  '${_getResponseDisplayText(alert.response!)}',
+              icon: Icons.check_circle_outline,
+            );
+            return;
+          }
+
+          _handleIncomingAlert(alert);
+        } catch (e) {
+          if (kDebugMode) debugPrint('❌ Failed to open tapped alert: $e');
+        }
       },
     );
 

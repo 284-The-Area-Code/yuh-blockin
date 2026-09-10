@@ -455,6 +455,29 @@ class SimpleAlertService {
         .map((item) => Alert.fromJson(item)); // Convert each item to Alert
   }
 
+  /// Fetch a single alert by id.
+  ///
+  /// Used when the app is opened by tapping a push notification: the notification
+  /// only carries the alert id, so the full alert has to be loaded before the
+  /// in-app banner and its response options can be shown.
+  Future<Alert?> getAlertById(String alertId) async {
+    _ensureInitialized();
+
+    try {
+      final result = await _supabase
+          .from('alerts')
+          .select()
+          .eq('id', alertId)
+          .maybeSingle();
+
+      if (result == null) return null;
+      return Alert.fromJson(result);
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Failed to fetch alert $alertId: $e');
+      return null;
+    }
+  }
+
   /// Mark alert as read
   Future<void> markAlertRead(String alertId) async {
     _ensureInitialized();

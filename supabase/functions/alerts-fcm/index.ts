@@ -231,7 +231,11 @@ Deno.serve(async (req: Request) => {
                 body: message || "Someone needs you to move your car!"
               },
               sound: soundFile,
-              badge: 1
+              badge: 1,
+              // Renders the Moving Now / 5 Minutes / Can't Move buttons. Must match the
+              // UNNotificationCategory registered in ios/Runner/AppDelegate.swift.
+              // Additive: a build without that category simply ignores it.
+              category: 'yuh_blockin_alert'
             }
           }
         };

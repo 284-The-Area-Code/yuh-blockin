@@ -36,10 +36,19 @@ class PushNotificationService {
   PushNotificationService._internal() {
     if (Platform.isIOS) {
       _diagnosticChannel.setMethodCallHandler(_handleNativeMethodCall);
+      _actionChannel.setMethodCallHandler(_handleNativeActionCall);
     }
   }
 
   static const MethodChannel _diagnosticChannel = MethodChannel('com.yuhblockin.v1/push_diagnostics');
+
+  /// iOS notification action buttons.
+  ///
+  /// These have to be handled natively: flutter_local_notifications ignores any
+  /// notification it did not itself create, and firebase_messaging does not surface
+  /// actionIdentifier on iOS, so neither plugin delivers the tapped action for a
+  /// remote APNs push. AppDelegate captures it and sends it over this channel.
+  static const MethodChannel _actionChannel = MethodChannel('com.yuhblockin.v1/notification_actions');
 
   Future<void> _handleNativeMethodCall(MethodCall call) async {
     if (call.method == 'onNativeRegistrationError') {
@@ -49,6 +58,52 @@ class PushNotificationService {
         lastError: 'NATIVE_APNS_ERROR: $error',
       );
     }
+  }
+
+  /// Live action tap arriving from AppDelegate while the engine is running.
+  Future<void> _handleNativeActionCall(MethodCall call) async {
+    if (call.method != 'onNotificationAction') return;
+    final args = Map<String, dynamic>.from(call.arguments as Map);
+    await _recordAlertResponse(args['actionId'] as String?, args['alertId'] as String?);
+  }
+
+  /// Drain an action that was tapped before the Flutter engine was ready — the
+  /// cold-start-from-Lock-Screen case. AppDelegate parks it; we collect it here.
+  Future<void> _consumePendingNativeAction() async {
+    if (!Platform.isIOS) return;
+    try {
+      final pending = await _actionChannel
+          .invokeMapMethod<String, dynamic>('consumePendingNotificationAction');
+      if (pending == null) return;
+      if (kDebugMode) debugPrint('[FCM] Draining pending notification action');
+      await _recordAlertResponse(
+          pending['actionId'] as String?, pending['alertId'] as String?);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FCM] No pending notification action: $e');
+    }
+  }
+
+  /// Write the user's response to the alert.
+  ///
+  /// Mirrors the Android path in notification_service.dart `_onNotificationResponse`
+  /// so both platforms record responses identically.
+  Future<void> _recordAlertResponse(String? actionId, String? alertId) async {
+    if (actionId == null || alertId == null || alertId.isEmpty) return;
+    if (actionId == 'respond') return; // legacy generic button
+
+    try {
+      final timestamp = DateTime.now().toIso8601String();
+      await Supabase.instance.client.from('alerts').update({
+        'response': actionId,
+        'response_at': timestamp,
+        'read_at': timestamp,
+      }).eq('id', alertId);
+      if (kDebugMode) debugPrint('✅ iOS notification action recorded: $actionId');
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Failed to record notification action: $e');
+    }
+
+    onNotificationTapped?.call(alertId);
   }
 
   late final FirebaseMessaging _messaging;
@@ -130,6 +185,9 @@ class PushNotificationService {
       if (initialMessage != null) {
         _handleNotificationTap(initialMessage);
       }
+
+      // 8. Drain any iOS notification action tapped before the engine was ready
+      await _consumePendingNativeAction();
 
       _initialized = true;
       if (kDebugMode) {

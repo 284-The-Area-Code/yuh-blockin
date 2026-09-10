@@ -65,6 +65,44 @@ import FirebaseMessaging
     }
   }
 
+  // MARK: - Notification action buttons (iOS)
+
+  /// Must match the `aps.category` sent by supabase/functions/alerts-fcm/index.ts.
+  private static let alertCategoryId = "yuh_blockin_alert"
+
+  /// Action identifiers. These are the SAME strings Android uses and the same strings
+  /// written to alerts.response, so the existing Dart handling applies unchanged.
+  private static let actionIds = ["moving_now", "5_minutes", "cant_move"]
+
+  /// An action tapped before the Flutter engine is ready (cold start from the Lock
+  /// Screen) is parked here and drained by Dart via `consumePendingNotificationAction`.
+  private var pendingAction: [String: String]?
+
+  /// Registers the notification category so iOS renders the buttons on a remote push.
+  /// Without both this registration AND `aps.category` in the payload, iOS shows a
+  /// plain banner with no actions.
+  private func registerNotificationCategories() {
+    let actions = [
+      UNNotificationAction(identifier: "moving_now", title: "Moving Now",  options: [.foreground]),
+      UNNotificationAction(identifier: "5_minutes",  title: "5 Minutes",   options: [.foreground]),
+      UNNotificationAction(identifier: "cant_move",  title: "Can't Move",  options: [.foreground]),
+    ]
+    let category = UNNotificationCategory(
+      identifier: AppDelegate.alertCategoryId,
+      actions: actions,
+      intentIdentifiers: [],
+      options: []
+    )
+    UNUserNotificationCenter.current().setNotificationCategories([category])
+    diag("registered notification category '\(AppDelegate.alertCategoryId)' with \(actions.count) actions")
+  }
+
+  private func notificationActionChannel() -> FlutterMethodChannel? {
+    guard let controller = window?.rootViewController as? FlutterViewController else { return nil }
+    return FlutterMethodChannel(name: "com.yuhblockin.v1/notification_actions",
+                                binaryMessenger: controller.binaryMessenger)
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -93,6 +131,23 @@ import FirebaseMessaging
     // notification interactions, remote notifications are delivered silently.
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
+    }
+
+    registerNotificationCategories()
+
+    // Drain a pending notification action from Dart once the engine is up.
+    if let channel = notificationActionChannel() {
+      channel.setMethodCallHandler { [weak self] call, result in
+        guard let self = self else { result(nil); return }
+        if call.method == "consumePendingNotificationAction" {
+          let pending = self.pendingAction
+          self.pendingAction = nil
+          if pending != nil { self.diag("handed pending notification action to Dart") }
+          result(pending)
+        } else {
+          result(FlutterMethodNotImplemented)
+        }
+      }
     }
 
     logNotificationSettings(phase: "launch")
@@ -157,6 +212,42 @@ import FirebaseMessaging
                                         binaryMessenger: controller.binaryMessenger)
       channel.invokeMethod("onNativeRegistrationError", arguments: ["error": errorDescription])
     }
+  }
+
+  // Handle a tapped notification action button.
+  //
+  // This MUST be handled natively. flutter_local_notifications bails out on any
+  // notification it did not itself create -- see its didReceiveNotificationResponse,
+  // which returns early unless isAFlutterLocalNotification() is true -- and
+  // firebase_messaging does not surface actionIdentifier on iOS at all. So for a remote
+  // APNs push, neither plugin delivers the tapped action to Dart.
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    let actionId = response.actionIdentifier
+    let userInfo = response.notification.request.content.userInfo
+    let alertId = userInfo["alert_id"] as? String
+
+    if AppDelegate.actionIds.contains(actionId), let alertId = alertId, !alertId.isEmpty {
+      diag("notification action '\(actionId)' for alert \(alertId)")
+      let payload = ["actionId": actionId, "alertId": alertId]
+
+      // Park it first: on a cold start from the Lock Screen the engine may not be
+      // running yet, so Dart drains it via consumePendingNotificationAction.
+      pendingAction = payload
+
+      // Also deliver live if the engine is already up.
+      notificationActionChannel()?.invokeMethod("onNotificationAction", arguments: payload)
+    } else if actionId != UNNotificationDefaultActionIdentifier {
+      diag("ignoring unrecognised notification action '\(actionId)'")
+    }
+
+    // Always forward so Firebase Messaging and Flutter plugins still see the response.
+    super.userNotificationCenter(center,
+                                 didReceive: response,
+                                 withCompletionHandler: completionHandler)
   }
 
   // T0: re-read settings after the Dart permission requests have had a chance to run.
