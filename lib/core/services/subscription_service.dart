@@ -173,22 +173,34 @@ class SubscriptionService {
 
     try {
       if (_revenueCatApiKey.isNotEmpty) {
-        // Refresh from RevenueCat
         final customerInfo = await Purchases.getCustomerInfo();
         await _handleCustomerInfoUpdate(customerInfo);
-        _lastEntitlementRefresh = DateTime.now();
+      }
 
-        if (kDebugMode) {
-          debugPrint('✅ Entitlements refreshed from RevenueCat');
-        }
-      } else {
-        // Refresh from server only
-        await _syncSubscriptionStatus();
-        _lastEntitlementRefresh = DateTime.now();
+      // Always re-read the server as well, not just when RevenueCat is absent.
+      // public.subscriptions is what validate_alert_permission() enforces, and
+      // the RevenueCat webhook is its only writer, so this is how a purchase
+      // made on another device - or one whose webhook has only just landed -
+      // reaches this session.
+      final storeSaysPremium = _isPremium;
+      final storeStatus = _subscriptionStatus;
+      await _syncSubscriptionStatus();
 
-        if (kDebugMode) {
-          debugPrint('✅ Entitlements refreshed from server');
-        }
+      // Optimistic union for the UI. If the store says premium but the webhook
+      // has not written the row yet, keep the premium flag rather than showing
+      // a just-paying user as free. This cannot be abused: entitlement is
+      // enforced server-side in validate_alert_permission(), which reads the
+      // row, not this flag.
+      if (storeSaysPremium && !_isPremium) {
+        _isPremium = true;
+        _subscriptionStatus = storeStatus;
+        await _saveCachedStatus();
+      }
+
+      _lastEntitlementRefresh = DateTime.now();
+
+      if (kDebugMode) {
+        debugPrint('✅ Entitlements refreshed: $_subscriptionStatus (premium: $_isPremium)');
       }
     } catch (e) {
       if (kDebugMode) {
