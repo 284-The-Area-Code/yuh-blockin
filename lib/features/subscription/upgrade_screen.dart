@@ -1,16 +1,17 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/subscription_service.dart';
-import '../../core/services/ath_movil_service.dart';
 import '../../config/payment_config.dart';
-import 'ath_payment_dialog.dart';
 
 /// Full screen upgrade/purchase UI
+///
+/// Purchases go through the platform store only (StoreKit on iOS, Google Play
+/// Billing on Android), brokered by RevenueCat. App Store Review Guideline
+/// 3.1.1 requires in-app purchase to unlock features, so no alternative
+/// in-app payment collection is offered here.
 class UpgradeScreen extends StatefulWidget {
   const UpgradeScreen({super.key});
 
@@ -20,40 +21,9 @@ class UpgradeScreen extends StatefulWidget {
 
 class _UpgradeScreenState extends State<UpgradeScreen> {
   final SubscriptionService _subscriptionService = SubscriptionService();
-  final AthMovilService _athMovilService = AthMovilService();
-  final TextEditingController _phoneController = TextEditingController();
-  final FocusNode _phoneFocusNode = FocusNode();
 
   bool _isLoading = false;
   String? _selectedPlan; // 'monthly' or 'lifetime'
-  String _paymentMethod = 'store'; // 'store' (App Store/Google Play) or 'ath_movil'
-  String _athInputMethod = 'phone'; // 'phone' or 'qr'
-  String? _phoneError;
-  String _athPath = ''; // Loaded from Supabase
-  bool _athPathLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAthPath();
-  }
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _phoneFocusNode.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadAthPath() async {
-    final path = await _athMovilService.getAthPath();
-    if (mounted) {
-      setState(() {
-        _athPath = path;
-        _athPathLoaded = true;
-      });
-    }
-  }
 
   /// Open Terms of Service
   Future<void> _openTermsOfService() async {
@@ -177,19 +147,6 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                     const SizedBox(height: 20),
                     // Benefits
                     _buildBenefitsSection(),
-                    const SizedBox(height: 16),
-                    // Payment method toggle
-                    _buildPaymentMethodToggle(),
-                    // ATH Móvil input section (phone or QR)
-                    if (_paymentMethod == 'ath_movil') ...[
-                      const SizedBox(height: 16),
-                      _buildAthInputTabs(),
-                      const SizedBox(height: 12),
-                      if (_athInputMethod == 'phone')
-                        _buildPhoneInput()
-                      else
-                        _buildQrCodeSection(),
-                    ],
                     const SizedBox(height: 24),
                     // Pricing cards
                     _buildPricingCards(),
@@ -258,385 +215,6 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           );
         }).toList(),
       ),
-    );
-  }
-
-  Widget _buildPaymentMethodToggle() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: PremiumTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: PremiumTheme.dividerColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildPaymentMethodButton(
-              id: 'store',
-              icon: PremiumTheme.isIOS
-                  ? CupertinoIcons.app_badge
-                  : CupertinoIcons.device_laptop,
-              label: PremiumTheme.isIOS ? 'App Store' : 'Google Play',
-            ),
-          ),
-          Expanded(
-            child: _buildPaymentMethodButton(
-              id: 'ath_movil',
-              icon: CupertinoIcons.creditcard_fill,
-              label: 'ATH Móvil',
-              comingSoon: true, // ATH Móvil coming soon - using native billing for now
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodButton({
-    required String id,
-    required IconData icon,
-    required String label,
-    bool comingSoon = false,
-  }) {
-    final isSelected = _paymentMethod == id;
-    final isDisabled = comingSoon;
-
-    return GestureDetector(
-      onTap: isDisabled
-          ? null
-          : () {
-              setState(() {
-                _paymentMethod = id;
-                _phoneError = null;
-              });
-            },
-      child: AnimatedContainer(
-        duration: PremiumTheme.fastDuration,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected && !isDisabled
-              ? PremiumTheme.accentColor
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
-                  color: isDisabled
-                      ? PremiumTheme.tertiaryTextColor
-                      : isSelected
-                          ? Colors.white
-                          : PremiumTheme.secondaryTextColor,
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDisabled
-                          ? PremiumTheme.tertiaryTextColor
-                          : isSelected
-                              ? Colors.white
-                              : PremiumTheme.secondaryTextColor,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            if (comingSoon) ...[
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Coming Soon',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAthInputTabs() {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: PremiumTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: PremiumTheme.dividerColor),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _athInputMethod = 'phone'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _athInputMethod == 'phone'
-                      ? PremiumTheme.accentColor.withAlpha(38)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      CupertinoIcons.phone_fill,
-                      size: 16,
-                      color: _athInputMethod == 'phone'
-                          ? PremiumTheme.accentColor
-                          : PremiumTheme.secondaryTextColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Phone',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _athInputMethod == 'phone'
-                            ? PremiumTheme.accentColor
-                            : PremiumTheme.secondaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _athInputMethod = 'qr'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _athInputMethod == 'qr'
-                      ? PremiumTheme.accentColor.withAlpha(38)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      CupertinoIcons.qrcode,
-                      size: 16,
-                      color: _athInputMethod == 'qr'
-                          ? PremiumTheme.accentColor
-                          : PremiumTheme.secondaryTextColor,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'QR Code',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _athInputMethod == 'qr'
-                            ? PremiumTheme.accentColor
-                            : PremiumTheme.secondaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQrCodeSection() {
-    // QR code is preset for monthly payment
-    const amount = PaymentConfig.athMonthlyPrice;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: PremiumTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PremiumTheme.dividerColor),
-      ),
-      child: Column(
-        children: [
-          // QR Code - Cropped to show only the ATH card portion
-          LayoutBuilder(
-            builder: (context, constraints) {
-              // Responsive sizing: max 240 width, maintain aspect ratio
-              final maxWidth = constraints.maxWidth.clamp(0.0, 240.0);
-              final height = maxWidth * (320 / 240); // Maintain 240:320 aspect ratio
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(
-                  width: maxWidth,
-                  height: height,
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    alignment: const Alignment(0.0, 0.15), // Center on the QR card
-                    child: SizedBox(
-                      width: 300,
-                      height: 650,
-                      child: Image.asset(
-                        'assets/images/yuhblockin_monthly_qrcode_ath.jpeg',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Instructions
-          Text(
-            'Scan or screenshot this QR code',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: PremiumTheme.primaryTextColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Open ATH Móvil and scan to pay \$${amount.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 13,
-              color: PremiumTheme.secondaryTextColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Phone input for verification
-          Text(
-            'After paying, enter your ATH phone to verify:',
-            style: TextStyle(
-              fontSize: 12,
-              color: PremiumTheme.tertiaryTextColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          CupertinoTextField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            style: TextStyle(
-              fontSize: 15,
-              color: PremiumTheme.primaryTextColor,
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(10),
-              _PhoneNumberFormatter(),
-            ],
-            placeholder: 'Your ATH phone number',
-            prefix: const Padding(
-              padding: EdgeInsets.only(left: 12.0),
-              child: Icon(
-                CupertinoIcons.phone_fill,
-                size: 20,
-                color: CupertinoColors.placeholderText,
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhoneInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CupertinoTextField(
-          controller: _phoneController,
-          focusNode: _phoneFocusNode,
-          keyboardType: TextInputType.phone,
-          style: TextStyle(
-            fontSize: 16,
-            color: PremiumTheme.primaryTextColor,
-          ),
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-            _PhoneNumberFormatter(),
-          ],
-          placeholder: 'Enter your ATH phone number',
-          prefix: const Padding(
-            padding: EdgeInsets.only(left: 12.0),
-            child: Icon(
-              CupertinoIcons.phone_fill,
-              color: CupertinoColors.placeholderText,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-          onChanged: (value) {
-            if (_phoneError != null) {
-              setState(() => _phoneError = null);
-            }
-          },
-        ),
-        if (_phoneError != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 4),
-            child: Text(
-              _phoneError!,
-              style: const TextStyle(
-                fontSize: 12,
-                color: CupertinoColors.systemRed,
-              ),
-            ),
-          ),
-        // Helper tip about ATH path
-        Padding(
-          padding: const EdgeInsets.only(top: 8, left: 4),
-          child: Row(
-            children: [
-              Icon(
-                CupertinoIcons.lightbulb_fill,
-                size: 14,
-                color: PremiumTheme.tertiaryTextColor,
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  _athPathLoaded
-                      ? 'Or search "$_athPath" in ATH Móvil'
-                      : 'Or search in ATH Móvil',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: PremiumTheme.tertiaryTextColor,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -871,15 +449,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
   Future<void> _purchase() async {
     if (_selectedPlan == null) return;
-
-    // Route to appropriate payment method
-    if (_paymentMethod == 'ath_movil') {
-      // ATH Móvil is coming soon - shouldn't reach here but just in case
-      _showErrorSnackbar('ATH Móvil coming soon! Please use ${PremiumTheme.isIOS ? "App Store" : "Google Play"}.');
-      return;
-    } else {
-      await _purchaseWithNativeBilling();
-    }
+    await _purchaseWithNativeBilling();
   }
 
   Future<void> _purchaseWithNativeBilling() async {
@@ -903,77 +473,6 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     } catch (e) {
       if (kDebugMode) {
         print('Purchase error: $e');
-      }
-      if (mounted) {
-        _showErrorSnackbar('An error occurred. Please try again.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _purchaseWithAthMovil() async {
-    // Validate phone number
-    final phone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
-    final validPhone = _athMovilService.validatePhoneNumber(phone);
-
-    if (validPhone == null) {
-      setState(() {
-        _phoneError = 'Enter a valid 10-digit phone number';
-      });
-      _phoneFocusNode.requestFocus();
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      // Get user ID
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) {
-        _showErrorSnackbar('Please sign in to continue');
-        return;
-      }
-
-      // Determine product type
-      final productType = _selectedPlan == 'lifetime'
-          ? AthProductType.lifetime
-          : AthProductType.monthly;
-
-      // Create payment
-      final result = await _athMovilService.createPayment(
-        userId: userId,
-        productType: productType,
-        phoneNumber: validPhone,
-      );
-
-      if (!mounted) return;
-
-      if (!result.success) {
-        _showErrorSnackbar(result.error ?? 'Failed to create payment');
-        return;
-      }
-
-      // Show payment dialog
-      final paymentResult = await AthPaymentDialog.show(
-        context: context,
-        transactionId: result.transactionId!,
-        amount: result.amount!,
-        productType: productType,
-      );
-
-      if (!mounted) return;
-
-      if (paymentResult == true) {
-        // Payment successful - refresh subscription status
-        await _subscriptionService.refreshEntitlements(force: true);
-        _showSuccessDialog();
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('ATH Móvil purchase error: $e');
       }
       if (mounted) {
         _showErrorSnackbar('An error occurred. Please try again.');
@@ -1051,37 +550,6 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
         ),
         margin: const EdgeInsets.all(16),
       ),
-    );
-  }
-}
-
-/// Phone number formatter for Puerto Rico numbers (787-XXX-XXXX)
-class _PhoneNumberFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text;
-
-    // Just return digits as-is for the internal value
-    // The display formatting is handled by the hint
-    if (text.isEmpty) {
-      return newValue;
-    }
-
-    // Format as XXX-XXX-XXXX for display
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      if (i == 3 || i == 6) {
-        buffer.write('-');
-      }
-      buffer.write(text[i]);
-    }
-
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -322,11 +323,39 @@ class SubscriptionService {
       } else {
         return PurchaseResult(success: false, error: 'Purchase not activated');
       }
-    } on PurchasesErrorCode catch (e) {
-      if (e == PurchasesErrorCode.purchaseCancelledError) {
-        return PurchaseResult(success: false, error: 'Purchase cancelled');
+    } on PlatformException catch (e) {
+      // Purchases.purchasePackage throws a PlatformException, never a
+      // PurchasesErrorCode (that is a plain enum). PurchasesErrorHelper is the
+      // documented way to map the exception onto the enum - see the example in
+      // purchases_flutter/lib/errors.dart.
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      switch (code) {
+        case PurchasesErrorCode.purchaseCancelledError:
+          return PurchaseResult(success: false, error: 'Purchase cancelled');
+        case PurchasesErrorCode.purchaseNotAllowedError:
+          return PurchaseResult(
+            success: false,
+            error: 'Purchases are not allowed on this device.',
+          );
+        case PurchasesErrorCode.paymentPendingError:
+          return PurchaseResult(
+            success: false,
+            error: 'Payment is pending approval. Premium unlocks once it clears.',
+          );
+        case PurchasesErrorCode.productAlreadyPurchasedError:
+          return PurchaseResult(
+            success: false,
+            error: 'You already own this. Use Restore to recover it.',
+          );
+        default:
+          if (kDebugMode) {
+            debugPrint('❌ Purchase failed: $code (${e.message})');
+          }
+          return PurchaseResult(
+            success: false,
+            error: 'Purchase failed. Please try again.',
+          );
       }
-      return PurchaseResult(success: false, error: 'Purchase failed: $e');
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Purchase failed: $e');
@@ -352,7 +381,7 @@ class SubscriptionService {
         'started_at': DateTime.now().toUtc().toIso8601String(),
         'expires_at': productId == lifetimeProductId
             ? null
-            : DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+            : DateTime.now().toUtc().add(const Duration(days: 30)).toIso8601String(),
         'is_demo': isDemo, // Mark as demo purchase for tracking
         'source': isDemo ? 'demo_mode' : 'revenuecat',
       });
@@ -382,31 +411,42 @@ class SubscriptionService {
     }
 
     await _saveCachedStatus();
-    await _syncToServer();
+
+    // NOTE: the client deliberately does NOT write entitlement state to the
+    // server. `public.subscriptions` grants writes to service_role only, and
+    // the authoritative write must come from the RevenueCat webhook. A client
+    // that can set its own `status` can grant itself premium.
 
     if (kDebugMode) {
       debugPrint('🔄 Subscription updated: $_subscriptionStatus');
     }
   }
 
+  /// Read the server's view of this user's entitlement.
+  ///
+  /// `public.subscriptions` is the single source of truth and is the same table
+  /// `validate_alert_permission()` reads, so the client and the server agree on
+  /// who is premium.
   Future<void> _syncSubscriptionStatus() async {
     try {
       final supabase = Supabase.instance.client;
       final result = await supabase
-          .from('ath_monthly_subscriptions')
-          .select('renewal_status, current_period_end')
+          .from('subscriptions')
+          .select('status, expires_at')
           .eq('user_id', _currentUserId!)
           .maybeSingle();
 
       if (result != null) {
-        final status = result['renewal_status'] as String?;
+        final status = result['status'] as String?;
         _subscriptionStatus = status ?? 'free';
-        _isPremium = _subscriptionStatus == 'active' || _subscriptionStatus == 'grace_period';
+        _isPremium = _subscriptionStatus == 'premium' || _subscriptionStatus == 'lifetime';
 
-        // Check if subscription has expired
-        if (result['current_period_end'] != null) {
-          final expiresAt = DateTime.parse(result['current_period_end']);
-          if (expiresAt.isBefore(DateTime.now())) {
+        // expires_at is NULL for lifetime. Compare in UTC: the column is
+        // timestamptz and Supabase returns it with an offset.
+        final expiresAtRaw = result['expires_at'];
+        if (_isPremium && expiresAtRaw != null) {
+          final expiresAt = DateTime.parse(expiresAtRaw as String).toUtc();
+          if (expiresAt.isBefore(DateTime.now().toUtc())) {
             _isPremium = false;
             _subscriptionStatus = 'expired';
           }
@@ -417,21 +457,6 @@ class SubscriptionService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('⚠️ Failed to sync subscription status: $e');
-      }
-    }
-  }
-
-  Future<void> _syncToServer() async {
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.from('ath_monthly_subscriptions').upsert({
-        'user_id': _currentUserId,
-        'renewal_status': _subscriptionStatus,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('⚠️ Failed to sync to server: $e');
       }
     }
   }

@@ -41,10 +41,8 @@ dependencies:
   # In-app purchases via RevenueCat
   purchases_flutter: ^8.0.0
 
-
   # URL launcher for opening terms/privacy links
   url_launcher: ^6.2.5
-  qr_flutter: ^4.1.0
   webview_flutter: ^4.13.0
   flutter_app_badger: ^1.5.0
 
