@@ -1,7 +1,12 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
-import 'package:purchases_flutter/purchases_flutter.dart';
+// purchases_flutter 10 exports its own PurchaseResult (customerInfo +
+// storeTransaction). This file already defines a PurchaseResult that is the
+// public API of this service and is used across the subscription UI, so the
+// SDK's is hidden rather than renaming ours in 20+ call sites. The SDK type is
+// still usable here via inference - we only need its .customerInfo.
+import 'package:purchases_flutter/purchases_flutter.dart' hide PurchaseResult;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/payment_config.dart';
@@ -325,8 +330,10 @@ class SubscriptionService {
         return PurchaseResult(success: false, error: 'Product not found');
       }
 
-      final customerInfo = await Purchases.purchasePackage(package);
-      await _handleCustomerInfoUpdate(customerInfo);
+      // purchasePackage is deprecated in 10.x in favour of purchase(PurchaseParams),
+      // and it now returns a PurchaseResult rather than CustomerInfo.
+      final purchase = await Purchases.purchase(PurchaseParams.package(package));
+      await _handleCustomerInfoUpdate(purchase.customerInfo);
 
       if (_isPremium) {
         return PurchaseResult(success: true, message: 'Purchase successful!');
