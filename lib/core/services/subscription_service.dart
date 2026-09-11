@@ -216,25 +216,23 @@ class SubscriptionService {
     return timeSinceRefresh.inHours >= 1; // Refresh every hour
   }
 
-  /// Increment daily usage after sending an alert
+  /// Record locally that an alert was sent, so the "alerts remaining" display
+  /// stays in step until the next server sync.
+  ///
+  /// This deliberately does NOT call the increment_daily_usage RPC any more.
+  /// The authoritative increment happens inside send_alert() on the server,
+  /// after the alert row is actually inserted. A client cannot be trusted to
+  /// report its own usage - one that simply never reported stayed at zero
+  /// forever, which is what made the daily limit bypassable. Calling the RPC
+  /// here as well would double-count every alert.
   Future<void> incrementDailyUsage() async {
     if (_isPremium) return; // Premium users don't track usage
 
     _dailyAlertsUsed++;
     await _saveDailyUsage();
 
-    // Also update server
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.rpc('increment_daily_usage');
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('⚠️ Failed to sync daily usage to server: $e');
-      }
-    }
-
     if (kDebugMode) {
-      debugPrint('📊 Daily usage: $_dailyAlertsUsed/$freeDailyAlertLimit');
+      debugPrint('📊 Daily usage (local): $_dailyAlertsUsed/$freeDailyAlertLimit');
     }
   }
 
