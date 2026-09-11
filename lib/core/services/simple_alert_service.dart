@@ -50,22 +50,48 @@ class SimpleAlertService {
         _supabase = Supabase.instance.client;
       }
 
-      // 2. Optimized Authentication Liveness check
-      // If we have a session that is NOT expired, we are already "logged in"
+      // 2. Authentication liveness.
+      //
+      // An EXPIRED access token is not a lost account. Supabase access tokens
+      // expire hourly and the session carries a refresh token that renews them
+      // while keeping the same user id. signInAnonymously() does the opposite:
+      // it mints a BRAND NEW user, silently orphaning that person's plates,
+      // alert history and purchase - with no uninstall and no warning. It also
+      // breaks send_alert, which now requires sender_user_id == auth.uid().
+      //
+      // So anonymous sign-in is the last resort, not the fallback.
       final currentSession = _supabase.auth.currentSession;
-      final isSessionValid = currentSession != null && 
-          !currentSession.isExpired;
 
-      if (isSessionValid) {
+      if (currentSession == null) {
+        // No session at all: genuinely a fresh install or wiped storage.
+        if (kDebugMode) {
+          debugPrint('🔐 No session at all - signing in anonymously (new identity)');
+        }
+        await _signInWithRetry();
+      } else if (currentSession.isExpired) {
+        try {
+          await _supabase.auth.refreshSession();
+          if (kDebugMode) {
+            debugPrint('🔐 Session refreshed - identity preserved');
+          }
+        } on AuthException catch (e) {
+          // The refresh token itself is invalid or revoked. Only now start over.
+          if (kDebugMode) {
+            debugPrint('🔐 Refresh token rejected (${e.message}) - new identity required');
+          }
+          await _signInWithRetry();
+        } catch (e) {
+          // Network failure. Keep the existing identity and let supabase_flutter
+          // retry in the background. A user on bad wifi must never be handed a
+          // new account.
+          if (kDebugMode) {
+            debugPrint('🔐 Session refresh failed (offline?) - keeping identity: $e');
+          }
+        }
+      } else {
         if (kDebugMode) {
           debugPrint('🔐 Simple Alert Service: Valid session found (no re-auth needed)');
         }
-      } else {
-        // Only sign in anonymously if we don't have a valid session
-        if (kDebugMode) {
-          debugPrint('🔐 Simple Alert Service: No valid session, signing in anonymously...');
-        }
-        await _signInWithRetry();
       }
 
       // 3. Realtime Resiliency: Listen for disconnects and force reconnect

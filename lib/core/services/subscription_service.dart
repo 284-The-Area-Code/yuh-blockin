@@ -81,6 +81,20 @@ class SubscriptionService {
       // Load daily usage
       await _loadDailyUsage();
 
+      // Reunite a returning user with a purchase they already paid for.
+      //
+      // Identity is anonymous and per-install, so a reinstall (or a lost
+      // session) produces a new app_user_id with no entitlement attached. The
+      // store receipt, however, belongs to the user's Google/Apple account, so
+      // a restore re-attaches it - RevenueCat's Transfer Behavior is set to
+      // "Transfer to new App User ID". Without this, someone who paid and then
+      // reinstalled is silently downgraded to free and has to know to press a
+      // Restore button they have no reason to look for.
+      //
+      // Runs at most once per install, and only when we are not already
+      // premium, so it costs nothing for free users after the first launch.
+      await _restoreOnFirstRunIfNeeded();
+
       _isInitialized = true;
 
       if (kDebugMode) {
@@ -474,6 +488,36 @@ class SubscriptionService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('⚠️ Failed to sync subscription status: $e');
+      }
+    }
+  }
+
+  /// Silently attempt a restore once per install, if we are not already premium.
+  ///
+  /// Deliberately swallows every failure: this is a best-effort convenience on
+  /// the startup path, and a user with no prior purchase will always "fail"
+  /// here. It must never block or surface an error.
+  Future<void> _restoreOnFirstRunIfNeeded() async {
+    if (_isPremium) return;
+    if (_revenueCatApiKey.isEmpty || PaymentConfig.isDemoMode) return;
+
+    try {
+      final prefs = await _getPrefs();
+      const flag = 'yuh_restore_attempted';
+      if (prefs.getBool(flag) == true) return;
+      await prefs.setBool(flag, true);
+
+      final customerInfo = await Purchases.restorePurchases();
+      await _handleCustomerInfoUpdate(customerInfo);
+
+      if (kDebugMode) {
+        debugPrint(_isPremium
+            ? '✅ Restored an existing purchase on first run'
+            : 'ℹ️ First-run restore found no prior purchase');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ℹ️ First-run restore skipped: $e');
       }
     }
   }

@@ -264,17 +264,26 @@ void onStart(ServiceInstance service) async {
 
   supabase = await initializeSupabase();
 
-  // Sign in anonymously for authenticated role
+  // Identity is established by the foreground app ONLY - never here.
+  //
+  // This isolate used to call signInAnonymously() whenever currentUser was
+  // null. Session recovery after Supabase.initialize() is asynchronous, so
+  // currentUser is almost always null at this point, which meant the background
+  // service routinely minted a brand new anonymous user AND overwrote the
+  // persisted session. The foreground app then adopted that new identity on its
+  // next launch, orphaning the user's plates, alert history and purchase.
+  //
+  // A background isolate has nothing useful to do with a fresh identity anyway:
+  // it subscribes by receiver_id read from SharedPreferences, and a brand new
+  // user has no alerts. Failing closed beats destroying the account.
   if (supabase != null && supabase.auth.currentUser == null) {
-    try {
-      await supabase.auth.signInAnonymously();
-      if (kDebugMode) {
-        debugPrint('Background service: Signed in anonymously');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Background service: Anonymous sign-in failed: $e');
-      }
+    // Give the asynchronous session recovery a moment to land before giving up.
+    await Future.delayed(const Duration(seconds: 2));
+    if (supabase.auth.currentUser == null && kDebugMode) {
+      debugPrint(
+        'Background service: no session recovered - not subscribing. '
+        'The foreground app establishes identity.',
+      );
     }
   }
 
