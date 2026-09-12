@@ -3635,10 +3635,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             duration: const Duration(milliseconds: 2500),
           );
         } else {
-          final errorMessage = result.recipients == 0 
-              ? 'Plate not found. Ensure it\'s registered.' 
-              : (result.error ?? 'Failed to send alert');
-              
+          // Every failure branch in send_alert() (unregistered plate, own
+          // vehicle, quota exhausted, session mismatch, unexpected error)
+          // returns recipients: 0. Checking recipients == 0 before result.error
+          // discarded the real message and mislabeled every failure as "Plate
+          // not found", regardless of the actual cause.
+          final errorMessage = result.error ?? 'Plate not found. Ensure it\'s registered.';
+
           _showPremiumSnackBar(
             message: errorMessage,
             isSuccess: false,
