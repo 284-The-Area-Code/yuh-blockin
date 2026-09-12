@@ -122,43 +122,6 @@ interface EntitlementState {
 }
 
 /**
- * Reduce the v2 active_entitlements list to the row we store.
- *
- * Each item is `{ object: 'customer.active_entitlement', entitlement_id,
- * expires_at }` where `expires_at` is epoch MILLISECONDS or null. RevenueCat
- * has already applied the "is it active right now" filter, so presence in
- * `items` means active and `expires_at: null` means lifetime - NOT expired.
- * A naive `expires_at < Date.now()` would coerce null to 0 and revoke every
- * lifetime purchase, so the null case is handled first and explicitly.
- *
- * IMPORTANT: this endpoint does not report SANDBOX purchases. Verified against
- * a live sandbox subscription that was active with gives_access true - the
- * customer's active_entitlements came back as an empty list while
- * /subscriptions showed it correctly. So an empty result here is NOT proof of
- * "no access"; readSubscription() below is consulted before concluding 'free'.
- */
-function readEntitlement(items: any[]): EntitlementState | null {
-  const ent = items.find((e) => e?.entitlement_id === PREMIUM_ENTITLEMENT);
-  if (!ent) return null;
-
-  if (ent.expires_at == null) {
-    return { status: 'lifetime', planType: 'lifetime', expiresAt: null };
-  }
-
-  const expiresMs = Number(ent.expires_at);
-  if (!Number.isFinite(expiresMs) || expiresMs <= Date.now()) {
-    // Defensive: RevenueCat should not list an expired entitlement as active.
-    return null;
-  }
-
-  return {
-    status: 'premium',
-    planType: 'monthly',
-    expiresAt: new Date(expiresMs).toISOString(),
-  };
-}
-
-/**
  * Derive entitlement from the v2 /subscriptions list.
  *
  * This is the path that works for sandbox. Each item carries `gives_access`,
@@ -194,11 +157,39 @@ function readSubscription(items: any[]): EntitlementState | null {
   };
 }
 
+/**
+ * Derive entitlement from the v2 /purchases list (one-time, non-subscription
+ * products - e.g. the lifetime purchase).
+ *
+ * Purchases have no `gives_access` flag the way subscriptions do. Instead
+ * `status` reflects the purchase's own lifecycle ('owned' vs e.g. 'refunded'),
+ * and each nested entitlement item carries its own `state`. Both are checked,
+ * matching by lookup_key exactly as readSubscription() does, so a refunded
+ * purchase or a product later detached from the entitlement correctly stops
+ * granting access.
+ *
+ * Verified against a live sandbox lifetime purchase: status 'owned', nested
+ * entitlement lookup_key 'premium', state 'active'.
+ */
+function readPurchase(items: any[]): EntitlementState | null {
+  const purchase = items.find((p) =>
+    p?.status === 'owned' &&
+    Array.isArray(p?.entitlements?.items) &&
+    p.entitlements.items.some(
+      (e: any) => e?.lookup_key === PREMIUM_ENTITLEMENT && e?.state === 'active',
+    )
+  );
+  if (!purchase) return null;
+
+  // One-time purchases don't expire.
+  return { status: 'lifetime', planType: 'lifetime', expiresAt: null };
+}
+
 const NO_ACCESS: EntitlementState = { status: 'free', planType: null, expiresAt: null };
 
 /**
  * Fetch one paginated customer sub-resource, following next_page.
- * `resource` is 'active_entitlements' or 'subscriptions'.
+ * `resource` is 'subscriptions' or 'purchases'.
  *
  * Returns null when RevenueCat does not know this customer (HTTP 404).
  * Throws on a transient upstream failure so the caller can ask for a redelivery.
@@ -207,7 +198,7 @@ async function fetchCustomerList(
   projectId: string,
   appUserId: string,
   apiKey: string,
-  resource: 'active_entitlements' | 'subscriptions',
+  resource: 'subscriptions' | 'purchases',
 ): Promise<any[] | null> {
   let url =
     `${RC_API_BASE}/projects/${encodeURIComponent(projectId)}` +
@@ -239,29 +230,36 @@ async function fetchCustomerList(
 }
 
 /**
- * Resolve a customer's entitlement from RevenueCat, reading both routes.
+ * Resolve a customer's entitlement from RevenueCat.
  *
- * active_entitlements is authoritative for production and for non-subscription
- * (lifetime) grants. It does NOT report sandbox purchases, so /subscriptions is
- * consulted before concluding the customer has no access. Only if both say no
- * do we write 'free' - which is still the correct revocation path, because an
- * expired subscription reports gives_access false.
+ * Reads /subscriptions then /purchases, matching each item's nested
+ * entitlements by lookup_key ('premium'). Deliberately does NOT use
+ * /active_entitlements: its `entitlement_id` field is RevenueCat's internal
+ * entitlement id (e.g. "entlb7a16c9ad2"), not the dashboard lookup_key - the
+ * two can never be compared without an extra lookup call, so that check was
+ * silent dead code from day one. It was also separately verified to omit
+ * active SANDBOX subscriptions entirely. /subscriptions and /purchases are
+ * the endpoints that actually expose lookup_key, so they are read directly.
+ *
+ * 'free' is written only when neither says access - which is also the
+ * correct revocation path: an expired subscription reports gives_access
+ * false, and a refunded purchase reports a status other than 'owned'.
  */
 async function resolveEntitlement(
   projectId: string,
   appUserId: string,
   apiKey: string,
 ): Promise<EntitlementState | null> {
-  const ents = await fetchCustomerList(projectId, appUserId, apiKey, 'active_entitlements');
-  if (ents === null) return null; // unknown customer
-
-  const fromEntitlements = readEntitlement(ents);
-  if (fromEntitlements) return fromEntitlements;
-
   const subs = await fetchCustomerList(projectId, appUserId, apiKey, 'subscriptions');
-  if (subs === null) return NO_ACCESS;
+  if (subs === null) return null; // unknown customer
 
-  return readSubscription(subs) ?? NO_ACCESS;
+  const fromSubs = readSubscription(subs);
+  if (fromSubs) return fromSubs;
+
+  const purchases = await fetchCustomerList(projectId, appUserId, apiKey, 'purchases');
+  if (purchases === null) return NO_ACCESS;
+
+  return readPurchase(purchases) ?? NO_ACCESS;
 }
 
 Deno.serve(async (req: Request) => {
@@ -366,9 +364,9 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // started_at is deliberately omitted: the v2 active_entitlements payload
-      // carries no purchase date, and PostgREST's merge-duplicates upsert only
-      // touches columns present in the body, so an existing value survives.
+      // started_at is deliberately omitted: EntitlementState doesn't carry a
+      // purchase date, and PostgREST's merge-duplicates upsert only touches
+      // columns present in the body, so an existing value survives.
       const { error: upsertError } = await supabase.from('subscriptions').upsert({
         user_id: appUserId,
         status: state.status,
