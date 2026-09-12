@@ -1290,6 +1290,48 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         await prefs.setString('user_id', userId);
       }
 
+      // The cached id can go stale without an uninstall: if the session's
+      // refresh token was dead, _alertService.initialize() above was forced
+      // to mint a brand new anonymous session as a last resort (see
+      // SimpleAlertService.initialize). The old cached id still passes
+      // userExists() below, because it's a real, historical row - just not
+      // this session's identity anymore. Every RPC that checks
+      // sender_user_id == auth.uid() (send_alert, and any future one) then
+      // fails with an error that looks unrelated to identity at all.
+      //
+      // auth.currentUser is authoritative here: it reflects whatever
+      // initialize() just settled on, whether reused, refreshed, or freshly
+      // minted, so comparing against it catches the drift immediately -
+      // rather than only when some other RPC happens to fail because of it.
+      final liveAuthUserId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null && liveAuthUserId != null && userId != liveAuthUserId) {
+        debugPrint(
+          '⚠️ Cached user_id ($userId) no longer matches the live session '
+          '($liveAuthUserId) - session was recreated. Adopting the new identity.',
+        );
+
+        // Clear the local plate cache explicitly, rather than relying on
+        // syncWithDatabase()'s own user-change detection (Step 1.5 in
+        // _initializeApp, runs right after this function returns): this
+        // branch is about to set BOTH user_id and user_id_backup to the same
+        // new value below, and syncWithDatabase() treats a matching backup as
+        // "this is a recovery, not a change" and deliberately skips clearing
+        // in that case - a heuristic meant for AccountRecoveryService's
+        // deliberate recovery flow, not this one. A plate has no automatic
+        // transfer the way a purchase does (see _restoreOnFirstRunIfNeeded),
+        // so nothing should keep displaying the old plate as if the new,
+        // unrelated identity owns it.
+        await _plateStorageService.clearAllPlates();
+
+        // Falls through to the "create/adopt new user" branch below, which
+        // already does everything else needed: getOrCreateUser() derives
+        // from auth.currentUser itself, and re-running
+        // _subscriptionService.initialize() with a different id bypasses its
+        // no-op guard, so _restoreOnFirstRunIfNeeded() fires and reattaches
+        // any store purchase automatically.
+        userId = null;
+      }
+
       // Verify the user exists in database before using it
       if (userId != null) {
         final existsResult = await _alertService.userExists(userId);
