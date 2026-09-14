@@ -900,6 +900,15 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         if (kDebugMode) {
           debugPrint('Notification tapped with payload: $payload');
         }
+        // Fires for BOTH a plain tap and an action-button press (Moving Now /
+        // 5 Minutes / Can't Move) - NotificationService._onNotificationResponse
+        // calls this unconditionally after writing the response, if any. An
+        // action-button press never causes a pause/resume lifecycle transition
+        // when the app is already foregrounded, so without this the Activity
+        // list and badges only picked up the change on the next background/
+        // foreground cycle - exactly the gap _reconcileAlertsFromServer's own
+        // doc comment already named but nothing actually triggered here.
+        unawaited(_reconcileAlertsFromServer());
       },
     );
 
@@ -931,7 +940,15 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           // used an action button, then tapped the notification again. Showing the
           // live banner would offer buttons for a decision already made, and let them
           // silently overwrite it. Confirm what was sent instead.
+          //
+          // This is also the path an iOS action-button press itself takes:
+          // PushNotificationService._recordAlertResponse writes the response
+          // and then calls this same onTap callback, so alert.hasResponse is
+          // always true by the time it's re-fetched here. Reconcile now rather
+          // than waiting for a background/foreground cycle that a press made
+          // while already foregrounded never causes.
           if (alert.hasResponse) {
+            unawaited(_reconcileAlertsFromServer());
             _showPremiumSnackBar(
               message: 'Already responded: '
                   '${_getResponseDisplayText(alert.response!)}',
