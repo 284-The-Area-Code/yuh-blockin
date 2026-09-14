@@ -255,6 +255,13 @@ class SimpleAlertService {
   }
 
   /// Check if a plate is already registered by any user
+  // `userId` is kept for source compatibility with existing callers, but is
+  // no longer used: the RPC derives identity from auth.uid() itself. plates
+  // used to have an RLS policy of "Allow all" (USING true), so this used to
+  // run as a raw, unrestricted cross-user SELECT - findable by anyone with
+  // the app's public API key, no ownership proof required. Now backed by
+  // check_plate_availability(), a SECURITY DEFINER function that returns
+  // only the two booleans the UI ever showed, never the actual owner id.
   Future<PlateCheckResult> checkPlateAvailability({
     required String plateNumber,
     required String userId,
@@ -264,27 +271,13 @@ class SimpleAlertService {
     final plateHash = _hashPlate(plateNumber);
 
     try {
-      final result = await _supabase
-          .from('plates')
-          .select('user_id')
-          .eq('plate_hash', plateHash)
-          .maybeSingle();
-
-      if (result == null) {
-        // Plate not registered - available
-        return PlateCheckResult(
-          isAvailable: true,
-          isOwnedByCurrentUser: false,
-        );
-      }
-
-      // Plate exists - check if it belongs to current user
-      final existingUserId = result['user_id'] as String;
-      final isOwned = existingUserId == userId;
+      final result = await _supabase.rpc('check_plate_availability', params: {
+        'p_plate_hash': plateHash,
+      }) as Map<String, dynamic>;
 
       return PlateCheckResult(
-        isAvailable: false,
-        isOwnedByCurrentUser: isOwned,
+        isAvailable: result['is_available'] as bool,
+        isOwnedByCurrentUser: result['is_owned_by_caller'] as bool? ?? false,
       );
     } catch (e) {
       if (kDebugMode) {

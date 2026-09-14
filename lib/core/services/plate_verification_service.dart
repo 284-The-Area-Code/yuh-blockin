@@ -279,6 +279,21 @@ class PlateVerificationService {
   }
 
   /// Verify ownership using the ownership key
+  // `userId` is kept for source compatibility with existing callers, but is
+  // no longer used: the RPC derives identity from auth.uid() itself. This
+  // matters more here than in checkPlateAvailability - account_recovery_service
+  // reads userId from SharedPreferences rather than fresh from auth, which is
+  // exactly the caching pattern that has already been the cause of identity
+  // drift elsewhere in this app. Deriving identity server-side means the
+  // plate always transfers to whoever is actually authenticated, not to
+  // whatever the client's local cache happened to believe.
+  //
+  // plates used to have an RLS policy of "Allow all" (USING true) - this
+  // could previously read ownership_key_hash for ANY plate and update
+  // user_id on it directly, from any client holding the app's public API
+  // key. That is the ownership-theft path this closes: an attacker could
+  // overwrite ownership_key_hash to a value of their choosing, then present
+  // that value here to "verify" and steal the plate.
   Future<VerificationResult> verifyOwnership({
     required String plateNumber,
     required String ownershipKey,
@@ -288,51 +303,20 @@ class PlateVerificationService {
       final plateHash = _hashPlateNumber(plateNumber);
       final keyHash = hashOwnershipKey(ownershipKey);
 
-      // Get the plate record
-      final record = await _supabase
-          .from('plates')
-          .select('id, user_id, ownership_key_hash, verification_status')
-          .eq('plate_hash', plateHash)
-          .maybeSingle();
+      final result = await _supabase.rpc(
+        'verify_and_transfer_plate_ownership',
+        params: {
+          'p_plate_hash': plateHash,
+          'p_ownership_key_hash': keyHash,
+        },
+      ) as Map<String, dynamic>;
 
-      if (record == null) {
-        return VerificationResult(
-          success: false,
-          error: 'Plate not found in registry',
-        );
-      }
-
-      // Check if the key matches
-      if (record['ownership_key_hash'] == keyHash) {
-        // Key is valid!
-        if (record['user_id'] != userId) {
-          // Transfer ownership to the user with the correct key
-          await _supabase
-              .from('plates')
-              .update({
-                'user_id': userId,
-                'verification_status': statusVerified,
-                'verified_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', record['id']);
-
-          return VerificationResult(
-            success: true,
-            message: 'Ownership verified and plate transferred to your account!',
-            ownershipTransferred: true,
-          );
-        } else {
-          return VerificationResult(
-            success: true,
-            message: 'Ownership verified! You are the rightful owner.',
-          );
-        }
-      } else {
-        return VerificationResult(
-          success: false,
-          error: 'Invalid ownership key',
-        );
-      }
+      return VerificationResult(
+        success: result['success'] as bool,
+        message: result['message'] as String?,
+        error: result['error'] as String?,
+        ownershipTransferred: result['ownership_transferred'] as bool? ?? false,
+      );
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to verify ownership: $e');
