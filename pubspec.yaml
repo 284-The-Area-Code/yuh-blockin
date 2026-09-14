@@ -49,6 +49,7 @@ dependencies:
   url_launcher: ^6.2.5
   webview_flutter: ^4.13.0
   flutter_app_badger: ^1.5.0
+  share_plus: ^12.0.2
 
   # Optional: Keep these only if you want advanced state management
   # hooks_riverpod: ^2.5.1

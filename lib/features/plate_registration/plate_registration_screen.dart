@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/plate_storage_service.dart';
@@ -537,6 +538,43 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                           ),
                         ),
                       ),
+
+                      const SizedBox(height: 10),
+
+                      // Share button - hands the key off to whatever the user
+                      // trusts (Notes, iCloud/Drive, Messages to themselves,
+                      // AirDrop, ...). Does NOT collect or transmit the key on
+                      // our own infrastructure - the OS share sheet is purely
+                      // local, so this adds no new PII collection.
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            HapticFeedback.mediumImpact();
+                            await SharePlus.instance.share(
+                              ShareParams(
+                                text: 'Yuh Blockin\' ownership key for $plateNumber:\n\n'
+                                    '$ownershipKey\n\n'
+                                    'Keep this safe - it is the ONLY way to recover '
+                                    'this plate if you switch devices. Anyone who has '
+                                    'this key can claim ownership of this plate.',
+                                subject: 'Yuh Blockin\' key - $plateNumber',
+                              ),
+                            );
+                            setDialogState(() => hasCopied = true);
+                          },
+                          icon: const Icon(Icons.ios_share_rounded, size: 18),
+                          label: const Text('Save / Share Key'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: PremiumTheme.accentColor,
+                            side: BorderSide(color: PremiumTheme.accentColor),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -563,9 +601,10 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Save this key securely! It\'s the only way to prove you own this plate. Like a crypto key - if you lose it, you lose ownership.',
+                          'THIS KEY WILL NEVER BE SHOWN AGAIN. It is the ONLY way to prove you own this plate and the ONLY way to recover it if you lose this device. We cannot recover it for you - not by phone, not by email, not by any support request. If you lose it, you permanently lose this plate. Save or share it now.',
                           style: TextStyle(
                             fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: Colors.red.shade300,
                           ),
                         ),
@@ -576,27 +615,38 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
 
                 const SizedBox(height: 20),
 
-                // Continue button
+                // Continue button - disabled until the key has actually been
+                // copied or shared at least once. Someone dismissing this
+                // dialog without saving the key has no way to recover this
+                // plate if they lose the device - see the warning above.
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Dismiss keyboard first
-                      FocusScope.of(context).unfocus();
-                      Navigator.of(context).pop();
-                      _showSuccessAnimation();
-                    },
+                    onPressed: hasCopied
+                        ? () {
+                            // Dismiss keyboard first
+                            FocusScope.of(context).unfocus();
+                            Navigator.of(context).pop();
+                            _showSuccessAnimation();
+                          }
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: PremiumTheme.accentColor,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          PremiumTheme.accentColor.withValues(alpha: 0.35),
+                      disabledForegroundColor:
+                          Colors.white.withValues(alpha: 0.6),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'I\'ve Saved My Key',
-                      style: TextStyle(
+                    child: Text(
+                      hasCopied
+                          ? 'I\'ve Saved My Key'
+                          : 'Copy or Share Your Key First',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
