@@ -2,7 +2,7 @@ name: yuh_blockin # Renamed for clarity, you can keep yuh_blockin_web if you pre
 description: "A Flutter project for Yuh Blockin'."
 publish_to: 'none'
 
-version: 1.0.0+27
+version: 1.0.0+29
 
 environment:
   # 3.4.0 is the floor required by purchases_flutter 9.0.0+.
