@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last Updated: December 10, 2025**
+**Last Updated: September 24, 2026**
 
 Welcome to Yuh Blockin'! These Terms of Service ("Terms") govern your use of the Yuh Blockin' mobile application ("App") operated by DezeTingz ("we," "our," or "us").
 
@@ -19,8 +19,8 @@ Yuh Blockin' is a vehicle monitoring application that allows users to:
 
 ## 2. Eligibility
 
-You must be at least 13 years old to use this App. By using the App, you represent and warrant that you:
-- Are at least 13 years of age
+You must be at least 18 years old to use this App. By using the App, you represent and warrant that you:
+- Are at least 18 years of age
 - Have the legal capacity to enter into these Terms
 - Will use the App in compliance with all applicable laws
 
@@ -54,6 +54,16 @@ You agree NOT to use the App to:
 - Transmit malware, viruses, or harmful code
 
 We reserve the right to terminate accounts that violate these terms.
+
+### 4.1 Zero Tolerance for Abuse
+
+Yuh Blockin' has zero tolerance for objectionable content or abusive users. This includes, without limitation, harassment, threats, hate speech, and any alert sent with the intent to harass, intimidate, or abuse another user.
+
+- Any alert can be reported directly in the App by the recipient.
+- We review reports and act on them within 24 hours of receipt.
+- Content found to violate this policy is removed, and the account responsible is terminated.
+- You may also block another user directly in the App; a blocked user's alerts to you will no longer be delivered.
+- To report abuse outside the App, or for any other safety concern, contact us using the information in Section 15.
 
 ---
 
@@ -166,6 +176,7 @@ We may suspend or terminate your access if:
 - Your use poses a security risk
 - Required by law
 - We discontinue the service
+- We receive and, within 24 hours of review, uphold a report of objectionable content or abusive behavior against your account (see Section 4.1)
 
 ### 11.3 Effect of Termination
 - Your license to use the App ends immediately
@@ -216,4 +227,4 @@ Location: British Virgin Islands
 
 ---
 
-*These Terms of Service are effective as of December 10, 2025.*
+*These Terms of Service are effective as of September 24, 2026.*
