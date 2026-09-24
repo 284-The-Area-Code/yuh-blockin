@@ -350,6 +350,50 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
                     ],
                   ],
                 ),
+                // Safety actions: hide, report, block sender. Apple
+                // Guideline 1.2 remediation.
+                PopupMenuButton<String>(
+                  onSelected: (action) => _handleAlertSafetyAction(alert, action),
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: 20,
+                    color: PremiumTheme.tertiaryTextColor,
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  color: PremiumTheme.surfaceColor,
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'hide',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_off_outlined, size: 20, color: PremiumTheme.secondaryTextColor),
+                          const SizedBox(width: 12),
+                          Text('Hide', style: TextStyle(color: PremiumTheme.primaryTextColor)),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'report',
+                      child: Row(
+                        children: [
+                          Icon(Icons.flag_outlined, size: 20, color: _warningColor),
+                          const SizedBox(width: 12),
+                          Text('Report', style: TextStyle(color: PremiumTheme.primaryTextColor)),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'block',
+                      child: Row(
+                        children: [
+                          Icon(Icons.block_rounded, size: 20, color: Colors.red),
+                          SizedBox(width: 12),
+                          Text('Block sender', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -477,6 +521,190 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
         ),
       ),
     );
+  }
+
+  void _handleAlertSafetyAction(Alert alert, String action) {
+    switch (action) {
+      case 'hide':
+        _hideReceivedAlert(alert);
+        break;
+      case 'report':
+        _showReportSheet(alert);
+        break;
+      case 'block':
+        _showBlockConfirmation(alert);
+        break;
+    }
+  }
+
+  Future<void> _hideReceivedAlert(Alert alert) async {
+    final success = await _alertService.hideAlertForReceiver(alert.id);
+    if (success && mounted) {
+      setState(() => _receivedAlerts.removeWhere((a) => a.id == alert.id));
+    }
+  }
+
+  static const Map<String, String> _reportReasons = {
+    'harassment': 'Harassment',
+    'threats': 'Threats',
+    'hate_speech': 'Hate speech',
+    'spam': 'Spam',
+    'inappropriate_content': 'Inappropriate content',
+    'other': 'Other',
+  };
+
+  void _showReportSheet(Alert alert) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: PremiumTheme.surfaceColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: PremiumTheme.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Report this alert',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: PremiumTheme.primaryTextColor,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'We review reports and act on them within 24 hours.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: PremiumTheme.secondaryTextColor),
+            ),
+            const SizedBox(height: 16),
+            for (final entry in _reportReasons.entries)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _submitReport(alert, entry.key);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: PremiumTheme.backgroundColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: PremiumTheme.dividerColor, width: 1),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              entry.value,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: PremiumTheme.primaryTextColor,
+                              ),
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_rounded, color: PremiumTheme.tertiaryTextColor, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitReport(Alert alert, String reason) async {
+    final success = await _alertService.reportAlert(
+      reporterId: widget.userId,
+      reportedUserId: alert.senderId,
+      alertId: alert.id,
+      reason: reason,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Report submitted. We review reports within 24 hours.'
+              : 'Failed to submit report. Please try again.',
+        ),
+        backgroundColor: success ? _successColor : Colors.red,
+      ),
+    );
+  }
+
+  void _showBlockConfirmation(Alert alert) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Block this sender?'),
+        content: const Text(
+          'They will no longer be able to send you alerts. This also clears their past alerts from your Activity.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _blockSender(alert);
+            },
+            child: const Text('Block', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _blockSender(Alert alert) async {
+    final success = await _alertService.blockUser(
+      blockerId: widget.userId,
+      blockedUserId: alert.senderId,
+    );
+    if (!success) return;
+
+    // Clear this sender's alerts from view immediately, not just the one
+    // that was acted on - matches the "block actually removes their
+    // history" behavior described in the confirmation dialog. Non-fatal if
+    // it fails: the block itself already succeeded, which is what actually
+    // stops future alerts.
+    await _alertService.hideAllAlertsFromSender(
+      receiverId: widget.userId,
+      senderId: alert.senderId,
+    );
+
+    if (mounted) {
+      setState(() {
+        _receivedAlerts.removeWhere((a) => a.senderId == alert.senderId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sender blocked.')),
+      );
+    }
   }
 
   Widget _buildSentAlertItem(Alert alert) {
@@ -628,21 +856,21 @@ class _AlertHistoryScreenState extends State<AlertHistoryScreen> {
       case 'clear_received':
         _showClearConfirmationDialog(
           title: 'Clear Received Alerts',
-          message: 'Are you sure you want to delete all ${_receivedAlerts.length} received alerts? This cannot be undone.',
+          message: 'Remove all ${_receivedAlerts.length} received alerts from your Activity? They stay on record for safety and reporting purposes.',
           onConfirm: () => _clearReceivedAlerts(),
         );
         break;
       case 'clear_sent':
         _showClearConfirmationDialog(
           title: 'Clear Sent Alerts',
-          message: 'Are you sure you want to delete all ${_sentAlerts.length} sent alerts? This cannot be undone.',
+          message: 'Remove all ${_sentAlerts.length} sent alerts from your Activity? They stay on record for safety and reporting purposes.',
           onConfirm: () => _clearSentAlerts(),
         );
         break;
       case 'clear_all':
         _showClearConfirmationDialog(
           title: 'Clear All Alerts',
-          message: 'Are you sure you want to delete all ${_receivedAlerts.length + _sentAlerts.length} alerts? This cannot be undone.',
+          message: 'Remove all ${_receivedAlerts.length + _sentAlerts.length} alerts from your Activity? They stay on record for safety and reporting purposes.',
           onConfirm: () => _clearAllAlerts(),
         );
         break;

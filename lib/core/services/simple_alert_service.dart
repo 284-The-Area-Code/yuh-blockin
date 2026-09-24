@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/supabase_config.dart';
 
 /// Simple and secure alert service
@@ -201,8 +202,21 @@ class SimpleAlertService {
     }
 
     try {
-      // Upsert into users table to ensure profile exists for RLS
-      await _supabase.from('users').upsert({'id': authUserId});
+      // Upsert into users table to ensure profile exists for RLS.
+      //
+      // Opportunistically stamps the ToS agreement recorded locally during
+      // onboarding (see OnboardingFlow's agreement gate) - the gate itself
+      // enforces agreement before onboarding even shows, since there is no
+      // auth session yet at that point; this is a best-effort durability
+      // record once an account exists, not the primary enforcement.
+      final upsertData = <String, dynamic>{'id': authUserId};
+      final prefs = await SharedPreferences.getInstance();
+      final tosVersion = prefs.getString('tos_agreed_version');
+      if (tosVersion != null) {
+        upsertData['tos_version'] = tosVersion;
+        upsertData['tos_agreed_at'] = DateTime.now().toUtc().toIso8601String();
+      }
+      await _supabase.from('users').upsert(upsertData);
 
       if (kDebugMode) {
         debugPrint('👤 ✅ User registered: $authUserId');
@@ -401,7 +415,13 @@ class SimpleAlertService {
     }
   }
 
-  /// Send a reminder alert directly to a specific user
+  /// Send a reminder alert directly to a specific user.
+  ///
+  /// Goes through the send_reminder_alert() RPC rather than a raw insert -
+  /// this used to bypass send_alert() entirely, which meant it also bypassed
+  /// the silent block-check added in 20260926_enforce_block_in_send_alert.sql.
+  /// Without this, a blocked sender could get around a block just by using
+  /// the "remind" button instead of the normal send button.
   Future<AlertResult> sendReminderAlert({
     required String receiverUserId,
     required String senderUserId,
@@ -411,24 +431,32 @@ class SimpleAlertService {
     _ensureInitialized();
 
     try {
-      // Insert directly into alerts table
-      final response = await _supabase.from('alerts').insert({
-        'sender_id': senderUserId,
-        'receiver_id': receiverUserId,
-        'plate_hash': plateHash,
-        'message': message ?? '⏰ Reminder: Still waiting',
-      }).select().single();
+      final response = await _supabase.rpc('send_reminder_alert', params: {
+        'sender_user_id': senderUserId,
+        'receiver_user_id': receiverUserId,
+        'target_plate_hash': plateHash,
+        if (message != null) 'alert_message': message,
+      });
 
-      if (kDebugMode) {
-        debugPrint('📢 Reminder sent to user: $receiverUserId');
+      final result = response as Map<String, dynamic>;
+
+      if (result['success'] == true) {
+        if (kDebugMode) {
+          debugPrint('📢 Reminder sent to user: $receiverUserId');
+        }
+        return AlertResult(
+          success: true,
+          recipients: result['recipients'] ?? 0,
+          error: null,
+          alertId: result['alert_id']?.toString(),
+        );
+      } else {
+        return AlertResult(
+          success: false,
+          recipients: 0,
+          error: result['error']?.toString() ?? 'Unknown error',
+        );
       }
-
-      return AlertResult(
-        success: true,
-        recipients: 1,
-        error: null,
-        alertId: response['id']?.toString(),
-      );
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Reminder failed: $e');
@@ -621,102 +649,263 @@ class SimpleAlertService {
     }
   }
 
-  /// Delete a single alert by ID
-  Future<bool> deleteAlert(String alertId) async {
+  /// Hide a single received alert from this user's own view.
+  ///
+  /// Soft-hide, not a delete: the row survives (still visible to the other
+  /// party, and to admin-manage-user) so it remains reportable evidence.
+  /// See 20260925_add_alert_hide_flags.sql.
+  Future<bool> hideAlertForReceiver(String alertId) async {
     _ensureInitialized();
 
     try {
-      await _supabase.from('alerts').delete().eq('id', alertId);
+      await _supabase.from('alerts').update({'hidden_by_receiver': true}).eq('id', alertId);
 
       if (kDebugMode) {
-        debugPrint('🗑️ Deleted alert: $alertId');
+        debugPrint('🙈 Hid alert for receiver: $alertId');
       }
       return true;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to delete alert: $e');
+        debugPrint('❌ Failed to hide alert: $e');
       }
       return false;
     }
   }
 
-  /// Delete all received alerts for a user
+  /// Hide a single sent alert from this user's own view. Same soft-hide
+  /// reasoning as [hideAlertForReceiver], mirrored for the sender side.
+  Future<bool> hideAlertForSender(String alertId) async {
+    _ensureInitialized();
+
+    try {
+      await _supabase.from('alerts').update({'hidden_by_sender': true}).eq('id', alertId);
+
+      if (kDebugMode) {
+        debugPrint('🙈 Hid alert for sender: $alertId');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to hide alert: $e');
+      }
+      return false;
+    }
+  }
+
+  /// "Clear" all received alerts for a user - a soft-hide, not a delete.
+  /// Return-count contract unchanged from the old hard-delete version, so
+  /// existing callers in alert_history_screen.dart need no changes.
   Future<int> deleteReceivedAlerts(String userId) async {
     _ensureInitialized();
 
     try {
       final response = await _supabase
           .from('alerts')
-          .delete()
+          .update({'hidden_by_receiver': true})
           .eq('receiver_id', userId)
+          .eq('hidden_by_receiver', false)
           .select();
 
       final count = (response as List).length;
       if (kDebugMode) {
-        debugPrint('🗑️ Deleted $count received alerts for user: $userId');
+        debugPrint('🙈 Hid $count received alerts for user: $userId');
       }
       return count;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to delete received alerts: $e');
+        debugPrint('❌ Failed to hide received alerts: $e');
       }
       return 0;
     }
   }
 
-  /// Delete all sent alerts for a user
+  /// "Clear" all sent alerts for a user - a soft-hide, not a delete. Same
+  /// contract-preservation reasoning as [deleteReceivedAlerts].
   Future<int> deleteSentAlerts(String userId) async {
     _ensureInitialized();
 
     try {
       final response = await _supabase
           .from('alerts')
-          .delete()
+          .update({'hidden_by_sender': true})
           .eq('sender_id', userId)
+          .eq('hidden_by_sender', false)
           .select();
 
       final count = (response as List).length;
       if (kDebugMode) {
-        debugPrint('🗑️ Deleted $count sent alerts for user: $userId');
+        debugPrint('🙈 Hid $count sent alerts for user: $userId');
       }
       return count;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to delete sent alerts: $e');
+        debugPrint('❌ Failed to hide sent alerts: $e');
       }
       return 0;
     }
   }
 
-  /// Delete all alerts (both sent and received) for a user
+  /// "Clear" all alerts (both sent and received) for a user - a soft-hide,
+  /// not a delete. Same contract-preservation reasoning as
+  /// [deleteReceivedAlerts].
   Future<int> deleteAllAlerts(String userId) async {
     _ensureInitialized();
 
     try {
-      // Delete received alerts
       final receivedResponse = await _supabase
           .from('alerts')
-          .delete()
+          .update({'hidden_by_receiver': true})
           .eq('receiver_id', userId)
+          .eq('hidden_by_receiver', false)
           .select();
 
-      // Delete sent alerts
       final sentResponse = await _supabase
           .from('alerts')
-          .delete()
+          .update({'hidden_by_sender': true})
           .eq('sender_id', userId)
+          .eq('hidden_by_sender', false)
           .select();
 
       final totalCount = (receivedResponse as List).length + (sentResponse as List).length;
       if (kDebugMode) {
-        debugPrint('🗑️ Deleted $totalCount total alerts for user: $userId');
+        debugPrint('🙈 Hid $totalCount total alerts for user: $userId');
       }
       return totalCount;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to delete all alerts: $e');
+        debugPrint('❌ Failed to hide all alerts: $e');
       }
       return 0;
+    }
+  }
+
+  /// Block another user. Their future alerts to the blocker are silently
+  /// no-op'd server-side (see is_blocked()/send_alert() in
+  /// 20260926_enforce_block_in_send_alert.sql) - this call just records the
+  /// block itself.
+  Future<bool> blockUser({
+    required String blockerId,
+    required String blockedUserId,
+  }) async {
+    _ensureInitialized();
+
+    try {
+      await _supabase.from('blocked_users').insert({
+        'blocker_id': blockerId,
+        'blocked_id': blockedUserId,
+      });
+      if (kDebugMode) {
+        debugPrint('🚫 Blocked user: $blockedUserId');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to block user: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Hides every alert already received from a given sender, in one call -
+  /// used right after blocking someone, so blocking clears their past
+  /// alerts from view too, not just the one being acted on when the block
+  /// happened. Best-effort: the block itself (blockUser) is what actually
+  /// stops future alerts, so a failure here is non-fatal.
+  Future<void> hideAllAlertsFromSender({
+    required String receiverId,
+    required String senderId,
+  }) async {
+    _ensureInitialized();
+
+    try {
+      await _supabase
+          .from('alerts')
+          .update({'hidden_by_receiver': true})
+          .eq('receiver_id', receiverId)
+          .eq('sender_id', senderId)
+          .eq('hidden_by_receiver', false);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to bulk-hide alerts from sender: $e');
+      }
+    }
+  }
+
+  Future<bool> unblockUser({
+    required String blockerId,
+    required String blockedUserId,
+  }) async {
+    _ensureInitialized();
+
+    try {
+      await _supabase
+          .from('blocked_users')
+          .delete()
+          .eq('blocker_id', blockerId)
+          .eq('blocked_id', blockedUserId);
+      if (kDebugMode) {
+        debugPrint('✅ Unblocked user: $blockedUserId');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to unblock user: $e');
+      }
+      return false;
+    }
+  }
+
+  /// The ids of every user this user has blocked, for a "Blocked Users"
+  /// management list.
+  Future<List<String>> getBlockedUserIds(String blockerId) async {
+    _ensureInitialized();
+
+    try {
+      final response = await _supabase
+          .from('blocked_users')
+          .select('blocked_id')
+          .eq('blocker_id', blockerId);
+
+      return (response as List)
+          .map((row) => row['blocked_id'] as String)
+          .toList();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load blocked users: $e');
+      }
+      return [];
+    }
+  }
+
+  /// File a safety report on an alert. Reports are insert-only from the
+  /// client - triaged exclusively through the admin-manage-user tool, per
+  /// 20260925_create_reports_table.sql.
+  Future<bool> reportAlert({
+    required String reporterId,
+    required String reportedUserId,
+    String? alertId,
+    required String reason,
+    String? details,
+  }) async {
+    _ensureInitialized();
+
+    try {
+      await _supabase.from('reports').insert({
+        'reporter_id': reporterId,
+        'reported_user_id': reportedUserId,
+        'alert_id': alertId,
+        'reason': reason,
+        'details': details,
+      });
+      if (kDebugMode) {
+        debugPrint('🚩 Reported alert: $alertId ($reason)');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to file report: $e');
+      }
+      return false;
     }
   }
 
@@ -778,6 +967,8 @@ class Alert {
   final DateTime createdAt;
   final DateTime? readAt;
   final DateTime? responseAt;
+  final bool hiddenBySender;
+  final bool hiddenByReceiver;
 
   Alert({
     required this.id,
@@ -792,6 +983,8 @@ class Alert {
     required this.createdAt,
     this.readAt,
     this.responseAt,
+    this.hiddenBySender = false,
+    this.hiddenByReceiver = false,
   });
 
   factory Alert.fromJson(Map<String, dynamic> json) {
@@ -808,6 +1001,8 @@ class Alert {
       createdAt: DateTime.parse(json['created_at']),
       readAt: json['read_at'] != null ? DateTime.parse(json['read_at']) : null,
       responseAt: json['response_at'] != null ? DateTime.parse(json['response_at']) : null,
+      hiddenBySender: json['hidden_by_sender'] as bool? ?? false,
+      hiddenByReceiver: json['hidden_by_receiver'] as bool? ?? false,
     );
   }
 
@@ -828,6 +1023,8 @@ class Alert {
     DateTime? createdAt,
     DateTime? readAt,
     DateTime? responseAt,
+    bool? hiddenBySender,
+    bool? hiddenByReceiver,
   }) {
     return Alert(
       id: id ?? this.id,
@@ -842,6 +1039,8 @@ class Alert {
       createdAt: createdAt ?? this.createdAt,
       readAt: readAt ?? this.readAt,
       responseAt: responseAt ?? this.responseAt,
+      hiddenBySender: hiddenBySender ?? this.hiddenBySender,
+      hiddenByReceiver: hiddenByReceiver ?? this.hiddenByReceiver,
     );
   }
 

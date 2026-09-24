@@ -6,7 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/premium_theme.dart';
 import '../plate_registration/plate_registration_screen.dart';
 import '../account_recovery/login_with_key_screen.dart';
+import '../legal/terms_of_service_screen.dart';
 import '../../main.dart';
+
+/// Bumping this forces every user to re-agree, even ones who already agreed
+/// to an older version - change it alongside any material edit to
+/// assets/legal/terms_of_service.md / docs/TERMS_OF_SERVICE.md.
+const String kTosVersion = '2026-09-25';
 
 /// Compact Onboarding Flow - No Scrolling Required
 class OnboardingFlow extends StatefulWidget {
@@ -22,6 +28,14 @@ class _OnboardingFlowState extends State<OnboardingFlow>
   int _currentPage = 0;
   final int _totalPages = 3;
   bool _imagesPreloaded = false;
+
+  // null while checking SharedPreferences, then true/false. The existing
+  // onboarding PageView (and its Skip button) is only ever built once this
+  // is true - see build() below. There is no auth session yet at this point
+  // (a brand-new install reaches onboarding before any account exists), so
+  // agreement is recorded locally first and opportunistically stamped
+  // server-side later, in SimpleAlertService.getOrCreateUser().
+  bool? _hasAgreedToTerms;
 
   // Entrance animation for seamless splash transition
   late AnimationController _entranceController;
@@ -66,6 +80,24 @@ class _OnboardingFlowState extends State<OnboardingFlow>
 
     // Start entrance animation
     _entranceController.forward();
+
+    _checkTermsAgreement();
+  }
+
+  Future<void> _checkTermsAgreement() async {
+    final prefs = await SharedPreferences.getInstance();
+    final agreedVersion = prefs.getString('tos_agreed_version');
+    if (mounted) {
+      setState(() => _hasAgreedToTerms = agreedVersion == kTosVersion);
+    }
+  }
+
+  Future<void> _agreeToTerms() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('tos_agreed_version', kTosVersion);
+    if (mounted) {
+      setState(() => _hasAgreedToTerms = true);
+    }
   }
 
   @override
@@ -153,6 +185,23 @@ class _OnboardingFlowState extends State<OnboardingFlow>
 
   @override
   Widget build(BuildContext context) {
+    // Still checking SharedPreferences - avoid a flash of onboarding content
+    // before we know whether the agreement gate is needed.
+    if (_hasAgreedToTerms == null) {
+      return Scaffold(
+        backgroundColor: PremiumTheme.backgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // A structurally separate screen with no Skip affordance at all - the
+    // existing PageView (and its Skip button, below) is only ever built
+    // once agreement is recorded, so Skip itself needed no changes to
+    // become unreachable before that point.
+    if (_hasAgreedToTerms == false) {
+      return _TermsAgreementGate(onAgree: _agreeToTerms);
+    }
+
     // Use Scaffold instead of CupertinoPageScaffold to avoid yellow text highlight
     return Scaffold(
       backgroundColor: PremiumTheme.backgroundColor,
@@ -288,6 +337,113 @@ class _OnboardingFlowState extends State<OnboardingFlow>
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Mandatory Terms of Service agreement gate, shown before any other
+/// onboarding content. No Skip button exists anywhere on this screen.
+class _TermsAgreementGate extends StatefulWidget {
+  final VoidCallback onAgree;
+
+  const _TermsAgreementGate({required this.onAgree});
+
+  @override
+  State<_TermsAgreementGate> createState() => _TermsAgreementGateState();
+}
+
+class _TermsAgreementGateState extends State<_TermsAgreementGate> {
+  bool _checked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: PremiumTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text(
+          'Before You Continue',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: PremiumTheme.primaryTextColor,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Icon(Icons.gavel_rounded, size: 48, color: PremiumTheme.accentColor),
+              const SizedBox(height: 16),
+              Text(
+                'Yuh Blockin\' has zero tolerance for abusive behavior. Please review and agree to our Terms of Service, including the reporting and blocking tools available to you.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: PremiumTheme.secondaryTextColor,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: PremiumTheme.surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: PremiumTheme.dividerColor),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: const TermsOfServiceContent(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () => setState(() => _checked = !_checked),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _checked,
+                        activeColor: PremiumTheme.accentColor,
+                        onChanged: (v) => setState(() => _checked = v ?? false),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'I have read and agree to the Terms of Service, including the zero-tolerance policy for abusive behavior.',
+                          style: TextStyle(fontSize: 13, color: PremiumTheme.primaryTextColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _checked ? widget.onAgree : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: PremiumTheme.accentColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: PremiumTheme.dividerColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Continue'),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
