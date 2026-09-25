@@ -62,10 +62,19 @@
             android:exported="false"
             tools:replace="android:foregroundServiceType,android:exported" />
 
-        <!-- Boot receiver to start background service when device restarts -->
+        <!--
+             Boot receiver disabled: on Android 15+ (targetSdk 36 here), the OS throws
+             ForegroundServiceStartNotAllowedException when a dataSync-type foreground
+             service is started from a BOOT_COMPLETED receiver context (confirmed crash
+             in Play Console vitals on build 30/1.0.0). Real alert delivery is unaffected
+             - it goes through FCM (see supabase/functions/alerts-fcm), which is fully
+             independent of this Realtime-subscription-based background service. This
+             service still starts normally via autoStart when the app is opened; it just
+             no longer tries to restart itself immediately after a device reboot.
+        -->
         <receiver
             android:name="id.flutter.flutter_background_service.BootReceiver"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>

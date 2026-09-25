@@ -75,7 +75,13 @@ class BackgroundAlertService {
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
-        autoStartOnBoot: true,
+        // Disabled: Android 15+ blocks starting a dataSync foreground service from a
+        // BOOT_COMPLETED context (ForegroundServiceStartNotAllowedException, confirmed
+        // in Play Console vitals on build 30/1.0.0). The receiver itself is also
+        // disabled in AndroidManifest.xml. Real delivery is unaffected - it goes
+        // through FCM independently of this service. This still starts normally via
+        // autoStart when the app is opened.
+        autoStartOnBoot: false,
         isForegroundMode: true,
         notificationChannelId: _notificationChannelId,
         initialNotificationTitle: 'Yuh Blockin',
