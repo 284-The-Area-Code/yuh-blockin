@@ -392,7 +392,6 @@ class _LoginWithKeyScreenState extends State<LoginWithKeyScreen> {
           child: TextField(
             controller: _keyController,
             focusNode: _keyFocusNode,
-            textCapitalization: TextCapitalization.characters,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
