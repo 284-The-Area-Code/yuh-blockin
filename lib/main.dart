@@ -615,6 +615,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   String _currentAlertUrgency = 'Normal'; // Low, Normal, or High
   bool _showingAlertBanner = false;
 
+  // In-app banner shown to the SENDER when their alert gets a response
+  // (mirrors _showingAlertBanner above, but for the opposite direction)
+  String? _currentResponseTitle;
+  String? _currentResponseBody;
+  bool _showingResponseBanner = false;
+
   // Unacknowledged alerts tracking
   int _unacknowledgedAlertsCount = 0;
   int _unseenAlertsCount = 0;
@@ -682,6 +688,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   Timer? _shakeStopTimer;
   Timer? _acknowledgeRefreshTimer;
   Timer? _alertAutoDismissTimer;
+  Timer? _responseBannerAutoDismissTimer;
 
   @override
   void initState() {
@@ -1168,6 +1175,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     _shakeStopTimer?.cancel();
     _acknowledgeRefreshTimer?.cancel();
     _diagnosticTapTimer?.cancel();
+    _responseBannerAutoDismissTimer?.cancel();
 
     // Dispose animation controllers
     _breathingController.dispose();
@@ -1606,7 +1614,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         body = responseText;
     }
 
-    // Only show system notification when app is NOT in foreground
+    // Only show the system notification when app is NOT in foreground, to avoid
+    // duplicating what the OS would show. When the app IS in foreground, show an
+    // in-app banner instead so the sender still gets visual feedback.
     if (_appLifecycleState != AppLifecycleState.resumed) {
       _notificationService.showAlertNotification(
         title: title,
@@ -1617,8 +1627,44 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       );
       debugPrint('📢 Showed response notification: $title - $body');
     } else {
-      debugPrint('ℹ️ Skipped system notification (app in foreground): $title - $body');
+      _showInAppResponseBanner(title, body);
+      debugPrint('ℹ️ Showed in-app response banner instead of system notification (app in foreground): $title - $body');
     }
+  }
+
+  /// Show an in-app banner for the SENDER when a response arrives while the
+  /// app is foregrounded (the system notification is intentionally skipped
+  /// in that case — see _showResponseNotification above).
+  void _showInAppResponseBanner(String title, String body) {
+    if (!mounted) return;
+
+    setState(() {
+      _currentResponseTitle = title;
+      _currentResponseBody = body;
+      _showingResponseBanner = true;
+    });
+
+    HapticFeedback.lightImpact();
+
+    // Auto-dismiss after 6 seconds — this banner is informational only,
+    // unlike the incoming-alert banner it doesn't need user action.
+    _responseBannerAutoDismissTimer?.cancel();
+    _responseBannerAutoDismissTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted && _showingResponseBanner) {
+        _dismissResponseBanner();
+      }
+    });
+  }
+
+  /// Dismiss the sender-side response banner
+  void _dismissResponseBanner() {
+    if (!mounted) return;
+    _responseBannerAutoDismissTimer?.cancel();
+    setState(() {
+      _showingResponseBanner = false;
+      _currentResponseTitle = null;
+      _currentResponseBody = null;
+    });
   }
 
 
@@ -2130,6 +2176,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             // Premium incoming alert notification banner
             if (_showingAlertBanner && _currentIncomingAlert != null)
               _buildIncomingAlertBanner(isTablet),
+
+            // Sender-side banner: shown when a sent alert receives a response
+            // while the app is foregrounded. Note: shares screen position with
+            // the incoming-alert banner above; the rare case of both being
+            // triggered at once isn't specially handled in this pass.
+            if (_showingResponseBanner &&
+                !(_showingAlertBanner && _currentIncomingAlert != null))
+              _buildResponseBanner(isTablet),
           ],
         ), // closes Stack
       ), // closes Scaffold
@@ -5551,6 +5605,124 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         ),
       ), // Closes SafeArea
     ); // Closes Positioned
+  }
+
+  /// Banner shown to the SENDER when their sent alert receives a response,
+  /// while the app is in the foreground (mirrors _buildIncomingAlertBanner,
+  /// but informational only — no response actions, since the sender isn't
+  /// the one being asked to respond here).
+  Widget _buildResponseBanner(bool isTablet) {
+    final safeAreaTop = MediaQuery.of(context).padding.top;
+    final iconSpaceHeight = isTablet ? 56 : 48;
+    final additionalMargin = isTablet ? 8 : 6;
+    final topOffset = safeAreaTop + (iconSpaceHeight + additionalMargin).toDouble();
+
+    return Positioned(
+      top: topOffset,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        top: false,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(
+            0,
+            _showingResponseBanner ? 0 : -200,
+            0,
+          ),
+          child: Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: isTablet ? 32.0 : 12.0,
+              vertical: 4.0,
+            ),
+            padding: EdgeInsets.fromLTRB(
+              isTablet ? 16 : 14,
+              isTablet ? 16 : 14,
+              isTablet ? 12 : 8,
+              isTablet ? 16 : 14,
+            ),
+            decoration: BoxDecoration(
+              color: PremiumTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: PremiumTheme.accentColor.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: PremiumTheme.accentColor.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: PremiumTheme.accentColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: PremiumTheme.accentColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _currentResponseTitle ?? 'Response received',
+                        style: TextStyle(
+                          fontSize: isTablet ? 15 : 14,
+                          fontWeight: FontWeight.w700,
+                          color: PremiumTheme.primaryTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _currentResponseBody ?? '',
+                        style: TextStyle(
+                          fontSize: isTablet ? 13 : 12,
+                          color: PremiumTheme.secondaryTextColor,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _dismissResponseBanner,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.close_rounded,
+                      color: PremiumTheme.tertiaryTextColor,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   /// Response button for the alert banner with visual feedback
