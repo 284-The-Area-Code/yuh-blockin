@@ -935,9 +935,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   }
 
   /// Shows the spotlight coach-mark tour once, the first time the home
-  /// screen is reached. Anchored to the real hero button / History / Alerts
-  /// / vehicle-card widgets via the _tour*Key GlobalKeys attached in
-  /// _buildStaticContent — not hardcoded positions.
+  /// screen is reached. Gated on the 'product_tour_shown' preference — see
+  /// _replayProductTour for the menu-triggered, ungated version of the same
+  /// tour.
   Future<void> _maybeShowProductTour() async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('product_tour_shown') ?? false) return;
@@ -947,6 +947,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted || CoachMarkTour.isShowing) return;
 
+    _showProductTour();
+  }
+
+  /// Replays the product tour on demand — reachable from the hamburger menu
+  /// ("Replay Product Tour") so it doesn't only depend on the one-time
+  /// first-launch preference gate to test or re-view it.
+  void _replayProductTour() {
+    if (!mounted || CoachMarkTour.isShowing) return;
+    _showProductTour();
+  }
+
+  /// Anchored to the real hero button / History / Alerts / vehicle-card
+  /// widgets via the _tour*Key GlobalKeys attached in _buildStaticContent —
+  /// not hardcoded positions.
+  void _showProductTour() {
     CoachMarkTour.show(
       context,
       steps: [
@@ -2439,6 +2454,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     transitionDuration: PremiumTheme.mediumDuration,
                   ),
                 );
+              } else if (value == 'replay_tour') {
+                _replayProductTour();
               } else if (value == 'contact') {
                 Navigator.of(context).push(
                   PageRouteBuilder(
@@ -2531,6 +2548,26 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     const SizedBox(width: 12),
                     Text(
                       'My Secret Keys',
+                      style: TextStyle(
+                        color: PremiumTheme.primaryTextColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'replay_tour',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.explore_outlined,
+                      color: PremiumTheme.accentColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Replay Product Tour',
                       style: TextStyle(
                         color: PremiumTheme.primaryTextColor,
                         fontWeight: FontWeight.w500,
