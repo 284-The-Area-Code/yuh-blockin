@@ -1620,7 +1620,6 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
               border: InputBorder.none,
             ),
             onChanged: _validatePlate,
-            textCapitalization: TextCapitalization.characters,
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\s\-]')),
               LengthLimitingTextInputFormatter(12),
