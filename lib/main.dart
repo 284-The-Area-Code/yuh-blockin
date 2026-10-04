@@ -13,6 +13,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
 
 import 'core/theme/premium_theme.dart';
+import 'core/widgets/coach_mark_tour.dart';
 import 'core/theme/theme_notifier.dart';
 import 'core/services/plate_storage_service.dart';
 import 'core/services/user_stats_service.dart';
@@ -657,6 +658,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
+  // Anchor keys for the spotlight product tour — attached to the real
+  // widgets below via KeyedSubtree in _buildStaticContent, not fabricated
+  // mockup positions.
+  final GlobalKey _tourHeroKey = GlobalKey(debugLabel: 'tour_hero_button');
+  final GlobalKey _tourHistoryKey = GlobalKey(debugLabel: 'tour_history');
+  final GlobalKey _tourAlertsKey = GlobalKey(debugLabel: 'tour_alerts');
+  final GlobalKey _tourVehicleKey = GlobalKey(debugLabel: 'tour_vehicle');
+
   // Diagnostic tap counter
   int _diagnosticTapCount = 0;
   Timer? _diagnosticTapTimer;
@@ -897,6 +906,59 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
     // Step 4: Initialize alert system (user ID is now guaranteed to exist)
     _initializeAlertSystem();
+
+    // Step 5: First-run product tour, once layout/entrance animation has
+    // settled and real plate data is in, so the vehicle-card step spotlights
+    // the correct variant (registered vehicle vs. setup hint).
+    unawaited(_maybeShowProductTour());
+  }
+
+  /// Shows the spotlight coach-mark tour once, the first time the home
+  /// screen is reached. Anchored to the real hero button / History / Alerts
+  /// / vehicle-card widgets via the _tour*Key GlobalKeys attached in
+  /// _buildStaticContent — not hardcoded positions.
+  Future<void> _maybeShowProductTour() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('product_tour_shown') ?? false) return;
+
+    // Let the entrance animation finish and the frame settle before
+    // measuring target rects.
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted || CoachMarkTour.isShowing) return;
+
+    CoachMarkTour.show(
+      context,
+      steps: [
+        CoachMarkStep(
+          key: _tourHeroKey,
+          title: 'Send an alert',
+          description:
+              'Tap here when someone is blocking you in. Enter their plate and we\'ll notify them instantly.',
+          shape: CoachMarkShape.circle,
+        ),
+        CoachMarkStep(
+          key: _tourHistoryKey,
+          title: 'Your history',
+          description: 'See every alert you\'ve sent and received, with their status.',
+        ),
+        CoachMarkStep(
+          key: _tourAlertsKey,
+          title: 'Alerts',
+          description: 'A quick look at how many people you\'ve helped move, and who\'s helped you.',
+        ),
+        CoachMarkStep(
+          key: _tourVehicleKey,
+          title: 'Your vehicle',
+          description: _primaryPlate != null
+              ? 'This is the plate people will alert when you\'re blocking them in.'
+              : 'Register your plate here so others can let you know if you\'re blocking them in.',
+        ),
+      ],
+      onComplete: () async {
+        final p = await SharedPreferences.getInstance();
+        await p.setBool('product_tour_shown', true);
+      },
+    );
   }
 
   /// Initialize notification and connectivity services
@@ -1176,6 +1238,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     _acknowledgeRefreshTimer?.cancel();
     _diagnosticTapTimer?.cancel();
     _responseBannerAutoDismissTimer?.cancel();
+
+    // Tear down the product tour overlay if it's still showing — it's
+    // inserted into the root Overlay, independent of this widget's tree.
+    CoachMarkTour.dismiss();
 
     // Dispose animation controllers
     _breathingController.dispose();
@@ -5143,7 +5209,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             // MAIN CONTENT: Hero button when not in alert mode
             ...[
               // Hero button - the centerpiece
-              _buildHeroButton(theme, isTablet),
+              KeyedSubtree(
+                key: _tourHeroKey,
+                child: _buildHeroButton(theme, isTablet),
+              ),
 
               // Stats and notification icons with labels - animated entrance
               SizedBox(height: isCompact ? 12 : (isTablet ? 28 : 20)),
@@ -5162,16 +5231,22 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildLabeledIcon(
-                      icon: _buildCompactStatsIcon(isTablet),
-                      label: 'History',
-                      isTablet: isTablet,
+                    KeyedSubtree(
+                      key: _tourHistoryKey,
+                      child: _buildLabeledIcon(
+                        icon: _buildCompactStatsIcon(isTablet),
+                        label: 'History',
+                        isTablet: isTablet,
+                      ),
                     ),
                     const SizedBox(width: 32),
-                    _buildLabeledIcon(
-                      icon: _buildCompactNotificationIcon(isTablet),
-                      label: 'Alerts',
-                      isTablet: isTablet,
+                    KeyedSubtree(
+                      key: _tourAlertsKey,
+                      child: _buildLabeledIcon(
+                        icon: _buildCompactNotificationIcon(isTablet),
+                        label: 'Alerts',
+                        isTablet: isTablet,
+                      ),
                     ),
                   ],
                 ),
@@ -5183,10 +5258,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
               // Active vehicle display OR setup hint
               SizedBox(height: isCompact ? 8 : (isTablet ? 24 : 16)),
-              if (_primaryPlate != null)
-                _buildActiveVehicleDisplay(isTablet)
-              else
-                _buildSetupHint(isTablet),
+              KeyedSubtree(
+                key: _tourVehicleKey,
+                child: _primaryPlate != null
+                    ? _buildActiveVehicleDisplay(isTablet)
+                    : _buildSetupHint(isTablet),
+              ),
 
               // Recent activity feed (only shows last 15 minutes)
               if (hasActivityFeed) ...[
