@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -23,6 +24,13 @@ class PlateVerificationService {
   // Lazy initialization - only access Supabase when needed
   SupabaseClient get _supabase => Supabase.instance.client;
   final _random = Random.secure();
+
+  // Ownership keys are bearer credentials (anyone holding one controls the
+  // plate - see class doc above), so they're kept in Keystore-backed secure
+  // storage rather than plain SharedPreferences. Older app versions wrote
+  // them to SharedPreferences under this same prefix; reads transparently
+  // migrate any value still sitting there into secure storage.
+  final _secureStorage = const FlutterSecureStorage();
 
   // Local storage key prefix
   static const String _storagePrefix = 'yuh_plate_key_';
@@ -67,10 +75,12 @@ class PlateVerificationService {
     required String ownershipKey,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      // Store with plate number hash as key for privacy
       final storageKey = _storagePrefix + _hashPlateForStorage(plateNumber);
-      await prefs.setString(storageKey, ownershipKey);
+      await _secureStorage.write(key: storageKey, value: ownershipKey);
+      // Belt-and-suspenders against a stale plaintext copy from before this
+      // migration lingering in SharedPreferences under the same key.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(storageKey);
 
       if (kDebugMode) {
         debugPrint('✅ Ownership key saved locally for plate');
@@ -87,9 +97,20 @@ class PlateVerificationService {
   /// Retrieve ownership key from local storage
   Future<String?> getLocalKey(String plateNumber) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final storageKey = _storagePrefix + _hashPlateForStorage(plateNumber);
-      return prefs.getString(storageKey);
+      final secureValue = await _secureStorage.read(key: storageKey);
+      if (secureValue != null) {
+        return secureValue;
+      }
+
+      // Migrate a pre-existing plaintext key from an older app version.
+      final prefs = await SharedPreferences.getInstance();
+      final legacyValue = prefs.getString(storageKey);
+      if (legacyValue != null) {
+        await _secureStorage.write(key: storageKey, value: legacyValue);
+        await prefs.remove(storageKey);
+      }
+      return legacyValue;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to get local key: $e');
@@ -107,8 +128,9 @@ class PlateVerificationService {
   /// Delete ownership key from local storage
   Future<bool> deleteLocalKey(String plateNumber) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final storageKey = _storagePrefix + _hashPlateForStorage(plateNumber);
+      await _secureStorage.delete(key: storageKey);
+      final prefs = await SharedPreferences.getInstance();
       await prefs.remove(storageKey);
       return true;
     } catch (e) {
@@ -119,14 +141,13 @@ class PlateVerificationService {
   /// Get all locally stored keys (for backup/export)
   Future<Map<String, String>> getAllLocalKeys() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys().where((k) => k.startsWith(_storagePrefix));
+      await _migrateAllLegacyKeys();
+      final all = await _secureStorage.readAll();
       final result = <String, String>{};
 
-      for (final key in keys) {
-        final value = prefs.getString(key);
-        if (value != null) {
-          result[key.replaceFirst(_storagePrefix, '')] = value;
+      for (final entry in all.entries) {
+        if (entry.key.startsWith(_storagePrefix)) {
+          result[entry.key.replaceFirst(_storagePrefix, '')] = entry.value;
         }
       }
 
@@ -140,8 +161,9 @@ class PlateVerificationService {
   /// Call this after plate sync to ensure consistency
   Future<int> cleanupOrphanedKeys(List<String> validPlates) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final allKeyNames = prefs.getKeys().where((k) => k.startsWith(_storagePrefix)).toList();
+      await _migrateAllLegacyKeys();
+      final all = await _secureStorage.readAll();
+      final allKeyNames = all.keys.where((k) => k.startsWith(_storagePrefix)).toList();
 
       // Build set of valid hashes
       final validHashes = <String>{};
@@ -153,7 +175,7 @@ class PlateVerificationService {
       for (final keyName in allKeyNames) {
         final hash = keyName.replaceFirst(_storagePrefix, '');
         if (!validHashes.contains(hash)) {
-          await prefs.remove(keyName);
+          await _secureStorage.delete(key: keyName);
           removedCount++;
           if (kDebugMode) {
             debugPrint('🗑️ Removed orphaned ownership key: $hash');
@@ -177,11 +199,12 @@ class PlateVerificationService {
   /// Clear all local ownership keys (for account switch or reset)
   Future<void> clearAllLocalKeys() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final allKeyNames = prefs.getKeys().where((k) => k.startsWith(_storagePrefix)).toList();
+      await _migrateAllLegacyKeys();
+      final all = await _secureStorage.readAll();
+      final allKeyNames = all.keys.where((k) => k.startsWith(_storagePrefix)).toList();
 
       for (final keyName in allKeyNames) {
-        await prefs.remove(keyName);
+        await _secureStorage.delete(key: keyName);
       }
 
       if (kDebugMode) {
@@ -191,6 +214,23 @@ class PlateVerificationService {
       if (kDebugMode) {
         debugPrint('❌ Failed to clear local keys: $e');
       }
+    }
+  }
+
+  /// One-time sweep that moves any ownership keys still sitting in
+  /// SharedPreferences (written by app versions before this migration) into
+  /// secure storage. `getLocalKey` already migrates per-plate on read; this
+  /// covers the bulk operations above, which enumerate storage directly
+  /// instead of going through `getLocalKey`.
+  Future<void> _migrateAllLegacyKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    final legacyKeyNames = prefs.getKeys().where((k) => k.startsWith(_storagePrefix)).toList();
+    for (final keyName in legacyKeyNames) {
+      final value = prefs.getString(keyName);
+      if (value != null) {
+        await _secureStorage.write(key: keyName, value: value);
+      }
+      await prefs.remove(keyName);
     }
   }
 
@@ -525,11 +565,10 @@ class PlateVerificationService {
   Future<int> importKeysFromJson(String jsonData) async {
     try {
       final keys = jsonDecode(jsonData) as Map<String, dynamic>;
-      final prefs = await SharedPreferences.getInstance();
       int imported = 0;
 
       for (final entry in keys.entries) {
-        await prefs.setString(_storagePrefix + entry.key, entry.value as String);
+        await _secureStorage.write(key: _storagePrefix + entry.key, value: entry.value as String);
         imported++;
       }
 
