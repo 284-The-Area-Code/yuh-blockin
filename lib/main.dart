@@ -2603,6 +2603,65 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
   }
 
+  /// Hero button gradient colors for the current press state. BVI Pride
+  /// gets a bespoke blue-dominant treatment (Resolution Blue family, gold
+  /// held to a single restrained highlight stop); every other theme keeps
+  /// today's exact hardcoded blue/accent gradient, unchanged.
+  List<Color> _heroGradientColors() {
+    if (PremiumTheme.currentMode == PremiumTheme.bviPrideMode) {
+      return _isPressed
+          ? const [
+              Color(0xFF0B1A3D),
+              Color(0xFF0B1A3D),
+              Color(0xFF050B1A),
+            ]
+          : const [
+              PremiumTheme.bviPrideElevatedSurface,
+              PremiumTheme.bviPrideResolutionBlue,
+              PremiumTheme.bviPrideBackgroundColor,
+            ];
+    }
+    return _isPressed
+        ? const [
+            Color(0xFF1565C0), // Darker when pressed
+            Color(0xFF1565C0),
+            Color(0xFF0D47A1),
+          ]
+        : [
+            const Color(0xFF1A73E8), // Bright blue highlight
+            PremiumTheme.accentColor, // Standard accent
+            const Color(0xFF1662CE), // Deeper blue
+          ];
+  }
+
+  /// Hero button glow. BVI Pride uses its flag blue plus a thin gold rim
+  /// (never a wash); every other theme keeps today's single accent-colored
+  /// shadow, unchanged.
+  List<BoxShadow> _heroShadow() {
+    if (PremiumTheme.currentMode == PremiumTheme.bviPrideMode) {
+      return [
+        BoxShadow(
+          color: PremiumTheme.bviPrideResolutionBlue.withValues(alpha: 0.35),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
+        ),
+        BoxShadow(
+          color: PremiumTheme.bviPrideAccentColor.withValues(alpha: 0.18),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+          spreadRadius: -2,
+        ),
+      ];
+    }
+    return [
+      BoxShadow(
+        color: PremiumTheme.accentColor.withValues(alpha: 0.3),
+        blurRadius: 16,
+        offset: const Offset(0, 8),
+      ),
+    ];
+  }
+
   Widget _buildHeroButton(ThemeData theme, bool isTablet) {
     final buttonSize = isTablet ? 280.0 : 240.0;
 
@@ -2640,31 +2699,17 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             height: buttonSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              // Premium radial gradient for depth - darken when pressed
+              // Premium radial gradient for depth - darken when pressed.
+              // Theme-aware: BVI Pride gets its own blue-dominant treatment
+              // via _heroGradientColors()/_heroShadow(); every other theme
+              // resolves to today's exact hardcoded values, unchanged.
               gradient: RadialGradient(
                 center: const Alignment(-0.3, -0.3), // Offset for 3D depth
                 radius: 1.2,
-                colors: _isPressed
-                    ? [
-                        const Color(0xFF1565C0), // Darker when pressed
-                        const Color(0xFF1565C0),
-                        const Color(0xFF0D47A1),
-                      ]
-                    : [
-                        const Color(0xFF1A73E8), // Bright blue highlight
-                        PremiumTheme.accentColor, // Standard accent
-                        const Color(0xFF1662CE), // Deeper blue
-                      ],
+                colors: _heroGradientColors(),
                 stops: const [0.0, 0.5, 1.0],
               ),
-              boxShadow: [
-                // Single optimized shadow for performance
-                BoxShadow(
-                  color: PremiumTheme.accentColor.withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              boxShadow: _heroShadow(),
             ),
             child: Stack(
               children: [

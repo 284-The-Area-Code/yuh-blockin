@@ -134,22 +134,25 @@ class PremiumTheme {
   /// Philippine Red (#D00C27) for highlights - strength & valor
   /// Motto: "Vigilate" - Be Vigilant
   ///
-  /// Premium Design Principles Applied:
-  /// - Deep navy base (not pure black) for luxury feel
-  /// - Golden accents represent Saint Ursula's sacred oil lamps
-  /// - Green touches from the coat of arms shield
-  /// - Red for critical alerts (bravery, valor)
-  static const Color bviPrideBackgroundColor = Color(0xFF0A1628); // Deep navy (premium dark, not pure black)
-  static const Color bviPrideSurfaceColor = Color(0xFF122140); // Elevated surface with blue tint
-  static const Color bviPrideElevatedSurface = Color(0xFF1A2D52); // Higher elevation surface
-  static const Color bviPrideAccentColor = Color(0xFFF7C700); // Golden Poppy - Saint Ursula's lamp
-  static const Color bviPrideAccentGlow = Color(0xFFFFE066); // Lighter gold for glow effects
-  static const Color bviPrideSecondaryAccent = Color(0xFF00A86B); // Brightened Cadmium Green (better contrast)
-  static const Color bviPrideTertiaryAccent = Color(0xFFD00C27); // Philippine Red - valor
+  /// Target hierarchy: ~70-80% deep Resolution-Blue / dark neutral,
+  /// ~10-15% white/light neutral, ~5-10% red, gold strictly as a small
+  /// accent (never a background wash), minimal green. Derived from the
+  /// actual flag blue (bviPrideResolutionBlue) rather than the generic
+  /// navy previously shared with the unrelated Island Gold theme -
+  /// background/surface/elevated/divider below are all steps of the same
+  /// Resolution Blue family, not reused bviSunrise* values.
+  static const Color bviPrideResolutionBlue = Color(0xFF001F7E); // Official flag blue - reserved for glows/borders/accents, not large fills
+  static const Color bviPrideBackgroundColor = Color(0xFF050B1A); // Near-black, Resolution-Blue-tinted navy
+  static const Color bviPrideSurfaceColor = Color(0xFF0B1A3D); // Resolution Blue family, darkened for surface contrast
+  static const Color bviPrideElevatedSurface = Color(0xFF13245A); // Lighter Resolution Blue step for elevated cards/sheets
+  static const Color bviPrideAccentColor = Color(0xFFE6B800); // Deepened Golden Poppy - reads as accent, not wash
+  static const Color bviPrideAccentGlow = Color(0xFFFFD84D); // Lighter gold for glow/rim highlights only, never fills
+  static const Color bviPrideSecondaryAccent = Color(0xFF2E7D4F); // Desaturated Cadmium Green - minimal, shield-accent only
+  static const Color bviPrideTertiaryAccent = Color(0xFFD00C27); // Philippine Red - the 5-10% red accent
   static const Color bviPridePrimaryTextColor = Color(0xFFFFFFFF); // Pure white (flag)
-  static const Color bviPrideSecondaryTextColor = Color(0xFFE8D5A3); // Warm gold-tinted white
-  static const Color bviPrideTertiaryTextColor = Color(0xFF6B8299); // Muted slate blue
-  static const Color bviPrideDividerColor = Color(0xFF1E3A5F); // Deep blue divider with visibility
+  static const Color bviPrideSecondaryTextColor = Color(0xFFC7D4EC); // Light blue-neutral white (was gold-tinted - that was the biggest source of "too much yellow" since this is body/subtitle text everywhere)
+  static const Color bviPrideTertiaryTextColor = Color(0xFF5E7BA8); // Brightened slate blue, distinct from Island Gold's shared tone
+  static const Color bviPrideDividerColor = Color(0xFF1C2C52); // Resolution Blue family divider
 
   // MARK: - Dynamic Color System
 
@@ -287,6 +290,45 @@ class PremiumTheme {
         return bviPrideDividerColor;
       default:
         return lightDividerColor;
+    }
+  }
+
+  /// Secondary accent color. Not every theme defines a distinct one - falls
+  /// back to accentColor, which is already what every existing call site
+  /// would render today, so adding this getter cannot change any theme's
+  /// output for modes that don't explicitly branch here.
+  static Color get secondaryAccentColor {
+    switch (_currentMode) {
+      case cyberpunkMode:
+        return cyberpunkSecondaryAccent;
+      case islandGoldMode:
+        return bviSunriseSecondaryAccent;
+      case bviPrideMode:
+        return bviPrideSecondaryAccent;
+      default:
+        return accentColor;
+    }
+  }
+
+  /// Tertiary accent color. Currently BVI Pride-only; other themes fall
+  /// back to accentColor (already-rendered, so no regression risk).
+  static Color get tertiaryAccentColor {
+    switch (_currentMode) {
+      case bviPrideMode:
+        return bviPrideTertiaryAccent;
+      default:
+        return accentColor;
+    }
+  }
+
+  /// One elevation step above surfaceColor. Currently BVI Pride-only;
+  /// other themes fall back to surfaceColor (already-rendered).
+  static Color get elevatedSurfaceColor {
+    switch (_currentMode) {
+      case bviPrideMode:
+        return bviPrideElevatedSurface;
+      default:
+        return surfaceColor;
     }
   }
 
@@ -619,6 +661,21 @@ class PremiumTheme {
           accentColor.withValues(alpha: 0.8),
         ],
       );
+
+  /// BVI Pride hero/background gradient - blue-dominant, gold reserved for
+  /// restrained edge highlights only. A pure data getter with no mode
+  /// branching: only ever referenced by call sites that already know
+  /// they're in BVI Pride mode, so it cannot affect other themes.
+  static const LinearGradient bviPrideHeroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      bviPrideElevatedSurface,
+      bviPrideResolutionBlue,
+      bviPrideBackgroundColor,
+    ],
+    stops: [0.0, 0.55, 1.0],
+  );
 
   // MARK: - Border Radius
 
