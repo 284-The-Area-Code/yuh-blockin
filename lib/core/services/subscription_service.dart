@@ -431,7 +431,13 @@ class SubscriptionService {
     final activeEntitlements = customerInfo.entitlements.active;
     final premiumEntitlement = activeEntitlements['premium'];
 
-    if (premiumEntitlement != null) {
+    // isSandbox is true for a license-tester's test purchase even in this
+    // production app build - RevenueCat reports it as active to the client
+    // SDK by design, for testing. The server mirrors this same distinction
+    // (see supabase/functions/revenuecat-webhook/index.ts); without checking
+    // it here too, a license-tester device shows itself Premium locally
+    // regardless of what the server-enforced entitlement actually is.
+    if (premiumEntitlement != null && !premiumEntitlement.isSandbox) {
       _isPremium = true;
       // Determine status from product ID (Monthly vs Lifetime share the 'premium' entitlement)
       final productId = premiumEntitlement.productIdentifier;
