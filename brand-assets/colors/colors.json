@@ -1,0 +1,90 @@
+{
+  "$schema_note": "Every value below was read from source code or sampled from an authoritative image. 'source' says which. Nothing is invented. See palette.md for usage notes and conflicts.",
+  "brand": {
+    "primary": {
+      "value": "#0B6E7D",
+      "name": "Brand Teal",
+      "source": "lib/main.dart:155 (AppInitializer _teal), lib/features/subscription/premium_monthly_screen.dart:26",
+      "note": "Code value for the logo teal. The logo raster itself samples at #0D7493."
+    },
+    "secondary": {
+      "value": "#FF847C",
+      "name": "Brand Coral",
+      "source": "lib/main.dart:156 (AppInitializer _coral)",
+      "note": "Code value for the logo coral. The logo raster samples at #FF7670; premium_monthly_screen.dart uses #FF6B6B."
+    },
+    "accent": {
+      "value": "#0A84FF",
+      "name": "Action Blue",
+      "source": "lib/core/theme/premium_theme.dart:65 (lightAccentColor) and :76 (darkAccentColor)",
+      "note": "The in-app interactive colour for the default Light and Dark themes: hero button, primary buttons, links, selected states."
+    }
+  },
+  "logo": {
+    "teal": { "value": "#0D7493", "source": "Sampled (dominant pixel) from assets/images/app_icon.png and logo_transparent.png" },
+    "coral": { "value": "#FF7670", "source": "Sampled (dominant pixel) from assets/images/app_icon.png and logo_transparent.png" }
+  },
+  "brandExtended": {
+    "deepBlue": { "value": "#045C71", "source": "lib/main.dart:157 (AppInitializer _deepBlue)" },
+    "softTeal": { "value": "#E8F6F8", "source": "lib/main.dart:158 (AppInitializer _softTeal), splash background gradient end" },
+    "tealLight": { "value": "#0D8A9C", "source": "lib/features/subscription/premium_monthly_screen.dart:27" },
+    "coralPremium": { "value": "#FF6B6B", "source": "lib/features/subscription/premium_monthly_screen.dart:28 (subscribe button)" }
+  },
+  "background": {
+    "primary": { "value": "#FCFCFC", "source": "premium_theme.dart:63 lightBackgroundColor" },
+    "secondary": { "value": "#FFFFFF", "source": "premium_theme.dart:64 lightSurfaceColor" },
+    "dark": { "value": "#000000", "source": "premium_theme.dart:74 darkBackgroundColor" },
+    "darkSurface": { "value": "#1C1C1E", "source": "premium_theme.dart:75 darkSurfaceColor" }
+  },
+  "text": {
+    "primary": { "value": "#1C1C1E", "source": "premium_theme.dart:66 lightPrimaryTextColor" },
+    "secondary": { "value": "#8E8E93", "source": "premium_theme.dart:67 lightSecondaryTextColor" },
+    "tertiary": { "value": "#C7C7CC", "source": "premium_theme.dart:68 lightTertiaryTextColor" },
+    "primaryOnDark": { "value": "#FFFFFF", "source": "premium_theme.dart:77 darkPrimaryTextColor" },
+    "tertiaryOnDark": { "value": "#48484A", "source": "premium_theme.dart:79 darkTertiaryTextColor" }
+  },
+  "border": {
+    "divider": { "value": "#E5E5EA", "source": "premium_theme.dart:69 lightDividerColor (0.5px)" },
+    "dividerDark": { "value": "#38383A", "source": "premium_theme.dart:80 darkDividerColor" }
+  },
+  "semantic": {
+    "success": { "value": "#34C759", "source": "lib/features/premium_alert/alert_history_screen.dart:41" },
+    "warning": { "value": "#FF9500", "source": "lib/features/premium_alert/alert_history_screen.dart:42" },
+    "error": { "value": "#FF3B30", "source": "lib/features/premium_alert/alert_history_screen.dart:413, 503" },
+    "info": { "value": "#007AFF", "source": "lib/features/premium_alert/alert_history_screen.dart:43 (_pendingColor)" }
+  },
+  "urgency": {
+    "low": { "value": "#34D399", "source": "alert_workflow_screen.dart:618, alert_sound_settings_screen.dart:32" },
+    "normal": { "value": "#0A84FF", "source": "alert_sound_settings_screen.dart:33" },
+    "high": { "value": "#EF4444", "source": "alert_workflow_screen.dart:620, alert_sound_settings_screen.dart:34" }
+  },
+  "gradients": {
+    "splashBackground": { "type": "linear", "direction": "top to bottom", "stops": ["#FFFFFF", "#E8F6F8"], "source": "lib/main.dart:420-428" },
+    "splashFooterText": { "type": "linear", "direction": "left to right", "stops": ["#0B6E7D", "#FF847C"], "source": "lib/main.dart:544 ('DezeTingz' wordmark)" },
+    "heroGradient": { "type": "linear", "direction": "top-left to bottom-right", "stops": ["accent 100%", "accent 80% opacity"], "source": "premium_theme.dart:614 heroGradient" },
+    "homeBackground": { "type": "linear", "direction": "top to bottom", "stops": ["#F8FBFF @0.0", "theme background @0.3", "theme background @1.0"], "source": "lib/main.dart:1888-1899" },
+    "homeHeroButton": { "type": "radial", "center": "(-0.3, -0.3)", "radius": 1.2, "stops": ["#1A73E8 @0.0", "#0A84FF (theme accent) @0.5", "#1662CE @1.0"], "pressed": ["#1565C0 @0.0", "#1565C0 @0.5", "#0D47A1 @1.0"], "shadow": "accent @30% opacity, blur 16, offset (0, 8)", "source": "lib/main.dart:2245-2266" }
+  },
+  "themes": {
+    "light": { "background": "#FCFCFC", "surface": "#FFFFFF", "accent": "#0A84FF", "textPrimary": "#1C1C1E", "textSecondary": "#8E8E93", "textTertiary": "#C7C7CC", "divider": "#E5E5EA", "premium": false },
+    "dark": { "background": "#000000", "surface": "#1C1C1E", "accent": "#0A84FF", "textPrimary": "#FFFFFF", "textSecondary": "#8E8E93", "textTertiary": "#48484A", "divider": "#38383A", "premium": false },
+    "caribbean_sunset": { "background": "#2D1B14", "surface": "#3D2A1F", "accent": "#FF8C42", "textPrimary": "#FFF5E6", "textSecondary": "#E6C9A8", "textTertiary": "#BF9F7A", "divider": "#4D3426", "premium": false },
+    "premium_pink": { "background": "#1A1218", "surface": "#2A1F26", "accent": "#FF6B9D", "textPrimary": "#FFF0F5", "textSecondary": "#E8B4C8", "textTertiary": "#B87D98", "divider": "#3D2A35", "premium": true },
+    "cyberpunk": { "background": "#0A0A12", "surface": "#12121C", "accent": "#00F5FF", "secondaryAccent": "#FF00FF", "textPrimary": "#E0F7FA", "textSecondary": "#7DD3E8", "textTertiary": "#4A6670", "divider": "#1A1A2E", "premium": true },
+    "island_gold": { "background": "#0A1628", "surface": "#142238", "accent": "#F7C700", "secondaryAccent": "#00A86B", "textPrimary": "#FFF8E7", "textSecondary": "#D4AA60", "textTertiary": "#6B8299", "divider": "#1E3350", "premium": true },
+    "bvi_pride": { "background": "#0A1628", "surface": "#122140", "elevatedSurface": "#1A2D52", "accent": "#F7C700", "accentGlow": "#FFE066", "secondaryAccent": "#00A86B", "tertiaryAccent": "#D00C27", "textPrimary": "#FFFFFF", "textSecondary": "#E8D5A3", "textTertiary": "#6B8299", "divider": "#1E3A5F", "premium": true }
+  },
+  "website": {
+    "note": "WordPress landing page (yuhblockin-site/astra/assets/css/yuhblockin.css). Uses its own teal/coral values that differ from the app.",
+    "teal": "#21819B",
+    "tealLight": "#2A9AB8",
+    "tealDark": "#1A6A80",
+    "coral": "#DE5E59",
+    "slate": "#3A424B",
+    "slateDark": "#2D343B",
+    "text": "#4D5660",
+    "textLight": "#6B7580",
+    "offWhite": "#F7F8FA",
+    "border": "#D3D7DE"
+  }
+}
