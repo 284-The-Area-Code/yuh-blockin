@@ -11,7 +11,7 @@ Yuh Blockin is a mobile app for resolving blocked-parking situations politely an
 - The owner gets a push notification and replies with a canned response: "Moving now", "5 minutes", "Can't move" or "Wrong car".
 - Ownership of a plate is proven with a secret key (`YB-…`), not an account.
 
-The tagline is **"Move with respect."** The app is published by **DezeTingz**. It was built for the British Virgin Islands (BVI governing law in the terms, a BVI Pride theme, a BVI launch plan), with a planned ATH Móvil (Puerto Rico) payment option.
+The tagline is **"Move with respect."** The app is published by **DezeTingz**. It was built for the British Virgin Islands (BVI governing law in the terms, a BVI Pride theme, a BVI launch plan). Purchases go through the App Store and Google Play only.
 
 **Platforms:** iOS and Android, from one Flutter codebase (`useMaterial3: false`, iOS-style styling). A Flutter web target exists but is unbranded. A separate WordPress landing page lives in `yuhblockin-site/`.
 
@@ -63,4 +63,8 @@ These are honest gaps. Nothing was fabricated to fill them.
 - No custom font files.
 - No custom icon set. The app uses Material Icons, with some Cupertino Icons.
 - No screenshots of Settings, Alert History, Theme picker, Secret Keys, Go Premium, the paywall, or the incoming-alert banner. The app could not be run in the environment where this pack was built (no Flutter SDK). These should be captured from a device build.
-- The existing screenshots date from December 2025 (WhatsApp exports at 592 × 1280). They may not match the newest build exactly.
+- No screenshots of the newer screens and components either: the Terms agreement gate shown before onboarding, the home-screen product tour, the sender-side response banner, Contact & Support, and the Report / Block actions in Alert History.
+- The existing screenshots date from December 2025 (WhatsApp exports at 592 × 1280). Known differences from the current build:
+  - `screenshots/other/plate-registered-ownership-key.jpeg` shows the old success dialog. The current dialog adds a "Save / Share Key" button, replaces the warning with "THIS KEY WILL NEVER BE SHOWN AGAIN…", and keeps the bottom button disabled ("Copy or Share Your Key First") until the key has been copied or shared.
+  - `screenshots/onboarding/` does not show the Terms agreement gate that now comes before page 1.
+  - The home menu now also lists "Replay Product Tour" and "Contact & Support". The menu does not appear in the existing captures.

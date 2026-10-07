@@ -4,13 +4,13 @@
     "primary": {
       "value": "#0B6E7D",
       "name": "Brand Teal",
-      "source": "lib/main.dart:155 (AppInitializer _teal), lib/features/subscription/premium_monthly_screen.dart:26",
+      "source": "lib/main.dart:156 (AppInitializer _teal), lib/features/subscription/premium_monthly_screen.dart:26",
       "note": "Code value for the logo teal. The logo raster itself samples at #0D7493."
     },
     "secondary": {
       "value": "#FF847C",
       "name": "Brand Coral",
-      "source": "lib/main.dart:156 (AppInitializer _coral)",
+      "source": "lib/main.dart:157 (AppInitializer _coral)",
       "note": "Code value for the logo coral. The logo raster samples at #FF7670; premium_monthly_screen.dart uses #FF6B6B."
     },
     "accent": {
@@ -25,8 +25,8 @@
     "coral": { "value": "#FF7670", "source": "Sampled (dominant pixel) from assets/images/app_icon.png and logo_transparent.png" }
   },
   "brandExtended": {
-    "deepBlue": { "value": "#045C71", "source": "lib/main.dart:157 (AppInitializer _deepBlue)" },
-    "softTeal": { "value": "#E8F6F8", "source": "lib/main.dart:158 (AppInitializer _softTeal), splash background gradient end" },
+    "deepBlue": { "value": "#045C71", "source": "lib/main.dart:158 (AppInitializer _deepBlue)" },
+    "softTeal": { "value": "#E8F6F8", "source": "lib/main.dart:159 (AppInitializer _softTeal), splash background gradient end" },
     "tealLight": { "value": "#0D8A9C", "source": "lib/features/subscription/premium_monthly_screen.dart:27" },
     "coralPremium": { "value": "#FF6B6B", "source": "lib/features/subscription/premium_monthly_screen.dart:28 (subscribe button)" }
   },
@@ -50,21 +50,23 @@
   "semantic": {
     "success": { "value": "#34C759", "source": "lib/features/premium_alert/alert_history_screen.dart:41" },
     "warning": { "value": "#FF9500", "source": "lib/features/premium_alert/alert_history_screen.dart:42" },
-    "error": { "value": "#FF3B30", "source": "lib/features/premium_alert/alert_history_screen.dart:413, 503" },
+    "error": { "value": "#FF3B30", "source": "lib/features/premium_alert/alert_history_screen.dart:457, 731" },
     "info": { "value": "#007AFF", "source": "lib/features/premium_alert/alert_history_screen.dart:43 (_pendingColor)" }
   },
-  "urgencyHomeBanner": { "low": "#43A047", "normal": "#1E88E5", "high": "#E53935", "source": "lib/main.dart:1162-1186 (live incoming-alert banner)" },
+  "urgencyHomeBanner": { "low": "#43A047", "normal": "#1E88E5", "high": "#E53935", "source": "lib/main.dart:1381-1411 (live incoming-alert banner)" },
   "urgency": {
     "low": { "value": "#34D399", "source": "alert_sound_settings_screen.dart:32 (also unreachable alert_workflow_screen.dart:618)" },
     "normal": { "value": "#0A84FF", "source": "alert_sound_settings_screen.dart:33" },
     "high": { "value": "#EF4444", "source": "alert_workflow_screen.dart:620, alert_sound_settings_screen.dart:34" }
   },
   "gradients": {
-    "splashBackground": { "type": "linear", "direction": "top to bottom", "stops": ["#FFFFFF", "#E8F6F8"], "source": "lib/main.dart:420-428" },
-    "splashFooterText": { "type": "linear", "direction": "left to right", "stops": ["#0B6E7D", "#FF847C"], "source": "lib/main.dart:544 ('DezeTingz' wordmark)" },
-    "heroGradient": { "type": "linear", "direction": "top-left to bottom-right", "stops": ["accent 100%", "accent 80% opacity"], "source": "premium_theme.dart:614 heroGradient" },
-    "homeBackground": { "type": "linear", "direction": "top to bottom", "stops": ["#F8FBFF @0.0", "theme background @0.3", "theme background @1.0"], "source": "lib/main.dart:1888-1899" },
-    "homeHeroButton": { "type": "radial", "center": "(-0.3, -0.3)", "radius": 1.2, "stops": ["#1A73E8 @0.0", "#0A84FF (theme accent) @0.5", "#1662CE @1.0"], "pressed": ["#1565C0 @0.0", "#1565C0 @0.5", "#0D47A1 @1.0"], "shadow": "accent @30% opacity, blur 16, offset (0, 8)", "source": "lib/main.dart:2245-2266" }
+    "splashBackground": { "type": "linear", "direction": "top to bottom", "stops": ["#FFFFFF", "#E8F6F8"], "source": "lib/main.dart:425-434" },
+    "splashFooterText": { "type": "linear", "direction": "left to right", "stops": ["#0B6E7D", "#FF847C"], "source": "lib/main.dart:553 ('DezeTingz' wordmark)" },
+    "heroGradient": { "type": "linear", "direction": "top-left to bottom-right", "stops": ["accent 100%", "accent 80% opacity"], "source": "premium_theme.dart:656 heroGradient" },
+    "homeBackground": { "type": "linear", "direction": "top to bottom", "stops": ["#F8FBFF @0.0", "theme background @0.3", "theme background @1.0"], "source": "lib/main.dart:2205-2216" },
+    "homeHeroButton": { "type": "radial", "center": "(-0.3, -0.3)", "radius": 1.2, "stops": ["#1A73E8 @0.0", "#0A84FF (theme accent) @0.5", "#1662CE @1.0"], "pressed": ["#1565C0 @0.0", "#1565C0 @0.5", "#0D47A1 @1.0"], "shadow": "accent @30% opacity, blur 16, offset (0, 8)", "note": "Every theme except BVI Pride.", "source": "lib/main.dart:2610-2663 (_heroGradientColors, _heroShadow), applied at 2706-2712" },
+    "homeHeroButtonBviPride": { "type": "radial", "center": "(-0.3, -0.3)", "radius": 1.2, "stops": ["#13245A @0.0", "#001F7E @0.5", "#050B1A @1.0"], "pressed": ["#0B1A3D @0.0", "#0B1A3D @0.5", "#050B1A @1.0"], "shadow": "#001F7E @35% opacity, blur 20, offset (0, 8); plus #E6B800 @18% opacity, blur 10, offset (0, 2), spread -2", "source": "lib/main.dart:2611-2622, 2640-2654" },
+    "bviPrideHeroGradient": { "type": "linear", "direction": "top-left to bottom-right", "stops": ["#13245A @0.0", "#001F7E @0.55", "#050B1A @1.0"], "source": "premium_theme.dart:669 bviPrideHeroGradient", "note": "Defined but not referenced anywhere in lib/." }
   },
   "themes": {
     "light": { "background": "#FCFCFC", "surface": "#FFFFFF", "accent": "#0A84FF", "textPrimary": "#1C1C1E", "textSecondary": "#8E8E93", "textTertiary": "#C7C7CC", "divider": "#E5E5EA", "premium": false },
@@ -73,7 +75,7 @@
     "premium_pink": { "background": "#1A1218", "surface": "#2A1F26", "accent": "#FF6B9D", "textPrimary": "#FFF0F5", "textSecondary": "#E8B4C8", "textTertiary": "#B87D98", "divider": "#3D2A35", "premium": true },
     "cyberpunk": { "background": "#0A0A12", "surface": "#12121C", "accent": "#00F5FF", "secondaryAccent": "#FF00FF", "textPrimary": "#E0F7FA", "textSecondary": "#7DD3E8", "textTertiary": "#4A6670", "divider": "#1A1A2E", "premium": true },
     "island_gold": { "background": "#0A1628", "surface": "#142238", "accent": "#F7C700", "secondaryAccent": "#00A86B", "textPrimary": "#FFF8E7", "textSecondary": "#D4AA60", "textTertiary": "#6B8299", "divider": "#1E3350", "premium": true },
-    "bvi_pride": { "background": "#0A1628", "surface": "#122140", "elevatedSurface": "#1A2D52", "accent": "#F7C700", "accentGlow": "#FFE066", "secondaryAccent": "#00A86B", "tertiaryAccent": "#D00C27", "textPrimary": "#FFFFFF", "textSecondary": "#E8D5A3", "textTertiary": "#6B8299", "divider": "#1E3A5F", "premium": true }
+    "bvi_pride": { "resolutionBlue": "#001F7E", "background": "#050B1A", "surface": "#0B1A3D", "elevatedSurface": "#13245A", "accent": "#E6B800", "accentGlow": "#FFD84D", "secondaryAccent": "#2E7D4F", "tertiaryAccent": "#D00C27", "textPrimary": "#FFFFFF", "textSecondary": "#C7D4EC", "textTertiary": "#5E7BA8", "divider": "#1C2C52", "premium": true, "source": "premium_theme.dart:144-155" }
   },
   "website": {
     "note": "WordPress landing page (yuhblockin-site/astra/assets/css/yuhblockin.css). Uses its own teal/coral values that differ from the app.",

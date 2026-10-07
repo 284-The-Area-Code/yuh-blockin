@@ -16,7 +16,8 @@ Yuh Blockin is an anonymous, respectful parking-alert app for iOS and Android.
 2. **Send an alert.** When someone is blocked in, they tap the large blue **YUH BLOCKIN'** button, choose "I'm Blocked" (or "I'm Blocking", a Premium option), type the plate, pick an emoji and an urgency level (Low / Normal / High), and send.
 3. **Reply.** The blocking driver gets a push notification and an in-app banner, then replies with one tap: *Moving now*, *5 minutes*, *Can't move* or *Wrong car*.
 4. **Track activity.** Alert history, activity feed and daily-usage counts.
-5. **Premium.** $2.99 per month or $19.99 lifetime. Premium unlocks more daily alerts, up to 10 vehicles, "I'm Blocking" alerts, and four extra themes.
+5. **Stay safe.** New users must agree to the Terms of Service, including a zero-tolerance policy for abuse, before onboarding. Recipients can hide, report or block a sender from Alert History, and blocked users can be unblocked in Contact & Support.
+6. **Premium.** $2.99 per month or $19.99 lifetime, through the App Store or Google Play. Premium unlocks more daily alerts, up to 10 vehicles, "I'm Blocking" alerts, and four extra themes.
 
 ## Audience
 
@@ -24,7 +25,7 @@ This section is based only on what the project itself says:
 
 - **Location:** the British Virgin Islands. The legal documents name BVI governing law, the launch plan is titled "Marketing & Launch Strategy (BVI)", and there is a BVI Pride theme.
 - **First users** (from `docs/Yuh_Blockin_Branded_Marketing_Plan.pdf`): daily commuters, taxi drivers, delivery drivers and shop staff. Later: property managers (B2B).
-- **Wider region:** Caribbean. The code includes ATH Móvil (Puerto Rico) payment work, currently disabled, and island-themed copy.
+- **Wider region:** Caribbean, reflected in island-themed copy.
 - **How they're reached:** WhatsApp groups, word of mouth, flyers and QR codes in parking areas.
 
 ## Brand personality
@@ -48,7 +49,7 @@ This describes the personality the current app already has:
 - **Identity:** teal `#0D7493` and coral `#FF7670` (sampled from the logo). The code's named brand values are teal `#0B6E7D` and coral `#FF847C`.
 - **Interface:** an Apple-style neutral system (`#FCFCFC` background, `#FFFFFF` surfaces, `#1C1C1E` text, `#8E8E93` secondary) with **Action Blue `#0A84FF`** for everything interactive.
 - **Where teal and coral appear in the app:** the logo, the splash (a white-to-`#E8F6F8` background and a teal-to-coral "DezeTingz" credit), and the legacy Premium Monthly screen.
-- **Optional user themes:** Dark, Caribbean Sunset, and Premium-only Pink, Cyberpunk, Island Gold and BVI Pride.
+- **Optional user themes:** Dark, Caribbean Sunset, and Premium-only Pink, Cyberpunk, Island Gold and BVI Pride. BVI Pride is blue-dominant (Resolution Blue `#001F7E` family), with gold `#E6B800` held to small accents and touches of red; it also restyles the hero button.
 
 ### Typography
 - System fonts only: SF Pro on iOS (with Apple's tracking values) and Roboto on Android.

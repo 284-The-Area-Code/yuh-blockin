@@ -10,10 +10,10 @@ The app has a small formal token set in `lib/core/theme/premium_theme.dart`. Mos
 | Token | Value | Status |
 |---|---|---|
 | Base unit | 8 | **Defined**: `PremiumTheme.baseUnit`, with `space(n) = 8 × n` |
-| Common vertical gaps | 16 (×26), 8 (×22), 12 (×20), 24 (×18), 20 (×15), 4 (×12) | Inferred from `SizedBox` heights |
-| Common horizontal gaps | 12 (×31), 8 (×28), 6 (×19) | Inferred from `SizedBox` widths |
-| Screen side padding (home) | 32 (80 on tablet) | Inline, `main.dart:1973` |
-| Badge padding | 6 × 2 | Inferred, most common `EdgeInsets.symmetric` |
+| Common vertical gaps | 16 (×25), 8 (×24), 12 (×21), 20 (×17), 24 (×16), 4 (×12) | Inferred from `SizedBox` heights |
+| Common horizontal gaps | 12 (×35), 8 (×26), 6 (×15) | Inferred from `SizedBox` widths |
+| Screen side padding (home) | 32 (80 on tablet) | Inline, `main.dart:2303` |
+| Badge padding | 6 × 2 | Inferred, the most common badge padding |
 | Card padding | 12, 16 or 20 | Inferred |
 
 In practice the scale is **4 / 6 / 8 / 12 / 16 / 20 / 24 / 32**.
@@ -26,13 +26,13 @@ In practice the scale is **4 / 6 / 8 / 12 / 16 / 20 / 24 / 32**.
 | `mediumRadius` | 12 | **Defined** | Primary buttons, menu button, list rows, plan cards |
 | `largeRadius` | 16 | **Defined** | Cards, vehicle card, activity feed, popup menu, send button |
 | `extraLargeRadius` | 24 | **Defined** | Dialogs, bottom sheets (top corners) |
-| 10 | 10 | Inferred (×16) | Onboarding buttons and rows |
-| 14 | 14 | Inferred (×9) | Plate input, register button, alert banner, CTAs |
-| 20 | 20 | Inferred (×19) | Pills (subscription badge), empty-state tiles |
+| 10 | 10 | Inferred (×17) | Onboarding buttons and rows |
+| 14 | 14 | Inferred (×10) | Plate input, register button, alert banner, CTAs |
+| 20 | 20 | Inferred (×17) | Pills (subscription badge), empty-state tiles |
 | 28 | 28 | Inferred (×4) | Inline Send Alert card |
 | Full circle | — | Inline | Hero button, icon buttons, avatars |
 
-Frequency across `lib/`: 12 (×37), 16 (×29), 8 (×26), 20 (×19), 10 (×16), 14 (×9).
+Frequency across `lib/`: 12 (×41), 16 (×28), 8 (×25), 20 (×17), 10 (×17), 14 (×10).
 
 ## Borders
 
@@ -56,11 +56,11 @@ Material elevation is turned off almost everywhere (`elevation: 0`). Depth comes
 | Accent glow | accent 30% blur 16 (0, 4-8) | Inferred, the most common pattern (hero button, toasts, CTAs) |
 | Soft lift | black 10% blur 4 (0, 2) | Inferred, usually paired with the accent glow |
 
-Most common blur radii: 16 (×14), 8 (×9), 12 (×9). Most common offsets: (0, 4) ×17 and (0, 2) ×13.
+Most common blur radii: 16 (×13), 8 (×10), 12 (×9). Most common offsets: (0, 4) ×17 and (0, 2) ×15.
 
 ## Opacity
 
-Colours are usually tinted by opacity rather than taken from separate tint swatches. The most common alpha values are 0.3 (×52), 0.1 (×47), 0.2 (×29), 0.15 (×26), 0.5 (×24), 0.08 (×17) and 0.05 (×10).
+Colours are usually tinted by opacity rather than taken from separate tint swatches. The most common alpha values are 0.3 (×52), 0.1 (×43), 0.15 (×29), 0.2 (×27), 0.5 (×25), 0.08 (×17) and 0.05 (×10).
 
 Typical pattern:
 - accent at 6-10% for tinted fills
@@ -71,23 +71,25 @@ Typical pattern:
 
 | Component | Size | Source |
 |---|---|---|
-| Hero button | 240 circle (280 on tablet) | `main.dart:2207` |
+| Hero button | 240 circle (280 on tablet) | `main.dart:2666` |
 | Primary button | padding 24 × 16, radius 12, label 16/w600 | **Defined**, `elevatedButtonTheme` |
 | Text button | padding 16 × 12, radius 8 | **Defined**, `textButtonTheme` |
-| Register vehicle button | height 52 (48 compact), max width 260 | `plate_registration_screen.dart:1624` |
-| Menu button | 40 × 40 (44 on tablet) | `main.dart:1995` |
-| Icon button (home) | about 38 px (padding 10 + 18 px icon) | `main.dart:3988` |
-| Count badge | minimum 20 px | `main.dart:3988` |
+| Register vehicle button | height 52 (48 compact), max width 260 | `plate_registration_screen.dart:1673` |
+| Menu button | 40 × 40 (44 on tablet) | `main.dart:2359` |
+| Icon button (home) | about 38 px (padding 10 + 18 px icon) | `main.dart:4477` |
+| Count badge | minimum 20 px | `main.dart:4477` |
 | Plate input | max width 300, text 22-24/w600 | inline alert, plate screen |
-| Emoji tile | 40 (44 on tablet) | `main.dart:5667` |
-| Onboarding progress bar | 32 × 4, radius 2 | `onboarding_flow.dart:226` |
-| Bottom-sheet handle | 40 × 4 | `main.dart:3233, 5991` |
+| Emoji tile | 40 (44 on tablet) | `main.dart:6286` |
+| Onboarding progress bar | 32 × 4, radius 2 | `onboarding_flow.dart:279` |
+| Bottom-sheet handle | 40 × 4 | `main.dart:3719, 6629` |
 | Paywall dialog | max width 340 | `paywall_dialog.dart` |
+| Product tour tooltip | padding 20/18/20/14, radius 18, black 28% shadow blur 24 (0, 10) | `coach_mark_tour.dart` |
+| Product tour spotlight | scrim black at 78%; cutout padded 10 px, radius 18 (circle for the hero button), white 90% ring 2.5 px | `coach_mark_tour.dart` |
 
 ## Navigation
 
 - **App bar:** background matches the screen, elevation 0, title 18/w600 (**defined**).
-- **Home:** there is no tab bar or bottom bar. Navigation goes through the header menu (popup menu, radius 16, elevation 8) and the History/Alerts icon buttons.
+- **Home:** there is no tab bar or bottom bar. Navigation goes through the header menu (popup menu, radius 16, elevation 8; items: My Vehicles, Themes, Alert Sounds, My Secret Keys, Replay Product Tour, Contact & Support) and the History/Alerts icon buttons.
 - **Page transitions:** Cupertino slide on both iOS and Android (**defined**, `pageTransitionsTheme`).
 
 ## Icon sizing
@@ -114,6 +116,8 @@ Typical pattern:
 | `bounceCurve` | `elasticOut` | **Defined** |
 | Press feedback | scale to 0.92 over 100 ms, plus haptic | Inline (hero button) |
 | Toast | 600 ms `easeOutBack` | Inline |
+| Product tour step change | 360 ms `easeInOutCubic`, the spotlight moves between targets | Inline (`coach_mark_tour.dart`) |
+| Sender response banner | slides in over 250 ms `easeOut`, auto-dismisses after 6 s | Inline (`main.dart:1762`, `5851`) |
 
 ## Platform notes
 

@@ -52,8 +52,11 @@ Defined in the `ThemeData.textTheme` in `premium_theme.dart`. No line-heights ar
 | App bar title | 18 | 600 | Primary text colour | `premium_theme.dart`, `appBarTheme` |
 | Elevated (primary) button | 16 | 600 | White on accent | `elevatedButtonTheme` |
 | Text button | 16 | 600 | Accent colour | `textButtonTheme` |
-| Splash "from" label | 10 | 300 Light | Letter-spacing 1.5, teal at 45% opacity | `lib/main.dart:~517` |
-| Splash "DezeTingz" | 15 | 400 | Letter-spacing 0.5, teal-to-coral gradient fill | `lib/main.dart:~547` |
+| Splash "from" label | 10 | 300 Light | Letter-spacing 1.5, teal at 45% opacity | `lib/main.dart:~525` |
+| Splash "DezeTingz" | 15 | 400 | Letter-spacing 0.5, teal-to-coral gradient fill | `lib/main.dart:~556` |
+| Product tour step counter ("1 of 4") | 12 | 700 | Letter-spacing 0.4, accent colour | `lib/core/widgets/coach_mark_tour.dart` |
+| Product tour title | 18 | 700 | Primary text colour | `coach_mark_tour.dart` |
+| Product tour description | 14 | Not set (inherited) | Line height 1.35, secondary text colour | `coach_mark_tour.dart` |
 
 Most screens set many sizes inline rather than through the theme. The recurring inline sizes are listed in [`../design-tokens/design-tokens.md`](../design-tokens/design-tokens.md).
 
