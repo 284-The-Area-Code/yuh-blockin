@@ -11,11 +11,12 @@ import 'premium_theme.dart';
 /// Every other theme keeps the existing home-screen treatment; callers check
 /// [BviPrideHome.isActive] before using anything in this file.
 ///
-/// Image sources (both public domain, from Wikimedia Commons):
-/// - assets/images/bvi_union_canton.png: canton cropped from
-///   "Flag of the British Virgin Islands.svg".
-/// - assets/images/bvi_coat_of_arms.png: "Coat of arms of the British
-///   Virgin Islands.svg" (CC0), including the VIGILATE scroll.
+/// Image sources:
+/// - assets/images/bvi_map.png: island outlines from geoBoundaries
+///   (gbOpen VGB ADM0, CC BY 4.0, traced from 2021 Sentinel-2 imagery).
+///   CC BY 4.0 requires a credit line in the app.
+/// - assets/images/bvi_flag.png: "Flag of the British Virgin Islands.svg"
+///   from Wikimedia Commons (public domain).
 class BviPrideHome {
   BviPrideHome._();
 
@@ -41,10 +42,8 @@ class BviPrideHome {
   static const Color labelColor = Color(0xFFD4D7DE);
   static const Color mutedText = Color(0xFFC4C8D2);
 
-  // Premium gold, kept to thin borders, text and small icons
-  static const Color gold = Color(0xFFE8C04A);
+  // Gold accents on the Add your vehicle card
   static const Color goldBorder = Color(0xFFB8932E);
-  static const Color goldFill = Color(0x73564614); // rgba(86,70,20,.45)
   static const Color goldPlus = Color(0xFFE0B43C);
   static const Color goldPlusFill = Color(0x59967A1E); // rgba(150,120,30,.35)
   static const Color vehicleCardFill = Color(0x8C2A2824); // rgba(42,40,36,.55)
@@ -81,8 +80,8 @@ class BviPrideHome {
   );
 }
 
-/// Faint Union Jack canton (top left, fading into the background) and the
-/// BVI coat of arms (top right), drawn behind the home-screen content.
+/// Faint map of the British Virgin Islands across the top of the home
+/// screen, with soft edges so it blends into the background.
 class BviPrideWatermark extends StatelessWidget {
   const BviPrideWatermark({super.key});
 
@@ -90,51 +89,115 @@ class BviPrideWatermark extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final topInset = MediaQuery.of(context).padding.top;
-    // Layout is proportioned to a 412 dp wide reference screen and capped so
-    // tablets don't get an oversized watermark.
+    // Proportioned to a 412 dp wide reference screen and capped so tablets
+    // don't get an oversized map.
     final w = math.min(size.width, 520.0);
     final scale = w / 412.0;
+    final mapWidth = 400 * scale;
 
     return IgnorePointer(
       child: Stack(
         children: [
           Positioned(
-            left: -30 * scale,
-            top: topInset,
-            width: 236 * scale,
-            height: 128 * scale,
+            left: (size.width - mapWidth) / 2,
+            top: topInset - 2 * scale,
+            width: mapWidth,
             child: Opacity(
-              opacity: 0.34,
+              opacity: 0.28,
               child: ShaderMask(
                 blendMode: BlendMode.dstIn,
-                shaderCallback: (rect) => const LinearGradient(
-                  // Matches a 120deg CSS fade: solid near the top-left
-                  // corner, gone by the lower right.
-                  begin: Alignment(-0.87, -0.5),
-                  end: Alignment(0.87, 0.5),
-                  colors: [Colors.white, Colors.white, Colors.transparent],
-                  stops: [0.0, 0.30, 0.88],
+                // Soft edges all round so no boundary of the image shows.
+                shaderCallback: (rect) => const RadialGradient(
+                  radius: 0.8,
+                  colors: [
+                    Colors.white,
+                    Colors.white,
+                    Color(0x99FFFFFF),
+                    Colors.transparent
+                  ],
+                  stops: [0.0, 0.55, 0.75, 1.0],
                 ).createShader(rect),
                 child: Image.asset(
-                  'assets/images/bvi_union_canton.png',
-                  fit: BoxFit.fill,
+                  'assets/images/bvi_map.png',
+                  fit: BoxFit.contain,
                 ),
               ),
             ),
           ),
-          Positioned(
-            left: size.width - (150 * scale),
-            top: topInset + 64 * scale,
-            width: 124 * scale,
-            child: Opacity(
-              opacity: 0.5,
-              child: Image.asset(
-                'assets/images/bvi_coat_of_arms.png',
-                fit: BoxFit.contain,
+        ],
+      ),
+    );
+  }
+}
+
+/// Premium marker for BVI Pride: a miniature BVI flag set in the same glass
+/// capsule as the History and Alerts buttons, with a soft blue edge and glow
+/// matching the island map.
+class BviPremiumPin extends StatelessWidget {
+  const BviPremiumPin({super.key, this.isTablet = false});
+
+  final bool isTablet;
+
+  @override
+  Widget build(BuildContext context) {
+    final flagWidth = isTablet ? 42.0 : 36.0;
+
+    return Semantics(
+      label: 'Premium',
+      child: Container(
+        width: isTablet ? 76 : 68,
+        height: isTablet ? 42 : 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: BviPrideHome.glassFill,
+          borderRadius: BorderRadius.circular(isTablet ? 21 : 19),
+          border: Border.all(color: BviPrideHome.glassBorder, width: 1.5),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(3.5),
+            boxShadow: const [
+              BoxShadow(color: Color(0x8CC8D6EE), spreadRadius: 1),
+              BoxShadow(color: Color(0x6696B4E6), blurRadius: 12),
+              BoxShadow(
+                color: Color(0x73000000),
+                blurRadius: 5,
+                offset: Offset(0, 2),
               ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3.5),
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/images/bvi_flag.png',
+                  width: flagWidth,
+                  height: flagWidth / 2,
+                  fit: BoxFit.cover,
+                ),
+                // Soft gloss, like an enamel pin.
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: const Alignment(-0.6, -1),
+                        end: const Alignment(0.6, 1),
+                        colors: [
+                          Colors.white.withValues(alpha: 0.28),
+                          Colors.white.withValues(alpha: 0.06),
+                          Colors.white.withValues(alpha: 0.0),
+                          const Color(0x1496B4E6),
+                        ],
+                        stops: const [0.0, 0.40, 0.42, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

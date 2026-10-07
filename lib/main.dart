@@ -2871,9 +2871,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
               // App name / Brand identity
               Text(
-                'YUH BLOCKIN\'',
+                'Yuh Blockin.',
                 style: TextStyle(
-                  fontSize: isBvi ? (isTablet ? 24 : 21) : (isTablet ? 18 : 16),
+                  fontSize: isBvi ? (isTablet ? 25 : 22) : (isTablet ? 18 : 16),
                   fontWeight: isBvi ? FontWeight.w700 : FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -3469,30 +3469,31 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       // Service not initialized yet, use defaults
     }
 
-    // BVI Pride premium pill: dark glass with a thin gold border.
     final isBviPremium = isPremium && BviPrideHome.isActive;
 
+    void openSubscriptionStatus() {
+      HapticFeedback.lightImpact();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const SubscriptionStatusScreen(),
+        ),
+      );
+    }
+
+    // BVI Pride: premium is shown as the mini BVI flag pin, icon only.
+    if (isBviPremium) {
+      return GestureDetector(
+        onTap: openSubscriptionStatus,
+        child: const BviPremiumPin(),
+      );
+    }
+
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const SubscriptionStatusScreen(),
-          ),
-        );
-      },
+      onTap: openSubscriptionStatus,
       child: AnimatedContainer(
         duration: PremiumTheme.fastDuration,
-        padding: isBviPremium
-            ? const EdgeInsets.symmetric(horizontal: 18, vertical: 7)
-            : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: isBviPremium
-            ? BoxDecoration(
-                color: BviPrideHome.goldFill,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: BviPrideHome.goldBorder, width: 1.5),
-              )
-            : BoxDecoration(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
           color: isPremium
               ? PremiumTheme.accentColor.withValues(alpha: 0.15)
               : (remaining == 0
@@ -3517,24 +3518,20 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   : (remaining == 0
                       ? Icons.warning_amber_rounded
                       : Icons.flash_on_rounded),
-              size: isBviPremium ? 18 : 14,
-              color: isBviPremium
-                  ? BviPrideHome.gold
-                  : isPremium
+              size: 14,
+              color: isPremium
                   ? PremiumTheme.accentColor
                   : (remaining == 0
                       ? Colors.red.shade400
                       : PremiumTheme.secondaryTextColor),
             ),
-            SizedBox(width: isBviPremium ? 8 : 6),
+            const SizedBox(width: 6),
             Text(
               isPremium ? 'Premium' : '$used/$limit today',
               style: TextStyle(
-                fontSize: isBviPremium ? 15 : 12,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isBviPremium
-                    ? BviPrideHome.gold
-                    : isPremium
+                color: isPremium
                     ? PremiumTheme.accentColor
                     : (remaining == 0
                         ? Colors.red.shade400
