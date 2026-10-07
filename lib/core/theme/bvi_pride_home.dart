@@ -81,7 +81,9 @@ class BviPrideHome {
 }
 
 /// Faint map of the British Virgin Islands across the top of the home
-/// screen, with soft edges so it blends into the background.
+/// screen. Sized so the whole archipelago, Anegada included, fits between
+/// the status bar and the hero button; the image's transparent margin and
+/// built-in glow mean no edge of it shows.
 class BviPrideWatermark extends StatelessWidget {
   const BviPrideWatermark({super.key});
 
@@ -93,34 +95,20 @@ class BviPrideWatermark extends StatelessWidget {
     // don't get an oversized map.
     final w = math.min(size.width, 520.0);
     final scale = w / 412.0;
-    final mapWidth = 400 * scale;
+    final mapWidth = 316 * scale;
 
     return IgnorePointer(
       child: Stack(
         children: [
           Positioned(
             left: (size.width - mapWidth) / 2,
-            top: topInset - 2 * scale,
+            top: topInset - 14 * scale,
             width: mapWidth,
             child: Opacity(
-              opacity: 0.28,
-              child: ShaderMask(
-                blendMode: BlendMode.dstIn,
-                // Soft edges all round so no boundary of the image shows.
-                shaderCallback: (rect) => const RadialGradient(
-                  radius: 0.8,
-                  colors: [
-                    Colors.white,
-                    Colors.white,
-                    Color(0x99FFFFFF),
-                    Colors.transparent
-                  ],
-                  stops: [0.0, 0.55, 0.75, 1.0],
-                ).createShader(rect),
-                child: Image.asset(
-                  'assets/images/bvi_map.png',
-                  fit: BoxFit.contain,
-                ),
+              opacity: 0.3,
+              child: Image.asset(
+                'assets/images/bvi_map.png',
+                fit: BoxFit.contain,
               ),
             ),
           ),
