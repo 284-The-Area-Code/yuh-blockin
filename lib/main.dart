@@ -705,6 +705,10 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   // Duplicate alert prevention - tracks recently alerted plates
   static final Map<String, DateTime> _recentlyAlertedPlates = {};
+
+  /// When this device first received a reply to each sent alert. Drives the
+  /// BVI Pride live ring; replies from earlier sessions are not shown there.
+  final Map<String, DateTime> _bviResponseSeenAt = {};
   static const int _duplicateAlertCooldownMinutes = 5;
 
   late AnimationController _alertModeController;
@@ -1692,6 +1696,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         // Mark this alert as processed to prevent duplicate marking
         _acknowledgedAlertIds.add(alert.id);
 
+        // Live ring: only count replies that arrived just now, not old ones
+        // replayed when the stream first loads.
+        if (DateTime.now().difference(alert.responseAt!.toLocal()).abs() <
+            const Duration(minutes: 2)) {
+          _bviResponseSeenAt[alert.id] = DateTime.now();
+        }
+
         // Increment "They Moved" counter - someone responded to your alert
         _statsService.incrementSituationsResolved().then((_) {
           _loadUserStats(); // Refresh stats display
@@ -1775,6 +1786,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   /// in that case — see _showResponseNotification above).
   void _showInAppResponseBanner(String title, String body) {
     if (!mounted) return;
+
+    // BVI Pride shows the reply inside the hero ring, so skip the duplicate
+    // banner when the ring is showing this reply and isn't covered by the
+    // inline alert card. Replies to older alerts still get the banner.
+    final live = _bviLiveStatus();
+    if (live != null && !live.isCountdown && !_isAlertModeActive) {
+      HapticFeedback.lightImpact();
+      setState(() {});
+      return;
+    }
 
     setState(() {
       _currentResponseTitle = title;
@@ -2708,9 +2729,45 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     ];
   }
 
+  /// Live ring state for the latest sent alert (BVI Pride only), or null.
+  BviLiveStatus? _bviLiveStatus() {
+    if (!BviPrideHome.isActive) return null;
+    final latest =
+        _recentSentAlerts.where((a) => !a.hiddenBySender).firstOrNull;
+    if (latest == null) return null;
+
+    // Alerts only store a plate hash; show the plate when it was sent from
+    // this device in this session, matched by send time.
+    final sentAt = latest.createdAt.toLocal();
+    String? plate;
+    for (final entry in _recentlyAlertedPlates.entries) {
+      if (entry.value.difference(sentAt).abs() < const Duration(seconds: 90)) {
+        plate = entry.key;
+      }
+    }
+
+    return BviLiveStatus.fromLatestAlert(
+      createdAt: latest.createdAt,
+      readAt: latest.readAt,
+      response: latest.response,
+      responseSeenAt: _bviResponseSeenAt[latest.id],
+      plate: plate,
+    );
+  }
+
+  void _openAlertHistory() {
+    if (_currentUserId == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AlertHistoryScreen(userId: _currentUserId!),
+      ),
+    );
+  }
+
   Widget _buildHeroButton(ThemeData theme, bool isTablet) {
     final buttonSize = isTablet ? 280.0 : 240.0;
     final isBvi = BviPrideHome.isActive;
+    final liveStatus = _bviLiveStatus();
 
     return AnimatedBuilder(
       animation: _entranceController,
@@ -2730,7 +2787,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         },
         onTapUp: (_) {
           setState(() => _isPressed = false);
-          _handleAlertTap();
+          // While the BVI ring shows a live alert, tapping opens its details.
+          if (liveStatus != null) {
+            _openAlertHistory();
+          } else {
+            _handleAlertTap();
+          }
         },
         onTapCancel: () {
           setState(() => _isPressed = false);
@@ -2742,11 +2804,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           // BVI Pride: frosted glass with a rainbow rim. Every other theme
           // keeps the existing radial-gradient button unchanged.
           child: isBvi
-              ? BviPrideHeroRing(
-                  size: buttonSize,
-                  pressed: _isPressed,
-                  child: _buildHeroButtonContent(isTablet),
-                )
+              ? (liveStatus != null
+                  ? BviPrideLiveRing(
+                      key: ValueKey(liveStatus.kind),
+                      size: buttonSize,
+                      pressed: _isPressed,
+                      status: liveStatus,
+                      onExpired: () {
+                        if (mounted) setState(() {});
+                      },
+                    )
+                  : BviPrideHeroRing(
+                      size: buttonSize,
+                      pressed: _isPressed,
+                      child: _buildHeroButtonContent(isTablet),
+                    ))
               : AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   curve: Curves.easeOut,
@@ -5444,6 +5516,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         // Check if we have very limited vertical space or activity feed is shown
         final hasActivityFeed = _hasRecentAlerts();
         final isVeryCompact = constraints.maxHeight < 550;
+        final bviLive = _bviLiveStatus() != null;
 
         // Decide if we should enable scrolling and disable "footer pushing"
         final isScrollingActive = isVeryCompact || hasActivityFeed;
@@ -5507,15 +5580,25 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
               // Subscription usage badge
               SizedBox(height: isCompact ? 8 : 12),
-              _buildSubscriptionBadge(),
+              // BVI Pride: while the ring shows a live alert, the secondary
+              // items step back so attention stays on the ring.
+              AnimatedOpacity(
+                opacity: bviLive ? 0.45 : 1.0,
+                duration: PremiumTheme.slowDuration,
+                child: _buildSubscriptionBadge(),
+              ),
 
               // Active vehicle display OR setup hint
               SizedBox(height: isCompact ? 8 : (isTablet ? 24 : 16)),
-              KeyedSubtree(
-                key: _tourVehicleKey,
-                child: _primaryPlate != null
-                    ? _buildActiveVehicleDisplay(isTablet)
-                    : _buildSetupHint(isTablet),
+              AnimatedOpacity(
+                opacity: bviLive ? 0.45 : 1.0,
+                duration: PremiumTheme.slowDuration,
+                child: KeyedSubtree(
+                  key: _tourVehicleKey,
+                  child: _primaryPlate != null
+                      ? _buildActiveVehicleDisplay(isTablet)
+                      : _buildSetupHint(isTablet),
+                ),
               ),
 
               // Recent activity feed (only shows last 15 minutes)

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -226,4 +227,389 @@ class BviPrideHeroRing extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What the BVI Pride hero ring is showing for the user's latest sent alert.
+enum BviLiveKind { waiting, seen, fiveMinutes, moving, cantMove, wrongCar }
+
+/// A live state for the hero ring, built from the most recent sent alert.
+class BviLiveStatus {
+  const BviLiveStatus({
+    required this.kind,
+    required this.start,
+    required this.window,
+    this.plate,
+  });
+
+  final BviLiveKind kind;
+  final DateTime start;
+  final Duration window;
+
+  /// Plate text, only known when the alert was sent from this device during
+  /// the current session (alerts themselves only store a plate hash).
+  final String? plate;
+
+  /// The app's own reply window for a sent alert (see UnacknowledgedAlertService).
+  static const Duration replyWindow = Duration(minutes: 10);
+  static const Duration fiveMinuteWindow = Duration(minutes: 5);
+  static const Duration replyFlash = Duration(seconds: 6);
+
+  bool get isCountdown =>
+      kind == BviLiveKind.waiting ||
+      kind == BviLiveKind.seen ||
+      kind == BviLiveKind.fiveMinutes;
+
+  DateTime get endsAt => start.add(window);
+
+  bool isActiveAt(DateTime now) => now.isBefore(endsAt);
+
+  /// Picks the ring state for the latest sent alert, or null when nothing is
+  /// live and the normal "Tap to alert" button should show.
+  ///
+  /// [responseSeenAt] is when this device first received the reply; replies
+  /// that arrived in an earlier session have none and are not shown.
+  static BviLiveStatus? fromLatestAlert({
+    required DateTime createdAt,
+    DateTime? readAt,
+    String? response,
+    DateTime? responseSeenAt,
+    String? plate,
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+    BviLiveStatus? status;
+
+    if (response == null) {
+      status = BviLiveStatus(
+        kind: readAt != null ? BviLiveKind.seen : BviLiveKind.waiting,
+        start: createdAt.toLocal(),
+        window: replyWindow,
+        plate: plate,
+      );
+    } else if (responseSeenAt != null) {
+      final kind = switch (response) {
+        '5_minutes' => BviLiveKind.fiveMinutes,
+        'moving_now' => BviLiveKind.moving,
+        'cant_move' => BviLiveKind.cantMove,
+        'wrong_car' => BviLiveKind.wrongCar,
+        _ => null,
+      };
+      if (kind != null) {
+        status = BviLiveStatus(
+          kind: kind,
+          start: responseSeenAt,
+          window:
+              kind == BviLiveKind.fiveMinutes ? fiveMinuteWindow : replyFlash,
+          plate: plate,
+        );
+      }
+    }
+
+    if (status == null || !status.isActiveAt(current)) return null;
+    return status;
+  }
+}
+
+/// BVI Pride hero ring in a live state: the rainbow rim becomes a countdown
+/// (or a full ring for a reply), with the status shown inside the circle.
+/// Ticks itself once a second and calls [onExpired] when the state ends so
+/// the home screen can return to the normal button.
+class BviPrideLiveRing extends StatefulWidget {
+  const BviPrideLiveRing({
+    super.key,
+    required this.size,
+    required this.pressed,
+    required this.status,
+    required this.onExpired,
+  });
+
+  final double size;
+  final bool pressed;
+  final BviLiveStatus status;
+  final VoidCallback onExpired;
+
+  @override
+  State<BviPrideLiveRing> createState() => _BviPrideLiveRingState();
+}
+
+class _BviPrideLiveRingState extends State<BviPrideLiveRing> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  void _tick() {
+    if (!mounted) return;
+    if (!widget.status.isActiveAt(DateTime.now())) {
+      _ticker?.cancel();
+      widget.onExpired();
+      return;
+    }
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = widget.status;
+    final remaining = status.endsAt.difference(DateTime.now());
+    final clamped = remaining.isNegative ? Duration.zero : remaining;
+    final progress = status.isCountdown
+        ? (clamped.inMilliseconds / status.window.inMilliseconds)
+            .clamp(0.0, 1.0)
+        : 1.0;
+    const rim = 2.5;
+
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _BviArcRingPainter(
+                  progress: progress,
+                  rimWidth: rim,
+                  glowOpacity: status.isCountdown ? 0.45 : 0.75,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(rim),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  center: const Alignment(0, -0.56),
+                  radius: 0.95,
+                  colors: widget.pressed
+                      ? const [
+                          Color(0xFF474D5C),
+                          Color(0xFF2E3442),
+                          Color(0xFF1F2430),
+                          Color(0xFF151923),
+                        ]
+                      : const [
+                          Color(0xFF5A6070),
+                          Color(0xFF3A4050),
+                          Color(0xFF262B38),
+                          Color(0xFF1A1E2A),
+                        ],
+                  stops: const [0.0, 0.32, 0.62, 1.0],
+                ),
+              ),
+              child: Center(child: _buildContent(status, clamped)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BviLiveStatus status, Duration remaining) {
+    final mm = remaining.inMinutes;
+    final ss = (remaining.inSeconds % 60).toString().padLeft(2, '0');
+
+    String? label;
+    IconData? labelIcon;
+    String headline;
+    String caption;
+    IconData? bigIcon;
+
+    switch (status.kind) {
+      case BviLiveKind.waiting:
+        label = 'SENT · WAITING';
+        labelIcon = Icons.send_rounded;
+        headline = '$mm:$ss';
+        caption = 'Waiting for reply';
+      case BviLiveKind.seen:
+        label = 'SEEN';
+        labelIcon = Icons.visibility_outlined;
+        headline = '$mm:$ss';
+        caption = "They've seen your alert";
+      case BviLiveKind.fiveMinutes:
+        label = '5-MINUTE COUNTDOWN';
+        headline = '$mm:$ss';
+        caption = 'Give them 5 minutes';
+      case BviLiveKind.moving:
+        bigIcon = Icons.check_circle_outline_rounded;
+        headline = "They're moving!";
+        caption = 'Replied just now';
+      case BviLiveKind.cantMove:
+        bigIcon = Icons.do_not_disturb_on_outlined;
+        headline = "Can't move right now";
+        caption = 'Replied just now';
+      case BviLiveKind.wrongCar:
+        bigIcon = Icons.help_outline_rounded;
+        headline = 'Wrong car!';
+        caption = 'Replied just now';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (label != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (labelIcon != null) ...[
+                  Icon(labelIcon, size: 14, color: BviPrideHome.mutedText),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                    color: BviPrideHome.mutedText,
+                  ),
+                ),
+              ],
+            ),
+          if (bigIcon != null) Icon(bigIcon, size: 52, color: Colors.white),
+          const SizedBox(height: 6),
+          Text(
+            headline,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: status.isCountdown ? 44 : 21,
+              fontWeight: FontWeight.w700,
+              height: 1.05,
+              color: Colors.white,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            caption,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: BviPrideHome.mutedText,
+            ),
+          ),
+          if (status.plate != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              child: Text(
+                status.plate!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.3,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Rainbow rim drawn as an arc for [progress] (1.0 = full ring), with a dim
+/// track for the elapsed part, a soft glow and a bright dot at the arc's end.
+class _BviArcRingPainter extends CustomPainter {
+  _BviArcRingPainter({
+    required this.progress,
+    required this.rimWidth,
+    required this.glowOpacity,
+  });
+
+  final double progress;
+  final double rimWidth;
+  final double glowOpacity;
+
+  static const Color _track = Color(0xFF2A2F3D);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = size.width / 2 - rimWidth / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final shader = BviPrideHome.rimGradient.createShader(rect);
+    const start = -math.pi / 2;
+    final sweep = 2 * math.pi * progress;
+
+    if (progress < 1.0) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = rimWidth
+          ..color = _track,
+      );
+    }
+    if (sweep <= 0) return;
+
+    // Glow
+    canvas.drawArc(
+      rect,
+      start,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 12
+        ..shader = shader
+        ..color = Colors.white.withValues(alpha: glowOpacity)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+    );
+    // Crisp rim
+    canvas.drawArc(
+      rect,
+      start,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = rimWidth
+        ..strokeCap = progress < 1.0 ? StrokeCap.round : StrokeCap.butt
+        ..shader = shader,
+    );
+
+    if (progress < 1.0) {
+      final end = start + sweep;
+      final tip = center + Offset(math.cos(end), math.sin(end)) * radius;
+      canvas.drawCircle(
+        tip,
+        7,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.5)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+      canvas.drawCircle(tip, 4, Paint()..color = Colors.white);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BviArcRingPainter old) =>
+      old.progress != progress ||
+      old.rimWidth != rimWidth ||
+      old.glowOpacity != glowOpacity;
 }
