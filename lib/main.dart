@@ -13,6 +13,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
 
 import 'core/theme/premium_theme.dart';
+import 'core/theme/bvi_pride_home.dart';
 import 'core/widgets/coach_mark_tour.dart';
 import 'core/theme/theme_notifier.dart';
 import 'core/services/plate_storage_service.dart';
@@ -2197,25 +2198,48 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           }
         }
       },
-      child: Scaffold(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        // BVI Pride is a dark screen: use light system bar icons there.
+        // Other themes keep the app-wide style set in main().
+        value: BviPrideHome.isActive
+            ? const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                statusBarBrightness: Brightness.dark,
+                systemNavigationBarColor: Colors.transparent,
+                systemNavigationBarIconBrightness: Brightness.light,
+              )
+            : const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.dark,
+                systemNavigationBarColor: Colors.transparent,
+                systemNavigationBarIconBrightness: Brightness.dark,
+              ),
+        child: Scaffold(
         backgroundColor: PremiumTheme.backgroundColor,
         body: Stack(
           children: [
             // Premium background gradient layer
             Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFFF8FBFF), // Very light blue tint at top
-                    PremiumTheme.backgroundColor,
-                    PremiumTheme.backgroundColor,
-                  ],
-                  stops: const [0.0, 0.3, 1.0],
-                ),
+                gradient: BviPrideHome.isActive
+                    ? BviPrideHome.backgroundGradient
+                    : LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          const Color(0xFFF8FBFF), // Very light blue tint at top
+                          PremiumTheme.backgroundColor,
+                          PremiumTheme.backgroundColor,
+                        ],
+                        stops: const [0.0, 0.3, 1.0],
+                      ),
               ),
             ),
+
+            // BVI Pride: faint Union Jack canton and coat of arms watermark
+            if (BviPrideHome.isActive)
+              const Positioned.fill(child: BviPrideWatermark()),
 
             // Ghosted car icon for brand reinforcement
             Positioned(
@@ -2328,6 +2352,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               _buildResponseBanner(isTablet),
           ],
         ), // closes Stack
+      ),
       ), // closes Scaffold
     ); // closes PopScope
   }
@@ -2345,12 +2370,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           // Logo on the left with blue accent filter
           ColorFiltered(
             colorFilter: ColorFilter.mode(
-              PremiumTheme.accentColor,
+              BviPrideHome.isActive ? Colors.white : PremiumTheme.accentColor,
               BlendMode.srcIn,
             ),
             child: Image.asset(
               'assets/images/logo_transparent.png',
-              height: isTablet ? 60 : 48,
+              height: BviPrideHome.isActive
+                  ? (isTablet ? 72 : 60)
+                  : (isTablet ? 60 : 48),
               fit: BoxFit.contain,
             ),
           ),
@@ -2360,18 +2387,24 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               width: isTablet ? 44 : 40,
               height: isTablet ? 44 : 40,
               alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: PremiumTheme.surfaceColor.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: PremiumTheme.accentColor.withValues(alpha: 0.1),
-                  width: 1,
-                ),
-              ),
+              decoration: BviPrideHome.isActive
+                  ? null
+                  : BoxDecoration(
+                      color: PremiumTheme.surfaceColor.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: PremiumTheme.accentColor.withValues(alpha: 0.1),
+                        width: 1,
+                      ),
+                    ),
               child: Icon(
                 Icons.menu_rounded,
-                color: PremiumTheme.accentColor,
-                size: isTablet ? 24 : 22,
+                color: BviPrideHome.isActive
+                    ? Colors.white
+                    : PremiumTheme.accentColor,
+                size: BviPrideHome.isActive
+                    ? (isTablet ? 30 : 28)
+                    : (isTablet ? 24 : 22),
               ),
             ),
             offset: const Offset(0, 48),
@@ -2664,6 +2697,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   Widget _buildHeroButton(ThemeData theme, bool isTablet) {
     final buttonSize = isTablet ? 280.0 : 240.0;
+    final isBvi = BviPrideHome.isActive;
 
     return AnimatedBuilder(
       animation: _entranceController,
@@ -2692,75 +2726,89 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
           scale: _isPressed ? 0.92 : 1.0,
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            width: buttonSize,
-            height: buttonSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              // Premium radial gradient for depth - darken when pressed.
-              // Theme-aware: BVI Pride gets its own blue-dominant treatment
-              // via _heroGradientColors()/_heroShadow(); every other theme
-              // resolves to today's exact hardcoded values, unchanged.
-              gradient: RadialGradient(
-                center: const Alignment(-0.3, -0.3), // Offset for 3D depth
-                radius: 1.2,
-                colors: _heroGradientColors(),
-                stops: const [0.0, 0.5, 1.0],
-              ),
-              boxShadow: _heroShadow(),
-            ),
-            child: Stack(
-              children: [
-                // Button content
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Megaphone icon - bold, action-oriented
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 100),
-                        transform: Matrix4.translationValues(
-                            0.0, _isPressed ? 4.0 : 0.0, 0.0),
-                        child: Icon(
-                          Icons.campaign_rounded,
-                          size: isTablet ? 56 : 48,
-                          color: _isPressed
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : Colors.white,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // App name / Brand identity
-                      Text(
-                        'YUH BLOCKIN\'',
-                        style: TextStyle(
-                          fontSize: isTablet ? 18 : 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Subtle tap hint
-                      Text(
-                        'Tap to alert',
-                        style: TextStyle(
-                          fontSize: isTablet ? 12 : 11,
-                          fontWeight: FontWeight.w400,
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
+          // BVI Pride: frosted glass with a rainbow rim. Every other theme
+          // keeps the existing radial-gradient button unchanged.
+          child: isBvi
+              ? BviPrideHeroRing(
+                  size: buttonSize,
+                  pressed: _isPressed,
+                  child: _buildHeroButtonContent(isTablet),
+                )
+              : AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  width: buttonSize,
+                  height: buttonSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    // Premium radial gradient for depth - darken when pressed.
+                    gradient: RadialGradient(
+                      center:
+                          const Alignment(-0.3, -0.3), // Offset for 3D depth
+                      radius: 1.2,
+                      colors: _heroGradientColors(),
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                    boxShadow: _heroShadow(),
                   ),
+                  child: _buildHeroButtonContent(isTablet),
                 ),
-              ],
-            ),
-          ),
         ),
       ),
+    );
+  }
+
+  /// Icon and labels inside the hero button.
+  Widget _buildHeroButtonContent(bool isTablet) {
+    final isBvi = BviPrideHome.isActive;
+
+    return Stack(
+      children: [
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Megaphone icon - bold, action-oriented
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                transform:
+                    Matrix4.translationValues(0.0, _isPressed ? 4.0 : 0.0, 0.0),
+                child: Icon(
+                  Icons.campaign_rounded,
+                  size: isBvi ? (isTablet ? 60 : 52) : (isTablet ? 56 : 48),
+                  color: _isPressed
+                      ? Colors.white.withValues(alpha: 0.9)
+                      : Colors.white,
+                ),
+              ),
+
+              SizedBox(height: isBvi ? 6 : 8),
+
+              // App name / Brand identity
+              Text(
+                'YUH BLOCKIN\'',
+                style: TextStyle(
+                  fontSize: isBvi ? (isTablet ? 24 : 21) : (isTablet ? 18 : 16),
+                  fontWeight: isBvi ? FontWeight.w700 : FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: isBvi ? 6 : 4),
+              // Subtle tap hint
+              Text(
+                'Tap to alert',
+                style: TextStyle(
+                  fontSize: isBvi ? (isTablet ? 15 : 14) : (isTablet ? 12 : 11),
+                  fontWeight: isBvi ? FontWeight.w500 : FontWeight.w400,
+                  color: isBvi
+                      ? BviPrideHome.mutedText
+                      : Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -3304,13 +3352,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         icon,
-        const SizedBox(height: 6),
+        SizedBox(height: BviPrideHome.isActive ? 8 : 6),
         Text(
           label,
           style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: PremiumTheme.secondaryTextColor,
+            fontSize: BviPrideHome.isActive ? 15 : 13,
+            fontWeight:
+                BviPrideHome.isActive ? FontWeight.w400 : FontWeight.w500,
+            color: BviPrideHome.isActive
+                ? BviPrideHome.labelColor
+                : PremiumTheme.secondaryTextColor,
           ),
         ),
       ],
@@ -3333,6 +3384,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       // Service not initialized yet, use defaults
     }
 
+    // BVI Pride premium pill: dark glass with a thin gold border.
+    final isBviPremium = isPremium && BviPrideHome.isActive;
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -3344,8 +3398,16 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       },
       child: AnimatedContainer(
         duration: PremiumTheme.fastDuration,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
+        padding: isBviPremium
+            ? const EdgeInsets.symmetric(horizontal: 18, vertical: 7)
+            : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: isBviPremium
+            ? BoxDecoration(
+                color: BviPrideHome.goldFill,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: BviPrideHome.goldBorder, width: 1.5),
+              )
+            : BoxDecoration(
           color: isPremium
               ? PremiumTheme.accentColor.withValues(alpha: 0.15)
               : (remaining == 0
@@ -3370,20 +3432,24 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   : (remaining == 0
                       ? Icons.warning_amber_rounded
                       : Icons.flash_on_rounded),
-              size: 14,
-              color: isPremium
+              size: isBviPremium ? 18 : 14,
+              color: isBviPremium
+                  ? BviPrideHome.gold
+                  : isPremium
                   ? PremiumTheme.accentColor
                   : (remaining == 0
                       ? Colors.red.shade400
                       : PremiumTheme.secondaryTextColor),
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: isBviPremium ? 8 : 6),
             Text(
               isPremium ? 'Premium' : '$used/$limit today',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: isBviPremium ? 15 : 12,
                 fontWeight: FontWeight.w500,
-                color: isPremium
+                color: isBviPremium
+                    ? BviPrideHome.gold
+                    : isPremium
                     ? PremiumTheme.accentColor
                     : (remaining == 0
                         ? Colors.red.shade400
@@ -4495,7 +4561,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         clipBehavior: Clip.none, // Allow badge to overflow
         children: [
           Container(
-            padding: EdgeInsets.all(isTablet ? 12 : 10),
+            padding: BviPrideHome.isActive
+                ? EdgeInsets.all(isTablet ? 15 : 13)
+                : EdgeInsets.all(isTablet ? 12 : 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -4505,17 +4573,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         Colors.green.shade500.withValues(alpha: 0.15),
                         Colors.green.shade600.withValues(alpha: 0.08),
                       ]
-                    : [
-                        PremiumTheme.surfaceColor.withValues(alpha: 0.6),
-                        PremiumTheme.surfaceColor.withValues(alpha: 0.4),
-                      ],
+                    : BviPrideHome.isActive
+                        ? const [BviPrideHome.glassFill, BviPrideHome.glassFill]
+                        : [
+                            PremiumTheme.surfaceColor.withValues(alpha: 0.6),
+                            PremiumTheme.surfaceColor.withValues(alpha: 0.4),
+                          ],
               ),
               shape: BoxShape.circle,
               border: Border.all(
                 color: hasNewStats
                     ? Colors.green.withValues(alpha: 0.2)
-                    : PremiumTheme.accentColor.withValues(alpha: 0.1),
-                width: 1,
+                    : BviPrideHome.isActive
+                        ? BviPrideHome.glassBorder
+                        : PremiumTheme.accentColor.withValues(alpha: 0.1),
+                width: BviPrideHome.isActive && !hasNewStats ? 1.5 : 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -4533,7 +4605,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               size: isTablet ? 20 : 18,
               color: hasNewStats
                   ? Colors.green.shade700
-                  : PremiumTheme.tertiaryTextColor,
+                  : BviPrideHome.isActive
+                      ? BviPrideHome.iconColor
+                      : PremiumTheme.tertiaryTextColor,
             ),
           ),
 
@@ -4967,7 +5041,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         clipBehavior: Clip.none, // Allow badge to overflow
         children: [
           Container(
-            padding: EdgeInsets.all(isTablet ? 12 : 10),
+            padding: BviPrideHome.isActive
+                ? EdgeInsets.all(isTablet ? 15 : 13)
+                : EdgeInsets.all(isTablet ? 12 : 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -4977,17 +5053,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         Colors.orange.shade500.withValues(alpha: 0.2),
                         Colors.red.shade500.withValues(alpha: 0.1),
                       ]
-                    : [
-                        PremiumTheme.surfaceColor.withValues(alpha: 0.6),
-                        PremiumTheme.surfaceColor.withValues(alpha: 0.4),
-                      ],
+                    : BviPrideHome.isActive
+                        ? const [BviPrideHome.glassFill, BviPrideHome.glassFill]
+                        : [
+                            PremiumTheme.surfaceColor.withValues(alpha: 0.6),
+                            PremiumTheme.surfaceColor.withValues(alpha: 0.4),
+                          ],
               ),
               shape: BoxShape.circle,
               border: Border.all(
                 color: showingUrgent
                     ? Colors.orange.withValues(alpha: 0.3)
-                    : PremiumTheme.accentColor.withValues(alpha: 0.1),
-                width: 1,
+                    : BviPrideHome.isActive
+                        ? BviPrideHome.glassBorder
+                        : PremiumTheme.accentColor.withValues(alpha: 0.1),
+                width: BviPrideHome.isActive && !showingUrgent ? 1.5 : 1,
               ),
               boxShadow: [
                 BoxShadow(
@@ -5005,7 +5085,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               size: isTablet ? 20 : 18,
               color: showingUrgent
                   ? Colors.orange.shade700
-                  : PremiumTheme.tertiaryTextColor,
+                  : BviPrideHome.isActive
+                      ? BviPrideHome.iconColor
+                      : PremiumTheme.tertiaryTextColor,
             ),
           ),
 
@@ -5577,7 +5659,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
         );
         await _refreshAllData();
       },
-      child: Container(
+      child: BviPrideHome.isActive
+          ? _buildBviSetupHintCard(isTablet)
+          : Container(
         padding: EdgeInsets.symmetric(
           horizontal: isTablet ? 20 : 16,
           vertical: isTablet ? 14 : 12,
@@ -5634,6 +5718,88 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               Icons.arrow_forward_ios_rounded,
               color: PremiumTheme.accentColor.withValues(alpha: 0.6),
               size: isTablet ? 16 : 14,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// BVI Pride "Add your vehicle" card: frosted glass, gold plus, faint car.
+  Widget _buildBviSetupHintCard(bool isTablet) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        constraints: BoxConstraints(maxWidth: isTablet ? 340 : 280),
+        padding: EdgeInsets.fromLTRB(
+            isTablet ? 20 : 18, isTablet ? 16 : 14, 14, isTablet ? 16 : 14),
+        decoration: BoxDecoration(
+          color: BviPrideHome.vehicleCardFill,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: BviPrideHome.glassBorder, width: 1),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Faint car silhouette inside the card
+            Positioned(
+              right: 0,
+              bottom: -18,
+              child: Icon(
+                Icons.directions_car_filled_rounded,
+                size: 72,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: isTablet ? 42 : 38,
+                  height: isTablet ? 42 : 38,
+                  decoration: const BoxDecoration(
+                    color: BviPrideHome.goldPlusFill,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: BviPrideHome.goldPlus,
+                    size: isTablet ? 24 : 22,
+                  ),
+                ),
+                SizedBox(width: isTablet ? 16 : 14),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Add your vehicle',
+                        style: TextStyle(
+                          fontSize: isTablet ? 17 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'to start receiving alerts',
+                        style: TextStyle(
+                          fontSize: isTablet ? 14 : 13,
+                          fontWeight: FontWeight.w400,
+                          color: BviPrideHome.mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: isTablet ? 14 : 12),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: BviPrideHome.goldBorder,
+                  size: isTablet ? 18 : 16,
+                ),
+              ],
             ),
           ],
         ),
