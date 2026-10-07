@@ -83,16 +83,22 @@ void main() async {
   // Enable edge-to-edge mode for standard production behavior
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  runApp(const PremiumYuhBlockinApp());
+  // Restore the user's chosen theme before the first frame
+  final savedThemeMode = await ThemeNotifier.loadSavedMode();
+
+  runApp(PremiumYuhBlockinApp(initialThemeMode: savedThemeMode));
 }
 
 class PremiumYuhBlockinApp extends StatelessWidget {
-  const PremiumYuhBlockinApp({super.key});
+  const PremiumYuhBlockinApp({super.key, this.initialThemeMode});
+
+  /// Theme mode saved from a previous session, if any.
+  final String? initialThemeMode;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ThemeNotifier(),
+      create: (_) => ThemeNotifier(initialMode: initialThemeMode),
       child: Consumer<ThemeNotifier>(
         builder: (context, themeNotifier, child) {
           return MaterialApp(
@@ -1508,6 +1514,13 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
       // Initialize subscription service
       await _subscriptionService.initialize(userId);
+
+      // A saved premium theme needs premium. If it can't be confirmed (lapsed
+      // or offline), show Light for this session; the saved choice is kept.
+      if (mounted && !_subscriptionService.isPremium) {
+        Provider.of<ThemeNotifier>(context, listen: false)
+            .fallBackFromPremiumTheme();
+      }
 
       // Update background service with user ID for reliable locked-screen alerts
       await _backgroundAlertService.setUserId(userId);
