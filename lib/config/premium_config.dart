@@ -18,7 +18,7 @@ class PremiumConfig {
   static const bool advancedAnalytics = isPremium;
 
   // App Information
-  static const String appName = isPremium ? 'Yuh Blockin\' Premium' : 'Yuh Blockin\'';
+  static const String appName = isPremium ? 'Yuh Blockin. Premium' : 'Yuh Blockin.';
   static const String tagline = isPremium
       ? 'Premium Caribbean parking alerts with mathematical precision'
       : 'Caribbean-style parking alerts with island respect';

@@ -68,7 +68,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
     final uri = Uri(
       scheme: 'mailto',
       path: _supportEmail,
-      queryParameters: {'subject': "Yuh Blockin' Support"},
+      queryParameters: {'subject': "Yuh Blockin. Support"},
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
@@ -172,7 +172,7 @@ class _ContactSupportScreenState extends State<ContactSupportScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Yuh Blockin\' has zero tolerance for objectionable content or abusive users. '
+                    'Yuh Blockin. has zero tolerance for objectionable content or abusive users. '
                     'You can report any alert directly from your Activity feed, or block a sender to '
                     'stop them from reaching you entirely. We review every report within 24 hours '
                     'and remove content and accounts that violate our policy.',

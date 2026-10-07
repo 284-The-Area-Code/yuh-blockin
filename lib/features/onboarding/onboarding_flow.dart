@@ -383,7 +383,7 @@ class _TermsAgreementGateState extends State<_TermsAgreementGate> {
               Icon(Icons.gavel_rounded, size: 48, color: PremiumTheme.accentColor),
               const SizedBox(height: 16),
               Text(
-                'Yuh Blockin\' has zero tolerance for abusive behavior. Please review and agree to our Terms of Service, including the reporting and blocking tools available to you.',
+                'Yuh Blockin. has zero tolerance for abusive behavior. Please review and agree to our Terms of Service, including the reporting and blocking tools available to you.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,

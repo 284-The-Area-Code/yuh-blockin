@@ -849,7 +849,7 @@ class _EmojiSelectionModalState extends State<EmojiSelectionModal>
                                 // Premium text styling
                                 Flexible(
                                   child: Text(
-                                    'Yuh Blockin!',
+                                    'Yuh Blockin.!',
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,

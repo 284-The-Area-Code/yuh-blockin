@@ -149,7 +149,7 @@ class NotificationService {
     // Create the alert notification channel with custom sound
     const alertChannel = AndroidNotificationChannel(
       'yuh_blockin_alerts',
-      'Yuh Blockin Alerts',
+      'Yuh Blockin. Alerts',
       description: 'Important parking alert notifications',
       importance: Importance.max,
       playSound: true,
@@ -270,7 +270,7 @@ class NotificationService {
       if (androidPlugin != null) {
         final channel = AndroidNotificationChannel(
           channelId,
-          'Yuh Blockin Alerts',
+          'Yuh Blockin. Alerts',
           description: 'Parking alert notifications with actions',
           importance: Importance.max,
           playSound: true,
@@ -286,7 +286,7 @@ class NotificationService {
     // Android notification details - HIGH priority for lock screen visibility
     final androidDetails = AndroidNotificationDetails(
       channelId,
-      'Yuh Blockin Alerts',
+      'Yuh Blockin. Alerts',
       channelDescription: 'Parking alert notifications',
       importance: Importance.max,
       priority: Priority.max,
@@ -306,7 +306,7 @@ class NotificationService {
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
-        summaryText: "Yuh Blockin'",
+        summaryText: "Yuh Blockin.",
       ),
       actions: [
         const AndroidNotificationAction(
@@ -373,7 +373,7 @@ class NotificationService {
         final fallbackDetails = NotificationDetails(
           android: AndroidNotificationDetails(
             'yuh_blockin_alerts_safe',
-            'Yuh Blockin Alerts',
+            'Yuh Blockin. Alerts',
             importance: Importance.max,
             priority: Priority.max,
             playSound: true,
@@ -402,7 +402,7 @@ class NotificationService {
           final systemDetails = NotificationDetails(
             android: AndroidNotificationDetails(
               'yuh_blockin_alerts_system',
-              'Yuh Blockin Alerts',
+              'Yuh Blockin. Alerts',
               importance: Importance.max,
               priority: Priority.max,
               playSound: true,
@@ -544,7 +544,7 @@ class NotificationService {
 
     const androidDetails = AndroidNotificationDetails(
       'yuh_blockin_warnings',
-      'Yuh Blockin Warnings',
+      'Yuh Blockin. Warnings',
       channelDescription: 'App warnings and status notifications',
       importance: Importance.high,
       priority: Priority.high,

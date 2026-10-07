@@ -2,7 +2,7 @@
 
 **Last Updated: September 24, 2026**
 
-Welcome to Yuh Blockin'! These Terms of Service ("Terms") govern your use of the Yuh Blockin' mobile application ("App") operated by DezeTingz ("we," "our," or "us").
+Welcome to Yuh Blockin.! These Terms of Service ("Terms") govern your use of the Yuh Blockin. mobile application ("App") operated by DezeTingz ("we," "our," or "us").
 
 By downloading, installing, or using the App, you agree to be bound by these Terms. If you do not agree to these Terms, do not use the App.
 
@@ -10,7 +10,7 @@ By downloading, installing, or using the App, you agree to be bound by these Ter
 
 ## 1. Description of Service
 
-Yuh Blockin' is a vehicle monitoring application that allows users to:
+Yuh Blockin. is a vehicle monitoring application that allows users to:
 - Register and monitor license plates
 - Receive notifications when registered plates are detected
 - Access premium features through paid subscriptions
@@ -57,7 +57,7 @@ We reserve the right to terminate accounts that violate these terms.
 
 ### 4.1 Zero Tolerance for Abuse
 
-Yuh Blockin' has zero tolerance for objectionable content or abusive users. This includes, without limitation, harassment, threats, hate speech, and any alert sent with the intent to harass, intimidate, or abuse another user.
+Yuh Blockin. has zero tolerance for objectionable content or abusive users. This includes, without limitation, harassment, threats, hate speech, and any alert sent with the intent to harass, intimidate, or abuse another user.
 
 - Any alert can be reported directly in the App by the recipient.
 - We review reports and act on them within 24 hours of receipt.

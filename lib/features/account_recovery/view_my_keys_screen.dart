@@ -79,19 +79,19 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
     HapticFeedback.mediumImpact();
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Yuh Blockin\' ownership key for $plate:\n\n'
+        text: 'Yuh Blockin. ownership key for $plate:\n\n'
             '$key\n\n'
             'Keep this safe - it is the ONLY way to recover this plate if you '
             'switch devices. Anyone who has this key can claim ownership of '
             'this plate.',
-        subject: 'Yuh Blockin\' key - $plate',
+        subject: 'Yuh Blockin. key - $plate',
       ),
     );
   }
 
   String _buildAllKeysText() {
     final buffer = StringBuffer();
-    buffer.writeln('=== Yuh Blockin\' Ownership Keys ===');
+    buffer.writeln('=== Yuh Blockin. Ownership Keys ===');
     buffer.writeln('Keep these keys safe! Anyone who has a key can claim '
         'ownership of that plate.\n');
 
@@ -132,7 +132,7 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
     await SharePlus.instance.share(
       ShareParams(
         text: _buildAllKeysText(),
-        subject: 'Yuh Blockin\' - all ownership keys',
+        subject: 'Yuh Blockin. - all ownership keys',
       ),
     );
   }

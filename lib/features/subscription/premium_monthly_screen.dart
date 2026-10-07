@@ -204,7 +204,7 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
 
               // Subtitle
               const Text(
-                'Unlock all Yuh Blockin\' premium features.',
+                'Unlock all Yuh Blockin. premium features.',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w400,
@@ -262,7 +262,7 @@ class _PremiumMonthlyScreenState extends State<PremiumMonthlyScreen> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Yuh Blockin\'',
+          'Yuh Blockin.',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w600,

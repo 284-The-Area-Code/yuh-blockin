@@ -2175,7 +2175,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
               title: Text(
-                'Exit Yuh Blockin?',
+                'Exit Yuh Blockin.?',
                 style: TextStyle(
                   color: PremiumTheme.primaryTextColor,
                   fontWeight: FontWeight.w600,

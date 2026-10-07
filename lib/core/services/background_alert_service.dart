@@ -36,7 +36,7 @@ class BackgroundAlertService {
 
   static const String _userIdKey = 'user_id';
   static const String _notificationChannelId = 'yuh_blockin_alerts';
-  static const String _notificationChannelName = 'Yuh Blockin Alerts';
+  static const String _notificationChannelName = 'Yuh Blockin. Alerts';
 
   // Helper for platform checking that works on web
   bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -84,7 +84,7 @@ class BackgroundAlertService {
         autoStartOnBoot: false,
         isForegroundMode: true,
         notificationChannelId: _notificationChannelId,
-        initialNotificationTitle: 'Yuh Blockin',
+        initialNotificationTitle: 'Yuh Blockin.',
         initialNotificationContent: 'Ready for alerts',
         foregroundServiceNotificationId: 888,
         foregroundServiceTypes: [AndroidForegroundType.dataSync],
@@ -482,7 +482,7 @@ Future<void> _showAlertNotification(
     if (androidPlugin != null) {
       final channel = AndroidNotificationChannel(
         channelId,
-        'Yuh Blockin Alerts',
+        'Yuh Blockin. Alerts',
         description: 'Parking alert notifications with actions',
         importance: Importance.max,
         playSound: true,
@@ -525,7 +525,7 @@ Future<void> _showAlertNotification(
 
   final androidDetails = AndroidNotificationDetails(
     channelId,
-    'Yuh Blockin Alerts',
+    'Yuh Blockin. Alerts',
     channelDescription: 'Critical parking alert notifications',
     importance: Importance.max,
     priority: Priority.max,
@@ -545,7 +545,7 @@ Future<void> _showAlertNotification(
     styleInformation: BigTextStyleInformation(
       body,
       contentTitle: title,
-      summaryText: "Yuh Blockin'",
+      summaryText: "Yuh Blockin.",
     ),
     actions: [
       const AndroidNotificationAction(
@@ -609,7 +609,7 @@ Future<void> _showAlertNotification(
       final fallbackDetails = NotificationDetails(
         android: AndroidNotificationDetails(
           'yuh_blockin_alerts_safe',
-          'Yuh Blockin Alerts',
+          'Yuh Blockin. Alerts',
           importance: Importance.max,
           priority: Priority.max,
           playSound: true,
@@ -638,7 +638,7 @@ Future<void> _showAlertNotification(
       final systemDetails = NotificationDetails(
         android: AndroidNotificationDetails(
           'yuh_blockin_alerts_system',
-          'Yuh Blockin Alerts',
+          'Yuh Blockin. Alerts',
           importance: Importance.max,
           priority: Priority.max,
           playSound: true,

@@ -553,12 +553,12 @@ class _PlateRegistrationScreenState extends State<PlateRegistrationScreen> {
                             HapticFeedback.mediumImpact();
                             await SharePlus.instance.share(
                               ShareParams(
-                                text: 'Yuh Blockin\' ownership key for $plateNumber:\n\n'
+                                text: 'Yuh Blockin. ownership key for $plateNumber:\n\n'
                                     '$ownershipKey\n\n'
                                     'Keep this safe - it is the ONLY way to recover '
                                     'this plate if you switch devices. Anyone who has '
                                     'this key can claim ownership of this plate.',
-                                subject: 'Yuh Blockin\' key - $plateNumber',
+                                subject: 'Yuh Blockin. key - $plateNumber',
                               ),
                             );
                             setDialogState(() => hasCopied = true);

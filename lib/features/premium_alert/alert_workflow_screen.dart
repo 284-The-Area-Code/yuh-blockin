@@ -1258,7 +1258,7 @@ class _AlertWorkflowScreenState extends State<AlertWorkflowScreen>
 
     // Check for specific error types
     if (lowerError.contains('license plate not registered') || lowerError.contains('not registered')) {
-      return 'No users have registered this license plate. The owner needs to install Yuh Blockin to receive alerts.';
+      return 'No users have registered this license plate. The owner needs to install Yuh Blockin. to receive alerts.';
     }
 
     if (lowerError.contains('rate limit') || lowerError.contains('too many') || lowerError.contains('spam')) {
