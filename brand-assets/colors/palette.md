@@ -24,6 +24,8 @@ The result is that the logo is teal and coral, while the buttons people tap are 
 | Teal Light | `#0D8A9C` | 13, 138, 156 | `premium_monthly_screen.dart:27` | Premium Monthly accents |
 | Premium Coral | `#FF6B6B` | 255, 107, 107 | `premium_monthly_screen.dart:28` | "Subscribe - Premium Monthly" button (confirmed in screenshot) |
 
+The Premium Monthly screen is no longer reachable in the current navigation. It survives in App Store screenshots only.
+
 ### Logo colours (sampled from the artwork)
 
 The logo is only available as a raster image. These are its dominant pixel colours, sampled from `assets/images/app_icon.png` and `logo_transparent.png`. The two files give identical results.
@@ -80,6 +82,12 @@ Defined in `premium_theme.dart:74-80`.
 | Low | `#34D399` | 52, 211, 153 | `alert_workflow_screen.dart:618`, `alert_sound_settings_screen.dart:32` |
 | Normal | `#0A84FF` | 10, 132, 255 | `alert_sound_settings_screen.dart:33` |
 | High | `#EF4444` | 239, 68, 68 | `alert_workflow_screen.dart:620`, `alert_sound_settings_screen.dart:34` |
+
+Urgency colours are **not consistent across the app**:
+- The table above matches the Alert Sounds settings screen.
+- The live incoming-alert banner on the home screen uses Material shades instead: Low `#43A047`, Normal `#1E88E5`, High `#E53935` (`lib/main.dart:1162-1186`).
+- The inline Send Alert urgency picker uses Flutter's `Colors.green`, the accent colour and `Colors.red`.
+- `alert_workflow_screen.dart` also uses the table's values, but that screen is unreachable.
 
 ---
 

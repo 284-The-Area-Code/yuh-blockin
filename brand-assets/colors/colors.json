@@ -53,8 +53,9 @@
     "error": { "value": "#FF3B30", "source": "lib/features/premium_alert/alert_history_screen.dart:413, 503" },
     "info": { "value": "#007AFF", "source": "lib/features/premium_alert/alert_history_screen.dart:43 (_pendingColor)" }
   },
+  "urgencyHomeBanner": { "low": "#43A047", "normal": "#1E88E5", "high": "#E53935", "source": "lib/main.dart:1162-1186 (live incoming-alert banner)" },
   "urgency": {
-    "low": { "value": "#34D399", "source": "alert_workflow_screen.dart:618, alert_sound_settings_screen.dart:32" },
+    "low": { "value": "#34D399", "source": "alert_sound_settings_screen.dart:32 (also unreachable alert_workflow_screen.dart:618)" },
     "normal": { "value": "#0A84FF", "source": "alert_sound_settings_screen.dart:33" },
     "high": { "value": "#EF4444", "source": "alert_workflow_screen.dart:620, alert_sound_settings_screen.dart:34" }
   },
