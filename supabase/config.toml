@@ -1,0 +1,31 @@
+# Supabase CLI configuration.
+#
+# Only per-function settings are declared here. Everything else stays on the
+# CLI/platform defaults.
+
+# RevenueCat cannot present a Supabase credential, so the platform-level JWT
+# gate must be off for this endpoint. It is not unauthenticated: the function
+# verifies an HMAC-SHA256 signature over the raw body before doing any work.
+#
+# Declared here rather than passed as `--no-verify-jwt` so the setting is
+# source-controlled and survives redeploys. Confirm the toggle in the dashboard
+# after the first deploy - the CLI has been reported to ignore this on updates
+# to an already-existing function.
+[functions.revenuecat-webhook]
+verify_jwt = false
+
+# alerts-fcm is deliberately NOT declared here. It is called by pg_net with an
+# `apikey` header and authenticates in-code via
+# createSupabaseContext(auth: 'secret:alerts_fcm_trigger'), so it must also run
+# with verify_jwt = false - but its live setting was configured outside this
+# repo and is not re-asserted here, to avoid changing a working production
+# function based on an inference.
+
+# admin-manage-user is a brand-new function (unlike alerts-fcm above, there is
+# no existing production setting to risk overriding), so it is declared here
+# the same way as revenuecat-webhook. The caller is a human operator via a
+# Secret API key (auth: 'secret:admin_manage_user'), not RevenueCat, but the
+# mechanism is identical: the platform JWT gate must be off for the in-code
+# check to ever run.
+[functions.admin-manage-user]
+verify_jwt = false

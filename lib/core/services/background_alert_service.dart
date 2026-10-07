@@ -75,7 +75,13 @@ class BackgroundAlertService {
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
-        autoStartOnBoot: true,
+        // Disabled: Android 15+ blocks starting a dataSync foreground service from a
+        // BOOT_COMPLETED context (ForegroundServiceStartNotAllowedException, confirmed
+        // in Play Console vitals on build 30/1.0.0). The receiver itself is also
+        // disabled in AndroidManifest.xml. Real delivery is unaffected - it goes
+        // through FCM independently of this service. This still starts normally via
+        // autoStart when the app is opened.
+        autoStartOnBoot: false,
         isForegroundMode: true,
         notificationChannelId: _notificationChannelId,
         initialNotificationTitle: 'Yuh Blockin',
@@ -159,7 +165,7 @@ void onBackgroundNotificationResponse(NotificationResponse response) async {
     try {
       await Supabase.initialize(
         url: SupabaseConfig.url,
-        anonKey: SupabaseConfig.anonKey,
+        publishableKey: SupabaseConfig.publishableKey,
       );
     } catch (_) {
       // Already initialized or fallback
@@ -168,7 +174,7 @@ void onBackgroundNotificationResponse(NotificationResponse response) async {
     final supabase = Supabase.instance.client;
 
     // 2. Send response to database
-    final timestamp = DateTime.now().toIso8601String();
+    final timestamp = DateTime.now().toUtc().toIso8601String();
     await supabase
         .from('alerts')
         .update({
@@ -243,7 +249,7 @@ void onStart(ServiceInstance service) async {
       // 2. Background isolates need their own initialization
       await Supabase.initialize(
         url: SupabaseConfig.url,
-        anonKey: SupabaseConfig.anonKey,
+        publishableKey: SupabaseConfig.publishableKey,
         realtimeClientOptions: const RealtimeClientOptions(
           eventsPerSecond: 10,
         ),
@@ -264,17 +270,26 @@ void onStart(ServiceInstance service) async {
 
   supabase = await initializeSupabase();
 
-  // Sign in anonymously for authenticated role
+  // Identity is established by the foreground app ONLY - never here.
+  //
+  // This isolate used to call signInAnonymously() whenever currentUser was
+  // null. Session recovery after Supabase.initialize() is asynchronous, so
+  // currentUser is almost always null at this point, which meant the background
+  // service routinely minted a brand new anonymous user AND overwrote the
+  // persisted session. The foreground app then adopted that new identity on its
+  // next launch, orphaning the user's plates, alert history and purchase.
+  //
+  // A background isolate has nothing useful to do with a fresh identity anyway:
+  // it subscribes by receiver_id read from SharedPreferences, and a brand new
+  // user has no alerts. Failing closed beats destroying the account.
   if (supabase != null && supabase.auth.currentUser == null) {
-    try {
-      await supabase.auth.signInAnonymously();
-      if (kDebugMode) {
-        debugPrint('Background service: Signed in anonymously');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Background service: Anonymous sign-in failed: $e');
-      }
+    // Give the asynchronous session recovery a moment to land before giving up.
+    await Future.delayed(const Duration(seconds: 2));
+    if (supabase.auth.currentUser == null && kDebugMode) {
+      debugPrint(
+        'Background service: no session recovered - not subscribing. '
+        'The foreground app establishes identity.',
+      );
     }
   }
 

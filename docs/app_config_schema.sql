@@ -8,10 +8,9 @@ CREATE TABLE IF NOT EXISTS app_config (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Insert ATH Móvil business path
-INSERT INTO app_config (key, value, description)
-VALUES ('ath_movil_path', '/dezetingz', 'ATH Móvil business path for payments')
-ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+-- No seed rows. The only key this table ever held was 'ath_movil_path', which
+-- became dead when the ATH Móvil integration was removed. See
+-- supabase/migrations/20260910_remove_ath_movil_subscription_path.sql.
 
 -- Enable RLS
 ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/premium_theme.dart';
+import '../../core/theme/bvi_motifs.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/theme/theme_notifier.dart';
 
@@ -243,16 +244,21 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
 
   /// Special ultra-premium BVI Pride theme option
   /// Features the 12 golden oil lamps of Saint Ursula from the BVI coat of arms
+  ///
+  /// Colors are sourced from PremiumTheme's bviPride* constants (not
+  /// redeclared locally) so this card and the rest of the app can never
+  /// drift apart. Gold is deliberately used only for thin accents/borders -
+  /// blue (the flag's dominant color) carries the surface, with a touch of
+  /// red for the "strength and valor" accent.
   Widget _buildBviPrideOption({required bool isCompact}) {
     final isSelected = _selectedTheme == PremiumTheme.bviPrideMode;
     final isLocked = !_isPremiumUser;
 
-    // BVI Flag official colors
-    const goldenPoppy = Color(0xFFF7C700);
-    const resolutionBlue = Color(0xFF001F7E); // Official flag blue
-    const deepNavy = Color(0xFF0A1628); // Dark background
-    const cadmiumGreen = Color(0xFF00A86B);
-    const philippineRed = Color(0xFFD00C27);
+    const goldenPoppy = PremiumTheme.bviPrideAccentColor;
+    const resolutionBlue = PremiumTheme.bviPrideResolutionBlue;
+    const deepNavy = PremiumTheme.bviPrideBackgroundColor;
+    const cadmiumGreen = PremiumTheme.bviPrideSecondaryAccent;
+    const philippineRed = PremiumTheme.bviPrideTertiaryAccent;
 
     // Responsive sizes
     final circleSize = isCompact ? 52.0 : 64.0;
@@ -300,16 +306,18 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
         padding: EdgeInsets.all(padding),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          // Premium gradient background when selected - Blue dominant with gold accent
+          // Premium gradient background when selected - Blue dominant,
+          // gold held to a faint final stop so it reads as accent, not wash.
           gradient: isSelected
               ? LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
                     resolutionBlue.withValues(alpha: 0.4),
-                    deepNavy.withValues(alpha: 0.6),
-                    goldenPoppy.withValues(alpha: 0.1),
+                    deepNavy.withValues(alpha: 0.7),
+                    goldenPoppy.withValues(alpha: 0.06),
                   ],
                 )
               : null,
@@ -323,18 +331,24 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
           ),
           boxShadow: isSelected
               ? [
-                  // Blue glow - BVI flag
+                  // Blue glow - BVI flag, the dominant light
                   BoxShadow(
                     color: resolutionBlue.withValues(alpha: 0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 4),
                     spreadRadius: 2,
                   ),
-                  // Golden accent glow
+                  // Thin gold rim - accent only, not a wash
                   BoxShadow(
-                    color: goldenPoppy.withValues(alpha: 0.25),
-                    blurRadius: 16,
+                    color: goldenPoppy.withValues(alpha: 0.15),
+                    blurRadius: 10,
                     offset: const Offset(0, 2),
+                  ),
+                  // Faint red presence - "strength and valor" accent
+                  BoxShadow(
+                    color: philippineRed.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 1),
                   ),
                 ]
               : [
@@ -346,66 +360,102 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                   ),
                 ],
         ),
-        child: Row(
+        child: Stack(
           children: [
-            // Premium BVI flag-inspired preview - Blue background with golden lamp
-            Container(
-              width: circleSize,
-              height: circleSize,
-              decoration: BoxDecoration(
-                // Resolution Blue - the main BVI flag color
-                gradient: const RadialGradient(
-                  center: Alignment.center,
-                  radius: 0.8,
-                  colors: [
-                    Color(0xFF002D9C), // Brighter center blue
-                    resolutionBlue, // Official Resolution Blue
-                    Color(0xFF001654), // Darker edge
-                  ],
+            // Extremely subtle Union-Jack-inspired geometry - abstracted
+            // hairlines, not a literal flag. Only present when selected so
+            // the unselected card stays quiet.
+            if (isSelected)
+              const Positioned.fill(
+                child: BviFlagGeometryOverlay(
+                  blueLine: resolutionBlue,
+                  redLine: philippineRed,
+                  whiteLine: Colors.white,
                 ),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: goldenPoppy,
-                  width: 3,
-                ),
-                boxShadow: [
-                  // Blue glow - representing the flag
-                  BoxShadow(
-                    color: resolutionBlue.withValues(alpha: 0.6),
-                    blurRadius: 20,
-                    spreadRadius: 4,
-                  ),
-                  // Golden lamp glow on top
-                  BoxShadow(
-                    color: goldenPoppy.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    spreadRadius: 1,
-                  ),
-                ],
               ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Small green accent ring (coat of arms)
-                  Container(
-                    width: circleSize - 16,
-                    height: circleSize - 16,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: cadmiumGreen.withValues(alpha: 0.6),
-                        width: 1.5,
-                      ),
+            Row(
+              children: [
+            // Premium BVI flag-inspired preview - Blue background, gold held
+            // to thin accents, with a faint eleven-lamp ring Easter egg.
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                BviElevenLampRing(
+                  diameter: circleSize + 16,
+                  lampColor: goldenPoppy,
+                  opacity: isSelected ? 0.35 : 0.18,
+                ),
+                Container(
+                  width: circleSize,
+                  height: circleSize,
+                  decoration: BoxDecoration(
+                    // Resolution Blue - the main BVI flag color
+                    gradient: const RadialGradient(
+                      center: Alignment.center,
+                      radius: 0.8,
+                      colors: [
+                        Color(0xFF002D9C), // Brighter center blue
+                        resolutionBlue, // Official Resolution Blue
+                        Color(0xFF001654), // Darker edge
+                      ],
                     ),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: goldenPoppy,
+                      width: 2.5,
+                    ),
+                    boxShadow: [
+                      // Blue glow - representing the flag, the dominant light
+                      BoxShadow(
+                        color: resolutionBlue.withValues(alpha: 0.6),
+                        blurRadius: 20,
+                        spreadRadius: 4,
+                      ),
+                      // Thin gold rim glow - accent only
+                      BoxShadow(
+                        color: goldenPoppy.withValues(alpha: 0.28),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                  // Oil lamp icon - representing Saint Ursula's 12 lamps
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    color: goldenPoppy,
-                    size: isCompact ? 24 : 30,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Thin red ring - layered depth, "strength and valor" accent
+                      Container(
+                        width: circleSize - 10,
+                        height: circleSize - 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: philippineRed.withValues(alpha: 0.35),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      // Small green accent ring (coat of arms)
+                      Container(
+                        width: circleSize - 16,
+                        height: circleSize - 16,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: cadmiumGreen.withValues(alpha: 0.6),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      // Stylized oil lamp - Saint Ursula's lamps, abstracted
+                      BviOilLampIcon(
+                        size: isCompact ? 24 : 30,
+                        color: goldenPoppy,
+                        glowColor: PremiumTheme.bviPrideAccentGlow,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
 
             SizedBox(width: isCompact ? 14 : 18),
@@ -482,7 +532,10 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                     style: TextStyle(
                       fontSize: subtitleFontSize,
                       fontWeight: FontWeight.w500,
-                      color: goldenPoppy.withValues(alpha: 0.9),
+                      // Light blue-neutral, not gold - body/subtitle text
+                      // staying gold-tinted was the single biggest source
+                      // of the "too much yellow" complaint across the app.
+                      color: PremiumTheme.bviPrideSecondaryTextColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -559,6 +612,8 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                       )
                     : null,
               ),
+              ],
+            ),
           ],
         ),
       ),

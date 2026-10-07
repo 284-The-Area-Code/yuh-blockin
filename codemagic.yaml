@@ -1,0 +1,349 @@
+workflows:
+  ios-apns-forensic:
+    name: iOS APNs Forensic Diagnostic
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+      groups:
+        - app_store_credentials
+
+      vars:
+        BUNDLE_ID: "com.yuhblockin.v1"
+        APP_STORE_APP_ID: "6791093118"
+
+    scripts:
+
+      # ============================================================
+      # FORENSIC CHECKPOINT 1 — FRESH REPOSITORY
+      # ============================================================
+      - name: "FORENSIC 1 - Repository state"
+        script: |
+          #!/bin/sh
+          set -u
+
+          echo ""
+          echo "========== FORENSIC 1: REPOSITORY STATE =========="
+
+          echo ""
+          echo "--- Git commit ---"
+          git rev-parse HEAD || true
+
+          echo ""
+          echo "--- PBXPROJ SHA256 ---"
+          sha256sum ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- CODE_SIGN_ENTITLEMENTS ---"
+          grep -n "CODE_SIGN_ENTITLEMENTS" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- PUSH CAPABILITY REFERENCES ---"
+          grep -n -i "com.apple.Push\|Push Notifications" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- ENTITLEMENTS FILE ---"
+          if [ -f ios/Runner/Runner.entitlements ]; then
+            cat ios/Runner/Runner.entitlements
+          else
+            echo "ERROR: Runner.entitlements NOT FOUND"
+          fi
+
+          echo ""
+          echo "--- BUNDLE IDENTIFIER ---"
+          grep -n "PRODUCT_BUNDLE_IDENTIFIER" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "========== END FORENSIC 1 =========="
+
+      # ============================================================
+      # FETCH APPLE SIGNING FILES
+      # ============================================================
+      - name: "Set up code signing"
+        script: |
+          #!/bin/sh
+          set -eu
+
+          echo ""
+          echo "========== SIGNING SETUP =========="
+
+          keychain initialize
+
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY"
+
+          keychain add-certificates
+
+          echo ""
+          echo "--- Signing files fetched ---"
+          ls -lah "$HOME/Library/MobileDevice/Provisioning Profiles/" \
+            2>/dev/null || true
+
+          echo ""
+          echo "========== END SIGNING SETUP =========="
+
+      # ============================================================
+      # FORENSIC CHECKPOINT 2 — AFTER FETCHING SIGNING FILES
+      # ============================================================
+      - name: "FORENSIC 2 - After signing files"
+        script: |
+          #!/bin/sh
+          set -u
+
+          echo ""
+          echo "========== FORENSIC 2: AFTER SIGNING FETCH =========="
+
+          echo ""
+          echo "--- PBXPROJ SHA256 ---"
+          sha256sum ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- CODE_SIGN_ENTITLEMENTS ---"
+          grep -n "CODE_SIGN_ENTITLEMENTS" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- PUSH CAPABILITY REFERENCES ---"
+          grep -n -i "com.apple.Push\|Push Notifications" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- Runner.entitlements ---"
+          cat ios/Runner/Runner.entitlements || true
+
+          echo ""
+          echo "========== END FORENSIC 2 =========="
+
+      # ============================================================
+      # APPLY PROFILES
+      # ============================================================
+      - name: "Apply signing profiles"
+        script: |
+          #!/bin/sh
+          set -eu
+
+          echo ""
+          echo "========== XCODE-PROJECT USE-PROFILES =========="
+
+          xcode-project use-profiles
+
+          echo ""
+          echo "========== END USE-PROFILES =========="
+
+      # ============================================================
+      # FORENSIC CHECKPOINT 3 — AFTER USE-PROFILES
+      # ============================================================
+      - name: "FORENSIC 3 - After use-profiles"
+        script: |
+          #!/bin/sh
+          set -u
+
+          echo ""
+          echo "========== FORENSIC 3: AFTER USE-PROFILES =========="
+
+          echo ""
+          echo "--- PBXPROJ SHA256 ---"
+          sha256sum ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- CODE_SIGN_ENTITLEMENTS ---"
+          grep -n "CODE_SIGN_ENTITLEMENTS" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- PUSH CAPABILITY REFERENCES ---"
+          grep -n -i "com.apple.Push\|Push Notifications" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- ENTITLEMENTS FILE ---"
+          cat ios/Runner/Runner.entitlements || true
+
+          echo ""
+          echo "--- PROFILE ENTITLEMENTS ---"
+
+          PROFILE=$(find "$HOME/Library/MobileDevice/Provisioning Profiles" \
+            -name "*.mobileprovision" \
+            -print -quit 2>/dev/null || true)
+
+          if [ -n "$PROFILE" ]; then
+            echo "Profile: $PROFILE"
+            security cms -D -i "$PROFILE" > /tmp/yuh_profile.plist
+
+            /usr/libexec/PlistBuddy \
+              -c "Print :Entitlements:application-identifier" \
+              /tmp/yuh_profile.plist || true
+
+            /usr/libexec/PlistBuddy \
+              -c "Print :Entitlements:aps-environment" \
+              /tmp/yuh_profile.plist || true
+          else
+            echo "No provisioning profile found."
+          fi
+
+          echo ""
+          echo "========== END FORENSIC 3 =========="
+
+      # ============================================================
+      # DEPENDENCIES
+      # ============================================================
+      - name: "Get Flutter packages"
+        script: |
+          flutter pub get
+
+      - name: "Install CocoaPods"
+        script: |
+          cd ios
+          pod install
+
+      # ============================================================
+      # FORENSIC CHECKPOINT 3B — AFTER DEPENDENCY INSTALL
+      # ============================================================
+      - name: "FORENSIC 3B - After dependencies"
+        script: |
+          #!/bin/sh
+          set -u
+
+          echo ""
+          echo "========== FORENSIC 3B: AFTER DEPENDENCIES =========="
+
+          echo ""
+          echo "--- PBXPROJ SHA256 ---"
+          sha256sum ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- CODE_SIGN_ENTITLEMENTS ---"
+          grep -n "CODE_SIGN_ENTITLEMENTS" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- PUSH CAPABILITY REFERENCES ---"
+          grep -n -i "com.apple.Push\|Push Notifications" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "========== END FORENSIC 3B =========="
+
+      # ============================================================
+      # BUILD
+      # ============================================================
+      - name: "Build iOS IPA - diagnostic only"
+        script: |
+          #!/bin/sh
+          set -eu
+
+          echo ""
+          echo "========== BUILD IDENTIFIERS =========="
+          echo "Codemagic BUILD_NUMBER: $BUILD_NUMBER"
+          echo "Codemagic PROJECT_BUILD_NUMBER: $PROJECT_BUILD_NUMBER"
+          echo "========================================"
+
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number="$PROJECT_BUILD_NUMBER" \
+            --export-method=app-store
+
+      # ============================================================
+      # FORENSIC CHECKPOINT 4 — AFTER FLUTTER BUILD
+      # ============================================================
+      - name: "FORENSIC 4 - Post Flutter build"
+        script: |
+          #!/bin/sh
+          set -u
+
+          echo ""
+          echo "========== FORENSIC 4: POST-BUILD =========="
+
+          echo ""
+          echo "--- PBXPROJ SHA256 ---"
+          sha256sum ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- CODE_SIGN_ENTITLEMENTS ---"
+          grep -n "CODE_SIGN_ENTITLEMENTS" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- PUSH CAPABILITY REFERENCES ---"
+          grep -n -i "com.apple.Push\|Push Notifications" \
+            ios/Runner.xcodeproj/project.pbxproj || true
+
+          echo ""
+          echo "--- ARCHIVE ---"
+          if [ -d build/ios/archive/Runner.xcarchive ]; then
+            echo "FOUND"
+          else
+            echo "NOT FOUND"
+          fi
+
+          echo ""
+          echo "--- RUNNER.APP ---"
+          APP="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+
+          if [ -d "$APP" ]; then
+            echo "FOUND"
+          else
+            echo "NOT FOUND"
+          fi
+
+          echo ""
+          echo "--- SIGNED EXECUTABLE ---"
+          EXECUTABLE="$APP/Runner"
+
+          if [ -f "$EXECUTABLE" ]; then
+            ls -lh "$EXECUTABLE"
+          else
+            echo "NOT FOUND"
+          fi
+
+          echo ""
+          echo "--- SIGNED BINARY ENTITLEMENTS ---"
+
+          if [ -f "$EXECUTABLE" ]; then
+            codesign -d --entitlements :- "$EXECUTABLE" 2>&1 || true
+          fi
+
+          echo ""
+          echo "--- DIRECT APNS ENTITLEMENT CHECK ---"
+
+          if [ -f "$EXECUTABLE" ]; then
+            codesign -d --entitlements :- "$EXECUTABLE" 2>&1 \
+              | grep -A2 -B2 "aps-environment" \
+              || echo "RESULT: aps-environment NOT PRESENT"
+          fi
+
+          echo ""
+          echo "--- EMBEDDED PROVISIONING PROFILE ---"
+
+          if [ -f "$APP/embedded.mobileprovision" ]; then
+            security cms -D -i "$APP/embedded.mobileprovision" \
+              > /tmp/yuh_embedded_profile.plist
+
+            /usr/libexec/PlistBuddy \
+              -c "Print :Entitlements:application-identifier" \
+              /tmp/yuh_embedded_profile.plist || true
+
+            /usr/libexec/PlistBuddy \
+              -c "Print :Entitlements:aps-environment" \
+              /tmp/yuh_embedded_profile.plist || true
+          else
+            echo "embedded.mobileprovision NOT FOUND"
+          fi
+
+          echo ""
+          echo "========== END FORENSIC 4 =========="
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/**/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log

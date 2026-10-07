@@ -58,3 +58,15 @@ docs/yuh-blockin-firebase-adminsdk*.json
 
 # Marketing / Screenshots
 assets/images/phone_screenshots/
+
+# Node tooling (supabase CLI devDependency)
+node_modules/
+package-lock.json
+
+# Supabase CLI local state
+supabase/.temp/
+
+# Local dart-define config (RevenueCat SDK keys for local Android builds).
+# These are PUBLIC SDK keys that ship in the binary, but keep build config out of git.
+dart_define.json
+dart_define.*.json

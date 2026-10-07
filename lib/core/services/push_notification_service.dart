@@ -1,10 +1,14 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../models/push_diagnostic_model.dart';
 import 'sound_preferences_service.dart';
 
 /// Background message handler - must be top-level function
@@ -13,7 +17,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Ensure Firebase is initialized in background isolate
   await Firebase.initializeApp();
   if (kDebugMode) {
-    debugPrint('Background push message: ${message.messageId}');
+    debugPrint('[FCM] Background push message: ${message.messageId}');
   }
 }
 
@@ -29,12 +33,88 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class PushNotificationService {
   static final PushNotificationService _instance = PushNotificationService._internal();
   factory PushNotificationService() => _instance;
-  PushNotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  PushNotificationService._internal() {
+    if (Platform.isIOS) {
+      _diagnosticChannel.setMethodCallHandler(_handleNativeMethodCall);
+      _actionChannel.setMethodCallHandler(_handleNativeActionCall);
+    }
+  }
+
+  static const MethodChannel _diagnosticChannel = MethodChannel('com.yuhblockin.v1/push_diagnostics');
+
+  /// iOS notification action buttons.
+  ///
+  /// These have to be handled natively: flutter_local_notifications ignores any
+  /// notification it did not itself create, and firebase_messaging does not surface
+  /// actionIdentifier on iOS, so neither plugin delivers the tapped action for a
+  /// remote APNs push. AppDelegate captures it and sends it over this channel.
+  static const MethodChannel _actionChannel = MethodChannel('com.yuhblockin.v1/notification_actions');
+
+  Future<void> _handleNativeMethodCall(MethodCall call) async {
+    if (call.method == 'onNativeRegistrationError') {
+      final String? error = call.arguments['error'];
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        apnsRegistration: PushDiagnosticState.failed,
+        lastError: 'NATIVE_APNS_ERROR: $error',
+      );
+    }
+  }
+
+  /// Live action tap arriving from AppDelegate while the engine is running.
+  Future<void> _handleNativeActionCall(MethodCall call) async {
+    if (call.method != 'onNotificationAction') return;
+    final args = Map<String, dynamic>.from(call.arguments as Map);
+    await _recordAlertResponse(args['actionId'] as String?, args['alertId'] as String?);
+  }
+
+  /// Drain an action that was tapped before the Flutter engine was ready — the
+  /// cold-start-from-Lock-Screen case. AppDelegate parks it; we collect it here.
+  Future<void> _consumePendingNativeAction() async {
+    if (!Platform.isIOS) return;
+    try {
+      final pending = await _actionChannel
+          .invokeMapMethod<String, dynamic>('consumePendingNotificationAction');
+      if (pending == null) return;
+      if (kDebugMode) debugPrint('[FCM] Draining pending notification action');
+      await _recordAlertResponse(
+          pending['actionId'] as String?, pending['alertId'] as String?);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[FCM] No pending notification action: $e');
+    }
+  }
+
+  /// Write the user's response to the alert.
+  ///
+  /// Mirrors the Android path in notification_service.dart `_onNotificationResponse`
+  /// so both platforms record responses identically.
+  Future<void> _recordAlertResponse(String? actionId, String? alertId) async {
+    if (actionId == null || alertId == null || alertId.isEmpty) return;
+    if (actionId == 'respond') return; // legacy generic button
+
+    try {
+      final timestamp = DateTime.now().toUtc().toIso8601String();
+      await Supabase.instance.client.from('alerts').update({
+        'response': actionId,
+        'response_at': timestamp,
+        'read_at': timestamp,
+      }).eq('id', alertId);
+      if (kDebugMode) debugPrint('✅ iOS notification action recorded: $actionId');
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Failed to record notification action: $e');
+    }
+
+    onNotificationTapped?.call(alertId);
+  }
+
+  late final FirebaseMessaging _messaging;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
   bool _isAppInForeground = true;
+
+  /// Diagnostic report notifier
+  final ValueNotifier<PushRegistrationReport> diagnosticReport =
+      ValueNotifier<PushRegistrationReport>(const PushRegistrationReport());
 
   /// Callback when notification is tapped
   Function(String? alertId)? onNotificationTapped;
@@ -43,54 +123,83 @@ class PushNotificationService {
   Future<void> initialize({Function(String?)? onTap}) async {
     if (_initialized) return;
 
+    // 1. Core initialization
+    _messaging = FirebaseMessaging.instance;
     onNotificationTapped = onTap;
 
+    diagnosticReport.value = diagnosticReport.value.copyWith(
+      lastAttempt: DateTime.now(),
+      lastError: null,
+    );
+
     try {
-      // Set up the background handler
+      if (kDebugMode) debugPrint('[FCM] Initializing service...');
+
+      // 2. Set up the background handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-      // Request permissions (iOS)
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-        criticalAlert: true,
-      );
+      // 3. Request permissions (iOS)
+      if (Platform.isIOS) {
+        if (kDebugMode) debugPrint('[FCM] Requesting notification permission...');
 
-      if (kDebugMode) {
-        debugPrint('Push permission status: ${settings.authorizationStatus}');
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          permission: PushDiagnosticState.pending,
+        );
+
+        final settings = await _messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+          criticalAlert: true,
+        );
+
+        final status = settings.authorizationStatus;
+        final isAuthorized = status == AuthorizationStatus.authorized ||
+                            status == AuthorizationStatus.provisional;
+
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          permission: isAuthorized ? PushDiagnosticState.available : PushDiagnosticState.missing,
+        );
+
+        if (!isAuthorized) {
+          if (kDebugMode) debugPrint('[FCM] Push permission denied: $status');
+          diagnosticReport.value = diagnosticReport.value.copyWith(
+            lastError: 'PERMISSION_DENIED: $status',
+          );
+        }
       }
 
-      // Initialize local notifications for foreground display
+      // 4. Initialize local notifications for foreground display
       await _initializeLocalNotifications();
 
-      // Get and save FCM token
+      // 5. Get and save FCM token (includes APNs wait on iOS)
       await _saveToken();
 
-      // Listen for token refresh
+      // 6. Setup listeners
       _messaging.onTokenRefresh.listen(_onTokenRefresh);
-
-      // Handle foreground messages
       FirebaseMessaging.onMessage.listen(_onForegroundMessage);
-
-      // Handle notification tap (app in background)
       FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
-      // Check if app was opened from a notification
+      // 7. Check for initial message
       final initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
         _handleNotificationTap(initialMessage);
       }
 
+      // 8. Drain any iOS notification action tapped before the engine was ready
+      await _consumePendingNativeAction();
+
       _initialized = true;
       if (kDebugMode) {
-        debugPrint('PushNotificationService initialized');
+        debugPrint('[FCM] PushNotificationService initialized');
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Failed to initialize push notifications: $e');
-      }
+      final errorStr = e.toString();
+      if (kDebugMode) debugPrint('[FCM] Initialization failed: $errorStr');
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        lastError: 'INIT_FAILED: ${errorStr.length > 50 ? errorStr.substring(0, 50) : errorStr}',
+      );
     }
   }
 
@@ -115,109 +224,186 @@ class PushNotificationService {
       },
     );
 
-    // Create notification channel for Android with custom sound
+    // Create notification channels for Android with custom sounds
     if (Platform.isAndroid) {
-      const channel = AndroidNotificationChannel(
-        'yuh_blockin_alerts', // Same channel ID as NotificationService
-        'Yuh Blockin Alerts',
-        description: 'Push notifications for parking alerts',
-        importance: Importance.max,
-        playSound: true,
-        sound: RawResourceAndroidNotificationSound('alert_sound'),
-        enableVibration: true,
-        enableLights: true,
-      );
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(channel);
+      if (androidPlugin != null) {
+        // List of all possible alert sounds in assets/sounds
+        final alertSounds = [
+          'low_alert_1', 'low_alert_2', 'low_alert_3',
+          'normal_alert',
+          'high_alert_1', 'high_alert_2',
+          'alert_sound'
+        ];
+
+        for (final soundName in alertSounds) {
+          final channel = AndroidNotificationChannel(
+            'yuh_blockin_alert_${soundName}_v2',
+            'Yuh Blockin Alerts',
+            description: 'Critical parking alert notifications',
+            importance: Importance.max,
+            playSound: true,
+            sound: RawResourceAndroidNotificationSound(soundName),
+            enableVibration: true,
+            enableLights: true,
+          );
+          await androidPlugin.createNotificationChannel(channel);
+        }
+
+        if (kDebugMode) {
+          debugPrint('✅ Android: ${alertSounds.length} alert channels pre-created');
+        }
+      }
     }
+  }
+
+  /// Wait for APNs token on iOS with bounded retry
+  Future<bool> _waitForAPNSToken() async {
+    if (!Platform.isIOS) return true;
+
+    if (kDebugMode) debugPrint('[FCM] Waiting for APNs token...');
+
+    diagnosticReport.value = diagnosticReport.value.copyWith(
+      apnsRegistration: PushDiagnosticState.pending,
+      apnsToken: PushDiagnosticState.pending,
+    );
+
+    int retryCount = 0;
+    const maxRetries = 20; // 20 seconds total
+
+    while (retryCount < maxRetries) {
+      try {
+        final apnsToken = await _messaging.getAPNSToken();
+        if (apnsToken != null) {
+          if (kDebugMode) debugPrint('[FCM] APNs token available after ${retryCount}s');
+          diagnosticReport.value = diagnosticReport.value.copyWith(
+            apnsRegistration: PushDiagnosticState.available,
+            apnsToken: PushDiagnosticState.available,
+          );
+          return true;
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('[FCM] APNs check error: $e');
+      }
+
+      retryCount++;
+      await Future.delayed(const Duration(seconds: 1));
+      if (kDebugMode && retryCount % 5 == 0) {
+        debugPrint('[FCM] Still waiting for APNs... ($retryCount/${maxRetries}s)');
+      }
+    }
+
+    if (kDebugMode) debugPrint('[FCM] ❌ Error: APNs token never appeared after ${maxRetries}s');
+    diagnosticReport.value = diagnosticReport.value.copyWith(
+      apnsRegistration: PushDiagnosticState.timeout,
+      apnsToken: PushDiagnosticState.missing,
+    );
+    return false;
   }
 
   /// Save FCM token to Supabase
   Future<void> _saveToken() async {
     try {
-      // On iOS, try to get APNs token first (with timeout)
-      if (Platform.isIOS) {
-        try {
-          final apnsToken = await _messaging.getAPNSToken().timeout(
-            const Duration(seconds: 3),
-            onTimeout: () => null,
-          );
-          if (apnsToken == null) {
-            if (kDebugMode) {
-              debugPrint('APNs token not available yet - will retry later');
-            }
-            // Don't block - FCM might still work or we'll retry later
-          } else {
-            if (kDebugMode) {
-              debugPrint('APNs token obtained');
-            }
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('APNs token error: $e');
-          }
-        }
-      }
-
-      // Get FCM token with timeout
-      final token = await _messaging.getToken().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => null,
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        lastAttempt: DateTime.now(),
       );
-      if (token == null) {
-        if (kDebugMode) {
-          debugPrint('FCM token is null');
-        }
-        return;
-      }
 
-      // ===== FCM TOKEN FOR TESTING =====
-      // Print full token so it can be copied for push notification testing
-      debugPrint('');
-      debugPrint('╔══════════════════════════════════════════════════════════════╗');
-      debugPrint('║                    FCM TOKEN FOR TESTING                     ║');
-      debugPrint('╠══════════════════════════════════════════════════════════════╣');
-      debugPrint('║ $token');
-      debugPrint('╚══════════════════════════════════════════════════════════════╝');
-      debugPrint('');
-      // ==================================
-
+      // 1. Identity Check
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
-      if (userId == null) {
-        if (kDebugMode) {
-          debugPrint('No user ID found, skipping token save');
-        }
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        userId: (userId != null && userId.isNotEmpty)
+            ? PushDiagnosticState.available
+            : PushDiagnosticState.missing,
+      );
+
+      if (userId == null || userId.isEmpty) {
+        if (kDebugMode) debugPrint('[FCM] No user ID available, skipping registration');
         return;
       }
+
+      // 2. iOS-Specific: Explicit APNs Handshake
+      if (Platform.isIOS) {
+        // Ensure we wait for the native token handoff
+        final apnsReady = await _waitForAPNSToken();
+        if (!apnsReady) {
+          if (kDebugMode) debugPrint('[FCM] Aborting: APNs token not available');
+          return;
+        }
+      }
+
+      // 3. Request FCM Token from Firebase
+      if (kDebugMode) debugPrint('[FCM] Requesting registration token...');
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        fcmToken: PushDiagnosticState.pending,
+      );
+
+      final token = await _messaging.getToken();
+
+      if (token == null) {
+        if (kDebugMode) debugPrint('[FCM] ❌ Error: FCM token is NULL');
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          fcmToken: PushDiagnosticState.missing,
+          lastError: 'FCM_TOKEN_NULL',
+        );
+        return;
+      }
+
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        fcmToken: PushDiagnosticState.available,
+      );
+
+      // Log masked token for debugging in non-production
+      if (kDebugMode) {
+        final masked = '${token.substring(0, 8)}...${token.substring(token.length - 4)}';
+        debugPrint('[FCM] FCM Token: $masked');
+      }
+
+      // 4. Supabase Persistence
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        supabaseSync: PushDiagnosticState.pending,
+      );
 
       final platform = Platform.isIOS ? 'ios' : 'android';
 
-      // Save to Supabase device_tokens table
-      await Supabase.instance.client.from('device_tokens').upsert({
-        'user_id': userId,
-        'fcm_token': token,
-        'platform': platform,
-        'updated_at': DateTime.now().toIso8601String(),
-      }, onConflict: 'user_id, fcm_token');
+      try {
+        await Supabase.instance.client.from('device_tokens').upsert({
+          'user_id': userId,
+          'fcm_token': token,
+          'platform': platform,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'user_id, fcm_token');
 
-      if (kDebugMode) {
-        debugPrint('FCM Token saved: ${token.substring(0, 20)}...');
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          supabaseSync: PushDiagnosticState.success,
+          lastError: null,
+        );
+
+        if (kDebugMode) debugPrint('[FCM] ✅ Registration successful for $platform');
+      } catch (supabaseError) {
+        final errorStr = supabaseError.toString();
+        if (kDebugMode) debugPrint('[FCM] ❌ Supabase upsert failed: $errorStr');
+        diagnosticReport.value = diagnosticReport.value.copyWith(
+          supabaseSync: PushDiagnosticState.failed,
+          lastError: 'SUPABASE_SYNC_FAILED: ${errorStr.length > 40 ? errorStr.substring(0, 40) : errorStr}',
+        );
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Failed to save FCM token: $e');
-      }
+      final errorStr = e.toString();
+      if (kDebugMode) debugPrint('[FCM] ❌ Registration chain failed: $errorStr');
+      diagnosticReport.value = diagnosticReport.value.copyWith(
+        lastError: 'CHAIN_FAILED: ${errorStr.length > 40 ? errorStr.substring(0, 40) : errorStr}',
+      );
     }
   }
 
   /// Handle token refresh
   void _onTokenRefresh(String token) {
-    if (kDebugMode) {
-      debugPrint('FCM token refreshed');
-    }
+    if (kDebugMode) debugPrint('[FCM] Token refreshed');
     _saveToken();
   }
 
@@ -227,10 +413,15 @@ class PushNotificationService {
       debugPrint('Foreground push message received: ${message.notification?.title}');
     }
 
-    // IMPORTANT: If app is in foreground, the main app's stream listener 
+    // IMPORTANT: If app is in foreground, the main app's stream listener
     // will show the high-fidelity in-app alert banner.
     // We skip the system notification here to prevent duplicates in foreground.
-    if (_isAppInForeground) {
+    //
+    // Ask the framework rather than trusting _isAppInForeground alone. That flag was
+    // only ever updated by the splash screen's lifecycle observer, which is removed in
+    // its dispose(), so after leaving the splash it stayed frozen at its initial `true`
+    // and suppressed notifications while the app was actually backgrounded.
+    if (_isCurrentlyForeground) {
       if (kDebugMode) {
         debugPrint('ℹ️ Push: Skipping system notification (app is in foreground)');
       }
@@ -395,11 +586,32 @@ class PushNotificationService {
     return await _messaging.getToken();
   }
 
-  /// Update foreground status to suppress duplicate notifications
+  /// Whether the app is genuinely on screen right now.
+  ///
+  /// Prefers the framework's own lifecycle state, which cannot go stale. Falls back to
+  /// the manually-maintained [_isAppInForeground] flag only when the framework has not
+  /// reported a state yet (very early startup).
+  bool get _isCurrentlyForeground {
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state == null) return _isAppInForeground;
+    return state == AppLifecycleState.resumed;
+  }
+
+  /// Update foreground status to suppress duplicate notifications.
+  ///
+  /// Kept for the existing call sites, but it is no longer the source of truth —
+  /// see [_isCurrentlyForeground].
   void setAppInForeground(bool isInForeground) {
     _isAppInForeground = isInForeground;
     if (kDebugMode) {
-      debugPrint('📱 Push: Foreground status updated: $_isAppInForeground');
+      debugPrint('📱 Push: Foreground status updated: $_isAppInForeground '
+          '(framework says: ${WidgetsBinding.instance.lifecycleState})');
     }
+  }
+
+  /// Manually retry the registration process (diagnostic utility)
+  Future<void> retryRegistration() async {
+    _initialized = false; // Allow re-initialization
+    await initialize();
   }
 }

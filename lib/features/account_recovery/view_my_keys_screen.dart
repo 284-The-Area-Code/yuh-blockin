@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/premium_theme.dart';
 import '../../core/services/account_recovery_service.dart';
@@ -70,10 +71,29 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
     }
   }
 
-  Future<void> _copyAllKeys() async {
+  // Hands the key off to whatever the user trusts (Notes, iCloud/Drive,
+  // Messages to themselves, AirDrop, ...) via the OS share sheet. Purely
+  // local - does not collect or transmit the key on our own infrastructure,
+  // so this adds no new PII collection.
+  Future<void> _shareKey(String plate, String key) async {
+    HapticFeedback.mediumImpact();
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Yuh Blockin\' ownership key for $plate:\n\n'
+            '$key\n\n'
+            'Keep this safe - it is the ONLY way to recover this plate if you '
+            'switch devices. Anyone who has this key can claim ownership of '
+            'this plate.',
+        subject: 'Yuh Blockin\' key - $plate',
+      ),
+    );
+  }
+
+  String _buildAllKeysText() {
     final buffer = StringBuffer();
     buffer.writeln('=== Yuh Blockin\' Ownership Keys ===');
-    buffer.writeln('Keep these keys safe!\n');
+    buffer.writeln('Keep these keys safe! Anyone who has a key can claim '
+        'ownership of that plate.\n');
 
     for (final entry in _plateKeys.entries) {
       if (entry.value != null) {
@@ -85,8 +105,11 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
 
     buffer.writeln('---');
     buffer.writeln('Generated: ${DateTime.now().toString().substring(0, 16)}');
+    return buffer.toString();
+  }
 
-    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+  Future<void> _copyAllKeys() async {
+    await Clipboard.setData(ClipboardData(text: _buildAllKeysText()));
     HapticFeedback.heavyImpact();
 
     if (mounted) {
@@ -100,6 +123,18 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
         ),
       );
     }
+  }
+
+  // Purely local via the OS share sheet - no new PII collection, same as
+  // the per-plate share.
+  Future<void> _shareAllKeys() async {
+    HapticFeedback.heavyImpact();
+    await SharePlus.instance.share(
+      ShareParams(
+        text: _buildAllKeysText(),
+        subject: 'Yuh Blockin\' - all ownership keys',
+      ),
+    );
   }
 
   @override
@@ -138,7 +173,15 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
         ),
         centerTitle: true,
         actions: [
-          if (_plateKeys.isNotEmpty && _plateKeys.values.any((v) => v != null))
+          if (_plateKeys.isNotEmpty && _plateKeys.values.any((v) => v != null)) ...[
+            IconButton(
+              onPressed: _shareAllKeys,
+              icon: Icon(
+                Icons.ios_share_rounded,
+                color: PremiumTheme.accentColor,
+              ),
+              tooltip: 'Share all keys',
+            ),
             IconButton(
               onPressed: _copyAllKeys,
               icon: Icon(
@@ -147,6 +190,7 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
               ),
               tooltip: 'Copy all keys',
             ),
+          ],
         ],
       ),
       body: _isLoading
@@ -226,7 +270,7 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Save These Keys',
+                  'Back Up These Keys Now',
                   style: TextStyle(
                     fontSize: isCompact ? 14 : 15,
                     fontWeight: FontWeight.w600,
@@ -235,9 +279,12 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'These keys are the ONLY way to recover your plates if you change devices.',
+                  'These keys are the ONLY way to prove ownership and recover your '
+                  'plates if you lose or replace this device. We cannot recover them '
+                  'for you - if a key is lost, that plate is permanently lost.',
                   style: TextStyle(
                     fontSize: isCompact ? 12 : 13,
+                    fontWeight: FontWeight.w600,
                     color: Colors.amber.shade700,
                   ),
                 ),
@@ -394,6 +441,23 @@ class _ViewMyKeysScreenState extends State<ViewMyKeysScreen> {
                                 ? Colors.green
                                 : PremiumTheme.accentColor,
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _shareKey(plate, key),
+                          icon: const Icon(Icons.ios_share_rounded, size: 18),
+                          label: const Text('Share Key'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: PremiumTheme.accentColor,
+                            side: BorderSide(color: PremiumTheme.accentColor),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),

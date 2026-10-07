@@ -173,7 +173,7 @@ class NotificationService {
       if (kDebugMode) debugPrint('📩 Foreground Action: $actionId for alert $alertId');
       
       try {
-        final timestamp = DateTime.now().toIso8601String();
+        final timestamp = DateTime.now().toUtc().toIso8601String();
         await Supabase.instance.client
             .from('alerts')
             .update({

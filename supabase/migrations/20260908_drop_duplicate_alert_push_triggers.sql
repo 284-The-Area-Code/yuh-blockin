@@ -1,0 +1,43 @@
+-- Migration: remove duplicate alert-push triggers
+--
+-- PROBLEM
+-- Three AFTER INSERT triggers existed on public.alerts, all calling the same
+-- alerts-fcm Edge Function:
+--
+--   alerts_notify_fcm       -> notify_alerts_fcm()      Authorization + service_role GUC
+--   on_new_alert            -> on_new_alert_http()      Authorization + service_role GUC
+--   on_new_alert_send_push  -> notify_alert_push()      apikey + Vault  (correct, kept)
+--
+-- The two legacy functions build their authorization header from a `service_role`
+-- GUC that was never set on this database — the identical defect diagnosed as F1.
+-- They have returned 401 UNAUTHORIZED_NO_AUTH_HEADER on every alert insert for as
+-- long as they have existed. Now that verify_jwt is disabled on alerts-fcm (the
+-- function authenticates callers itself via a named secret key), they instead reach
+-- the handler and are rejected with 403.
+--
+-- Evidence: a single controlled INSERT produced two net._http_response rows at the
+-- identical timestamp — one 403 (a legacy trigger) and one 500 from deep inside the
+-- handler (the fixed trigger, authenticated successfully).
+--
+-- Left unfixed, these would produce two to three DUPLICATE push notifications per
+-- alert as soon as the FCM path is repaired.
+--
+-- WHAT THIS DOES
+-- Drops the two redundant triggers only. The functions notify_alerts_fcm() and
+-- on_new_alert_http() are intentionally NOT dropped: removing the triggers is
+-- sufficient to stop the duplicate calls, and is trivially reversible. The functions
+-- can be removed separately once nothing is confirmed to reference them.
+--
+-- Neither legacy function contains a hardcoded credential (verified: prosrc has no
+-- literal JWT), so no key rotation is required.
+--
+-- AFTER APPLYING
+-- A controlled INSERT into public.alerts must produce exactly ONE new row in
+-- net._http_response, not two.
+
+drop trigger if exists alerts_notify_fcm on public.alerts;
+drop trigger if exists on_new_alert      on public.alerts;
+
+-- Retained, unchanged:
+--   on_new_alert_send_push AFTER INSERT ON public.alerts
+--     FOR EACH ROW EXECUTE FUNCTION notify_alert_push()

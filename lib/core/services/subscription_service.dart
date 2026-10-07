@@ -1,6 +1,12 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:flutter/services.dart' show PlatformException;
+// purchases_flutter 10 exports its own PurchaseResult (customerInfo +
+// storeTransaction). This file already defines a PurchaseResult that is the
+// public API of this service and is used across the subscription UI, so the
+// SDK's is hidden rather than renaming ours in 20+ call sites. The SDK type is
+// still usable here via inference - we only need its .customerInfo.
+import 'package:purchases_flutter/purchases_flutter.dart' hide PurchaseResult;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/payment_config.dart';
@@ -74,6 +80,20 @@ class SubscriptionService {
 
       // Load daily usage
       await _loadDailyUsage();
+
+      // Reunite a returning user with a purchase they already paid for.
+      //
+      // Identity is anonymous and per-install, so a reinstall (or a lost
+      // session) produces a new app_user_id with no entitlement attached. The
+      // store receipt, however, belongs to the user's Google/Apple account, so
+      // a restore re-attaches it - RevenueCat's Transfer Behavior is set to
+      // "Transfer to new App User ID". Without this, someone who paid and then
+      // reinstalled is silently downgraded to free and has to know to press a
+      // Restore button they have no reason to look for.
+      //
+      // Runs at most once per install, and only when we are not already
+      // premium, so it costs nothing for free users after the first launch.
+      await _restoreOnFirstRunIfNeeded();
 
       _isInitialized = true;
 
@@ -172,22 +192,34 @@ class SubscriptionService {
 
     try {
       if (_revenueCatApiKey.isNotEmpty) {
-        // Refresh from RevenueCat
         final customerInfo = await Purchases.getCustomerInfo();
         await _handleCustomerInfoUpdate(customerInfo);
-        _lastEntitlementRefresh = DateTime.now();
+      }
 
-        if (kDebugMode) {
-          debugPrint('✅ Entitlements refreshed from RevenueCat');
-        }
-      } else {
-        // Refresh from server only
-        await _syncSubscriptionStatus();
-        _lastEntitlementRefresh = DateTime.now();
+      // Always re-read the server as well, not just when RevenueCat is absent.
+      // public.subscriptions is what validate_alert_permission() enforces, and
+      // the RevenueCat webhook is its only writer, so this is how a purchase
+      // made on another device - or one whose webhook has only just landed -
+      // reaches this session.
+      final storeSaysPremium = _isPremium;
+      final storeStatus = _subscriptionStatus;
+      await _syncSubscriptionStatus();
 
-        if (kDebugMode) {
-          debugPrint('✅ Entitlements refreshed from server');
-        }
+      // Optimistic union for the UI. If the store says premium but the webhook
+      // has not written the row yet, keep the premium flag rather than showing
+      // a just-paying user as free. This cannot be abused: entitlement is
+      // enforced server-side in validate_alert_permission(), which reads the
+      // row, not this flag.
+      if (storeSaysPremium && !_isPremium) {
+        _isPremium = true;
+        _subscriptionStatus = storeStatus;
+        await _saveCachedStatus();
+      }
+
+      _lastEntitlementRefresh = DateTime.now();
+
+      if (kDebugMode) {
+        debugPrint('✅ Entitlements refreshed: $_subscriptionStatus (premium: $_isPremium)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -203,25 +235,23 @@ class SubscriptionService {
     return timeSinceRefresh.inHours >= 1; // Refresh every hour
   }
 
-  /// Increment daily usage after sending an alert
+  /// Record locally that an alert was sent, so the "alerts remaining" display
+  /// stays in step until the next server sync.
+  ///
+  /// This deliberately does NOT call the increment_daily_usage RPC any more.
+  /// The authoritative increment happens inside send_alert() on the server,
+  /// after the alert row is actually inserted. A client cannot be trusted to
+  /// report its own usage - one that simply never reported stayed at zero
+  /// forever, which is what made the daily limit bypassable. Calling the RPC
+  /// here as well would double-count every alert.
   Future<void> incrementDailyUsage() async {
     if (_isPremium) return; // Premium users don't track usage
 
     _dailyAlertsUsed++;
     await _saveDailyUsage();
 
-    // Also update server
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.rpc('increment_daily_usage');
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('⚠️ Failed to sync daily usage to server: $e');
-      }
-    }
-
     if (kDebugMode) {
-      debugPrint('📊 Daily usage: $_dailyAlertsUsed/$freeDailyAlertLimit');
+      debugPrint('📊 Daily usage (local): $_dailyAlertsUsed/$freeDailyAlertLimit');
     }
   }
 
@@ -314,19 +344,49 @@ class SubscriptionService {
         return PurchaseResult(success: false, error: 'Product not found');
       }
 
-      final customerInfo = await Purchases.purchasePackage(package);
-      await _handleCustomerInfoUpdate(customerInfo);
+      // purchasePackage is deprecated in 10.x in favour of purchase(PurchaseParams),
+      // and it now returns a PurchaseResult rather than CustomerInfo.
+      final purchase = await Purchases.purchase(PurchaseParams.package(package));
+      await _handleCustomerInfoUpdate(purchase.customerInfo);
 
       if (_isPremium) {
         return PurchaseResult(success: true, message: 'Purchase successful!');
       } else {
         return PurchaseResult(success: false, error: 'Purchase not activated');
       }
-    } on PurchasesErrorCode catch (e) {
-      if (e == PurchasesErrorCode.purchaseCancelledError) {
-        return PurchaseResult(success: false, error: 'Purchase cancelled');
+    } on PlatformException catch (e) {
+      // Purchases.purchasePackage throws a PlatformException, never a
+      // PurchasesErrorCode (that is a plain enum). PurchasesErrorHelper is the
+      // documented way to map the exception onto the enum - see the example in
+      // purchases_flutter/lib/errors.dart.
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      switch (code) {
+        case PurchasesErrorCode.purchaseCancelledError:
+          return PurchaseResult(success: false, error: 'Purchase cancelled');
+        case PurchasesErrorCode.purchaseNotAllowedError:
+          return PurchaseResult(
+            success: false,
+            error: 'Purchases are not allowed on this device.',
+          );
+        case PurchasesErrorCode.paymentPendingError:
+          return PurchaseResult(
+            success: false,
+            error: 'Payment is pending approval. Premium unlocks once it clears.',
+          );
+        case PurchasesErrorCode.productAlreadyPurchasedError:
+          return PurchaseResult(
+            success: false,
+            error: 'You already own this. Use Restore to recover it.',
+          );
+        default:
+          if (kDebugMode) {
+            debugPrint('❌ Purchase failed: $code (${e.message})');
+          }
+          return PurchaseResult(
+            success: false,
+            error: 'Purchase failed. Please try again.',
+          );
       }
-      return PurchaseResult(success: false, error: 'Purchase failed: $e');
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Purchase failed: $e');
@@ -349,10 +409,10 @@ class SubscriptionService {
         'user_id': _currentUserId,
         'status': _subscriptionStatus,
         'plan_type': productId == lifetimeProductId ? 'lifetime' : 'monthly',
-        'started_at': DateTime.now().toIso8601String(),
+        'started_at': DateTime.now().toUtc().toIso8601String(),
         'expires_at': productId == lifetimeProductId
             ? null
-            : DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+            : DateTime.now().toUtc().add(const Duration(days: 30)).toIso8601String(),
         'is_demo': isDemo, // Mark as demo purchase for tracking
         'source': isDemo ? 'demo_mode' : 'revenuecat',
       });
@@ -371,7 +431,13 @@ class SubscriptionService {
     final activeEntitlements = customerInfo.entitlements.active;
     final premiumEntitlement = activeEntitlements['premium'];
 
-    if (premiumEntitlement != null) {
+    // isSandbox is true for a license-tester's test purchase even in this
+    // production app build - RevenueCat reports it as active to the client
+    // SDK by design, for testing. The server mirrors this same distinction
+    // (see supabase/functions/revenuecat-webhook/index.ts); without checking
+    // it here too, a license-tester device shows itself Premium locally
+    // regardless of what the server-enforced entitlement actually is.
+    if (premiumEntitlement != null && !premiumEntitlement.isSandbox) {
       _isPremium = true;
       // Determine status from product ID (Monthly vs Lifetime share the 'premium' entitlement)
       final productId = premiumEntitlement.productIdentifier;
@@ -382,31 +448,42 @@ class SubscriptionService {
     }
 
     await _saveCachedStatus();
-    await _syncToServer();
+
+    // NOTE: the client deliberately does NOT write entitlement state to the
+    // server. `public.subscriptions` grants writes to service_role only, and
+    // the authoritative write must come from the RevenueCat webhook. A client
+    // that can set its own `status` can grant itself premium.
 
     if (kDebugMode) {
       debugPrint('🔄 Subscription updated: $_subscriptionStatus');
     }
   }
 
+  /// Read the server's view of this user's entitlement.
+  ///
+  /// `public.subscriptions` is the single source of truth and is the same table
+  /// `validate_alert_permission()` reads, so the client and the server agree on
+  /// who is premium.
   Future<void> _syncSubscriptionStatus() async {
     try {
       final supabase = Supabase.instance.client;
       final result = await supabase
-          .from('ath_monthly_subscriptions')
-          .select('renewal_status, current_period_end')
+          .from('subscriptions')
+          .select('status, expires_at')
           .eq('user_id', _currentUserId!)
           .maybeSingle();
 
       if (result != null) {
-        final status = result['renewal_status'] as String?;
+        final status = result['status'] as String?;
         _subscriptionStatus = status ?? 'free';
-        _isPremium = _subscriptionStatus == 'active' || _subscriptionStatus == 'grace_period';
+        _isPremium = _subscriptionStatus == 'premium' || _subscriptionStatus == 'lifetime';
 
-        // Check if subscription has expired
-        if (result['current_period_end'] != null) {
-          final expiresAt = DateTime.parse(result['current_period_end']);
-          if (expiresAt.isBefore(DateTime.now())) {
+        // expires_at is NULL for lifetime. Compare in UTC: the column is
+        // timestamptz and Supabase returns it with an offset.
+        final expiresAtRaw = result['expires_at'];
+        if (_isPremium && expiresAtRaw != null) {
+          final expiresAt = DateTime.parse(expiresAtRaw as String).toUtc();
+          if (expiresAt.isBefore(DateTime.now().toUtc())) {
             _isPremium = false;
             _subscriptionStatus = 'expired';
           }
@@ -421,17 +498,32 @@ class SubscriptionService {
     }
   }
 
-  Future<void> _syncToServer() async {
+  /// Silently attempt a restore once per install, if we are not already premium.
+  ///
+  /// Deliberately swallows every failure: this is a best-effort convenience on
+  /// the startup path, and a user with no prior purchase will always "fail"
+  /// here. It must never block or surface an error.
+  Future<void> _restoreOnFirstRunIfNeeded() async {
+    if (_isPremium) return;
+    if (_revenueCatApiKey.isEmpty || PaymentConfig.isDemoMode) return;
+
     try {
-      final supabase = Supabase.instance.client;
-      await supabase.from('ath_monthly_subscriptions').upsert({
-        'user_id': _currentUserId,
-        'renewal_status': _subscriptionStatus,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      final prefs = await _getPrefs();
+      const flag = 'yuh_restore_attempted';
+      if (prefs.getBool(flag) == true) return;
+      await prefs.setBool(flag, true);
+
+      final customerInfo = await Purchases.restorePurchases();
+      await _handleCustomerInfoUpdate(customerInfo);
+
+      if (kDebugMode) {
+        debugPrint(_isPremium
+            ? '✅ Restored an existing purchase on first run'
+            : 'ℹ️ First-run restore found no prior purchase');
+      }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('⚠️ Failed to sync to server: $e');
+        debugPrint('ℹ️ First-run restore skipped: $e');
       }
     }
   }
