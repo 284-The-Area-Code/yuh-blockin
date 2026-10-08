@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/premium_theme.dart';
 import '../../core/theme/bvi_motifs.dart';
+import '../../core/theme/bvi_pride_home.dart';
 import '../../core/services/subscription_service.dart';
 import '../../core/theme/theme_notifier.dart';
 
@@ -256,7 +257,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
   }
 
   /// Special ultra-premium BVI Pride theme option
-  /// Features the 12 golden oil lamps of Saint Ursula from the BVI coat of arms
+  /// Its emblem is the same miniature BVI flag shown on the BVI Pride home screen
   ///
   /// Colors are sourced from PremiumTheme's bviPride* constants (not
   /// redeclared locally) so this card and the rest of the app can never
@@ -388,87 +389,73 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ),
             Row(
               children: [
-            // Premium BVI flag-inspired preview - Blue background, gold held
-            // to thin accents, with a faint eleven-lamp ring Easter egg.
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                BviElevenLampRing(
-                  diameter: circleSize + 16,
-                  lampColor: goldenPoppy,
-                  opacity: isSelected ? 0.35 : 0.18,
+            // Premium BVI preview - Blue background, gold held to thin
+            // accents, with the mini BVI flag from the home screen.
+            Container(
+              width: circleSize,
+              height: circleSize,
+              decoration: BoxDecoration(
+                // Resolution Blue - the main BVI flag color
+                gradient: const RadialGradient(
+                  center: Alignment.center,
+                  radius: 0.8,
+                  colors: [
+                    Color(0xFF002D9C), // Brighter center blue
+                    resolutionBlue, // Official Resolution Blue
+                    Color(0xFF001654), // Darker edge
+                  ],
                 ),
-                Container(
-                  width: circleSize,
-                  height: circleSize,
-                  decoration: BoxDecoration(
-                    // Resolution Blue - the main BVI flag color
-                    gradient: const RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.8,
-                      colors: [
-                        Color(0xFF002D9C), // Brighter center blue
-                        resolutionBlue, // Official Resolution Blue
-                        Color(0xFF001654), // Darker edge
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: goldenPoppy,
-                      width: 2.5,
-                    ),
-                    boxShadow: [
-                      // Blue glow - representing the flag, the dominant light
-                      BoxShadow(
-                        color: resolutionBlue.withValues(alpha: 0.6),
-                        blurRadius: 20,
-                        spreadRadius: 4,
-                      ),
-                      // Thin gold rim glow - accent only
-                      BoxShadow(
-                        color: goldenPoppy.withValues(alpha: 0.28),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Thin red ring - layered depth, "strength and valor" accent
-                      Container(
-                        width: circleSize - 10,
-                        height: circleSize - 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: philippineRed.withValues(alpha: 0.35),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      // Small green accent ring (coat of arms)
-                      Container(
-                        width: circleSize - 16,
-                        height: circleSize - 16,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: cadmiumGreen.withValues(alpha: 0.6),
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                      // Stylized oil lamp - Saint Ursula's lamps, abstracted
-                      BviOilLampIcon(
-                        size: isCompact ? 24 : 30,
-                        color: goldenPoppy,
-                        glowColor: PremiumTheme.bviPrideAccentGlow,
-                      ),
-                    ],
-                  ),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: goldenPoppy,
+                  width: 2.5,
                 ),
-              ],
+                boxShadow: [
+                  // Blue glow - representing the flag, the dominant light
+                  BoxShadow(
+                    color: resolutionBlue.withValues(alpha: 0.6),
+                    blurRadius: 20,
+                    spreadRadius: 4,
+                  ),
+                  // Thin gold rim glow - accent only
+                  BoxShadow(
+                    color: goldenPoppy.withValues(alpha: 0.28),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Thin red ring - layered depth, "strength and valor" accent
+                  Container(
+                    width: circleSize - 10,
+                    height: circleSize - 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: philippineRed.withValues(alpha: 0.35),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  // Small green accent ring (coat of arms)
+                  Container(
+                    width: circleSize - 16,
+                    height: circleSize - 16,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: cadmiumGreen.withValues(alpha: 0.6),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                  // Mini BVI flag - the same mark as the home screen
+                  BviMiniFlag(width: isCompact ? 28 : 34),
+                ],
+              ),
             ),
 
             SizedBox(width: isCompact ? 14 : 18),
@@ -541,7 +528,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                   ),
                   SizedBox(height: isCompact ? 4 : 6),
                   Text(
-                    'Saint Ursula\'s Golden Lamps',
+                    'Island map & flag',
                     style: TextStyle(
                       fontSize: subtitleFontSize,
                       fontWeight: FontWeight.w500,
@@ -556,7 +543,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                   if (!isCompact) ...[
                     const SizedBox(height: 2),
                     Text(
-                      'Official BVI coat of arms colors',
+                      'Official BVI flag colors',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,

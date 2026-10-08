@@ -129,7 +129,6 @@ class PremiumTheme {
   // MARK: - BVI Pride Theme Colors (ULTRA PREMIUM)
 
   /// BVI Pride mode - Official British Virgin Islands Flag & Coat of Arms
-  /// Inspired by Saint Ursula's 12 golden oil lamps on the green shield
   /// Resolution Blue (#001F7E), Golden Poppy (#F7C700), Cadmium Green (#006124)
   /// Philippine Red (#D00C27) for highlights - strength & valor
   /// Motto: "Vigilate" - Be Vigilant

@@ -149,9 +149,6 @@ class BviPremiumPin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final flagWidth = isTablet ? 42.0 : 36.0;
-    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-
     return Semantics(
       label: 'Premium',
       child: Container(
@@ -163,52 +160,68 @@ class BviPremiumPin extends StatelessWidget {
           borderRadius: BorderRadius.circular(isTablet ? 21 : 19),
           border: Border.all(color: BviPrideHome.glassBorder, width: 1.5),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(3.5),
-            boxShadow: const [
-              BoxShadow(color: Color(0x8CC8D6EE), spreadRadius: 1),
-              BoxShadow(color: Color(0x6696B4E6), blurRadius: 12),
-              BoxShadow(
-                color: Color(0x73000000),
-                blurRadius: 5,
-                offset: Offset(0, 2),
-              ),
-            ],
+        child: BviMiniFlag(width: isTablet ? 42.0 : 36.0),
+      ),
+    );
+  }
+}
+
+/// The miniature BVI flag from [BviPremiumPin], on its own: soft blue edge,
+/// glow and enamel-pin gloss. Also used as the emblem on the BVI Pride card
+/// in Theme settings, so the picker shows the same mark as the home screen.
+class BviMiniFlag extends StatelessWidget {
+  const BviMiniFlag({super.key, required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(3.5),
+        boxShadow: const [
+          BoxShadow(color: Color(0x8CC8D6EE), spreadRadius: 1),
+          BoxShadow(color: Color(0x6696B4E6), blurRadius: 12),
+          BoxShadow(
+            color: Color(0x73000000),
+            blurRadius: 5,
+            offset: Offset(0, 2),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(3.5),
-            child: Stack(
-              children: [
-                Image.asset(
-                  'assets/images/bvi_flag.png',
-                  width: flagWidth,
-                  height: flagWidth / 2,
-                  fit: BoxFit.cover,
-                  // Decode at display size rather than the full 1200 px.
-                  cacheWidth: (flagWidth * pixelRatio).round(),
-                ),
-                // Soft gloss, like an enamel pin.
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: const Alignment(-0.6, -1),
-                        end: const Alignment(0.6, 1),
-                        colors: [
-                          Colors.white.withValues(alpha: 0.28),
-                          Colors.white.withValues(alpha: 0.06),
-                          Colors.white.withValues(alpha: 0.0),
-                          const Color(0x1496B4E6),
-                        ],
-                        stops: const [0.0, 0.40, 0.42, 1.0],
-                      ),
-                    ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(3.5),
+        child: Stack(
+          children: [
+            Image.asset(
+              'assets/images/bvi_flag.png',
+              width: width,
+              height: width / 2,
+              fit: BoxFit.cover,
+              // Decode at display size rather than the full 1200 px.
+              cacheWidth: (width * pixelRatio).round(),
+            ),
+            // Soft gloss, like an enamel pin.
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: const Alignment(-0.6, -1),
+                    end: const Alignment(0.6, 1),
+                    colors: [
+                      Colors.white.withValues(alpha: 0.28),
+                      Colors.white.withValues(alpha: 0.06),
+                      Colors.white.withValues(alpha: 0.0),
+                      const Color(0x1496B4E6),
+                    ],
+                    stops: const [0.0, 0.40, 0.42, 1.0],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
