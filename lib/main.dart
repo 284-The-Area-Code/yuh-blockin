@@ -41,6 +41,7 @@ import 'core/services/account_recovery_service.dart';
 import 'features/alert_sound_settings/alert_sound_settings_screen.dart';
 import 'features/account_recovery/view_my_keys_screen.dart';
 import 'features/support/contact_support_screen.dart';
+import 'features/feedback/feedback_screen.dart';
 import 'features/debug/push_diagnostic_screen.dart';
 
 /// Premium flagship-quality Yuh Blockin' app
@@ -2527,6 +2528,23 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                 );
               } else if (value == 'replay_tour') {
                 _replayProductTour();
+              } else if (value == 'feedback') {
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(-1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(CurvedAnimation(
+                        parent: animation,
+                        curve: PremiumTheme.standardCurve,
+                      )),
+                      child: const FeedbackScreen(),
+                    ),
+                    transitionDuration: PremiumTheme.mediumDuration,
+                  ),
+                );
               } else if (value == 'contact') {
                 Navigator.of(context).push(
                   PageRouteBuilder(
@@ -2639,6 +2657,26 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                     const SizedBox(width: 12),
                     Text(
                       'Replay Product Tour',
+                      style: TextStyle(
+                        color: PremiumTheme.primaryTextColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'feedback',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.rate_review_outlined,
+                      color: PremiumTheme.accentColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Share Feedback',
                       style: TextStyle(
                         color: PremiumTheme.primaryTextColor,
                         fontWeight: FontWeight.w500,
