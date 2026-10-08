@@ -122,19 +122,39 @@ interface EntitlementState {
 }
 
 /**
+ * True when a v2 subscription/purchase item's `environment` field is
+ * RevenueCat's production designation (case-insensitive: observed as both
+ * `"SANDBOX"` on the webhook event itself and documented lowercase
+ * `"production"`/`"sandbox"` on the API v2 object schema).
+ */
+function isProductionEnvironment(item: any): boolean {
+  return typeof item?.environment === 'string' && item.environment.toUpperCase() === 'PRODUCTION';
+}
+
+/**
  * Derive entitlement from the v2 /subscriptions list.
  *
- * This is the path that works for sandbox. Each item carries `gives_access`,
- * which is RevenueCat's own authoritative "does this grant access right now"
- * flag, plus a nested `entitlements.items[].lookup_key`. An expired
- * subscription comes back with gives_access false and an empty entitlements
- * list, so filtering on gives_access alone is sufficient - but the lookup_key
- * is still checked so a future non-premium product cannot grant premium.
+ * Each item carries `gives_access`, which is RevenueCat's own authoritative
+ * "does this grant access right now" flag, plus a nested
+ * `entitlements.items[].lookup_key`. An expired subscription comes back with
+ * gives_access false and an empty entitlements list, so filtering on
+ * gives_access alone is sufficient - but the lookup_key is still checked so a
+ * future non-premium product cannot grant premium.
+ *
+ * Also requires `environment === 'production'`. RevenueCat's v2 Customer API
+ * returns sandbox items alongside real ones with no separate endpoint to
+ * exclude them, and this project's own license-tester/QA devices hold active
+ * sandbox subscriptions - without this filter, any TRANSFER or RENEWAL event
+ * touching one of those devices re-syncs a sandbox entitlement into this
+ * production table as real premium. (Confirmed live: the webhook log shows
+ * repeated `TRANSFER (... env SANDBOX)` events each followed by
+ * `synced status=lifetime`.)
  *
  * `ends_at` and `current_period_ends_at` are epoch MILLISECONDS.
  */
 function readSubscription(items: any[]): EntitlementState | null {
   const sub = items.find((s) =>
+    isProductionEnvironment(s) &&
     s?.gives_access === true &&
     Array.isArray(s?.entitlements?.items) &&
     s.entitlements.items.some((e: any) => e?.lookup_key === PREMIUM_ENTITLEMENT)
@@ -169,10 +189,12 @@ function readSubscription(items: any[]): EntitlementState | null {
  * granting access.
  *
  * Verified against a live sandbox lifetime purchase: status 'owned', nested
- * entitlement lookup_key 'premium', state 'active'.
+ * entitlement lookup_key 'premium', state 'active'. Also requires
+ * `environment === 'production'` - see the comment on readSubscription().
  */
 function readPurchase(items: any[]): EntitlementState | null {
   const purchase = items.find((p) =>
+    isProductionEnvironment(p) &&
     p?.status === 'owned' &&
     Array.isArray(p?.entitlements?.items) &&
     p.entitlements.items.some(
