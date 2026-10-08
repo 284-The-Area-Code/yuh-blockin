@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'sound_preferences_service.dart';
 import 'background_alert_service.dart';
+import 'notification_channels.dart';
 
 /// Comprehensive Notification Service
 ///
@@ -148,7 +149,7 @@ class NotificationService {
 
     // Create the alert notification channel with custom sound
     const alertChannel = AndroidNotificationChannel(
-      'yuh_blockin_alerts',
+      NotificationChannels.general,
       'Yuh Blockin. Alerts',
       description: 'Important parking alert notifications',
       importance: Importance.max,
@@ -157,9 +158,11 @@ class NotificationService {
       enableVibration: true,
       enableLights: true,
       ledColor: Color(0xFF4CAF50),
+      showBadge: false,
     );
 
     await androidPlugin.createNotificationChannel(alertChannel);
+    await NotificationChannels.deleteRetired(androidPlugin);
     debugPrint('Notification channel created with custom sound');
   }
 
@@ -260,8 +263,7 @@ class NotificationService {
       600,  // Long final buzz
     ]);
 
-    // Android: Use a fresh channel ID to ensure action buttons are updated
-    final channelId = 'yuh_blockin_alert_${soundFileName}_v2';
+    final channelId = NotificationChannels.alert(soundFileName);
 
     // Create the notification channel for this specific sound
     if (_isAndroid) {
@@ -278,6 +280,7 @@ class NotificationService {
           enableVibration: true,
           enableLights: true,
           ledColor: const Color(0xFF4CAF50),
+          showBadge: false,
         );
         await androidPlugin.createNotificationChannel(channel);
       }
@@ -289,6 +292,7 @@ class NotificationService {
       'Yuh Blockin. Alerts',
       channelDescription: 'Parking alert notifications',
       importance: Importance.max,
+      channelShowBadge: false,
       priority: Priority.max,
       playSound: playSound,
       sound: playSound ? RawResourceAndroidNotificationSound(soundFileName) : null,
@@ -334,7 +338,7 @@ class NotificationService {
     // Note: interruptionLevel.active is used since we don't have time-sensitive entitlement
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
-      presentBadge: true,
+      presentBadge: false,
       presentSound: playSound,
       interruptionLevel: InterruptionLevel.active,
       threadIdentifier: 'yuh_blockin_alerts',
@@ -372,9 +376,10 @@ class NotificationService {
       try {
         final fallbackDetails = NotificationDetails(
           android: AndroidNotificationDetails(
-            'yuh_blockin_alerts_safe',
+            NotificationChannels.safeFallback,
             'Yuh Blockin. Alerts',
             importance: Importance.max,
+            channelShowBadge: false,
             priority: Priority.max,
             playSound: true,
             sound: const RawResourceAndroidNotificationSound('alert_sound'),
@@ -401,9 +406,10 @@ class NotificationService {
         try {
           final systemDetails = NotificationDetails(
             android: AndroidNotificationDetails(
-              'yuh_blockin_alerts_system',
+              NotificationChannels.systemFallback,
               'Yuh Blockin. Alerts',
               importance: Importance.max,
+              channelShowBadge: false,
               priority: Priority.max,
               playSound: true,
               enableVibration: true,
@@ -543,10 +549,11 @@ class NotificationService {
     }
 
     const androidDetails = AndroidNotificationDetails(
-      'yuh_blockin_warnings',
+      NotificationChannels.warnings,
       'Yuh Blockin. Warnings',
       channelDescription: 'App warnings and status notifications',
       importance: Importance.high,
+      channelShowBadge: false,
       priority: Priority.high,
       playSound: false,
       enableVibration: true,

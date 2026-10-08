@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:vibration/vibration.dart';
 import '../../config/supabase_config.dart';
 import 'user_alias_service.dart';
+import 'notification_channels.dart';
 
 // Regex for emoji extraction (shared with main app)
 final RegExp _emojiRegex = RegExp(
@@ -35,8 +36,8 @@ class BackgroundAlertService {
   BackgroundAlertService._internal();
 
   static const String _userIdKey = 'user_id';
-  static const String _notificationChannelId = 'yuh_blockin_alerts';
-  static const String _notificationChannelName = 'Yuh Blockin. Alerts';
+  static const String _notificationChannelId = NotificationChannels.service;
+  static const String _notificationChannelName = 'Background service';
 
   // Helper for platform checking that works on web
   bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -52,13 +53,11 @@ class BackgroundAlertService {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       _notificationChannelId,
       _notificationChannelName,
-      description: 'Critical parking alert notifications',
-      importance: Importance.max,
-      playSound: true,
-      enableVibration: true,
-      sound: RawResourceAndroidNotificationSound('alert_sound'),
-      enableLights: true,
-      ledColor: Color(0xFF4CAF50),
+      description: 'Keeps Yuh Blockin. ready for alerts',
+      importance: Importance.low,
+      playSound: false,
+      enableVibration: false,
+      showBadge: false,
     );
 
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -470,10 +469,7 @@ Future<void> _showAlertNotification(
     debugPrint('iOS sound file: $iosSoundFileName');
   }
 
-  // Android: Use a channel ID that includes action support and sound
-  // IMPORTANT: We append '_v2' to the channel ID to force Android to re-register the channel
-  // and show the new action buttons (Moving Now, etc.) if they were cached previously.
-  final channelId = 'yuh_blockin_alert_${soundFileName}_v2';
+  final channelId = NotificationChannels.alert(soundFileName);
 
   // Create the notification channel for this specific sound (Android only)
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
@@ -490,6 +486,7 @@ Future<void> _showAlertNotification(
         enableVibration: true,
         enableLights: true,
         ledColor: const Color(0xFF4CAF50),
+        showBadge: false,
       );
       await androidPlugin.createNotificationChannel(channel);
     }
@@ -528,6 +525,7 @@ Future<void> _showAlertNotification(
     'Yuh Blockin. Alerts',
     channelDescription: 'Critical parking alert notifications',
     importance: Importance.max,
+    channelShowBadge: false,
     priority: Priority.max,
     playSound: true,
     sound: RawResourceAndroidNotificationSound(soundFileName),
@@ -572,7 +570,7 @@ Future<void> _showAlertNotification(
   // iOS notification details with custom sound
   final iosDetails = DarwinNotificationDetails(
     presentAlert: true,
-    presentBadge: true,
+    presentBadge: false,
     presentSound: true,
     sound: iosSoundFileName,
     interruptionLevel: InterruptionLevel.active,
@@ -608,9 +606,10 @@ Future<void> _showAlertNotification(
     try {
       final fallbackDetails = NotificationDetails(
         android: AndroidNotificationDetails(
-          'yuh_blockin_alerts_safe',
+          NotificationChannels.safeFallback,
           'Yuh Blockin. Alerts',
           importance: Importance.max,
+          channelShowBadge: false,
           priority: Priority.max,
           playSound: true,
           sound: const RawResourceAndroidNotificationSound('alert_sound'),
@@ -637,9 +636,10 @@ Future<void> _showAlertNotification(
       
       final systemDetails = NotificationDetails(
         android: AndroidNotificationDetails(
-          'yuh_blockin_alerts_system',
+          NotificationChannels.systemFallback,
           'Yuh Blockin. Alerts',
           importance: Importance.max,
+          channelShowBadge: false,
           priority: Priority.max,
           playSound: true,
           enableVibration: true,

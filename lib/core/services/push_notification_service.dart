@@ -10,6 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/push_diagnostic_model.dart';
 import 'sound_preferences_service.dart';
+import 'notification_channels.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
@@ -127,6 +129,9 @@ class PushNotificationService {
     _messaging = FirebaseMessaging.instance;
     onNotificationTapped = onTap;
 
+    // The app shows no icon badge. Clear any count older builds left behind.
+    await _clearAppIconBadge();
+
     diagnosticReport.value = diagnosticReport.value.copyWith(
       lastAttempt: DateTime.now(),
       lastError: null,
@@ -203,6 +208,16 @@ class PushNotificationService {
     }
   }
 
+  Future<void> _clearAppIconBadge() async {
+    try {
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        FlutterAppBadger.removeBadge();
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('⚠️ Could not clear app icon badge: $e');
+    }
+  }
+
   /// Initialize local notifications for foreground message display
   Future<void> _initializeLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -230,17 +245,11 @@ class PushNotificationService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null) {
-        // List of all possible alert sounds in assets/sounds
-        final alertSounds = [
-          'low_alert_1', 'low_alert_2', 'low_alert_3',
-          'normal_alert',
-          'high_alert_1', 'high_alert_2',
-          'alert_sound'
-        ];
+        const alertSounds = NotificationChannels.alertSounds;
 
         for (final soundName in alertSounds) {
           final channel = AndroidNotificationChannel(
-            'yuh_blockin_alert_${soundName}_v2',
+            NotificationChannels.alert(soundName),
             'Yuh Blockin Alerts',
             description: 'Critical parking alert notifications',
             importance: Importance.max,
@@ -248,9 +257,11 @@ class PushNotificationService {
             sound: RawResourceAndroidNotificationSound(soundName),
             enableVibration: true,
             enableLights: true,
+            showBadge: false,
           );
           await androidPlugin.createNotificationChannel(channel);
         }
+        await NotificationChannels.deleteRetired(androidPlugin);
 
         if (kDebugMode) {
           debugPrint('✅ Android: ${alertSounds.length} alert channels pre-created');
@@ -478,9 +489,9 @@ class PushNotificationService {
       debugPrint('Push notification sound: $soundFileName (urgency: $urgencyLevel)');
     }
 
-    // Android: Use a channel ID specific to this sound file
-    // This is required because Android caches channel settings including sound
-    final channelId = 'yuh_blockin_alert_$soundFileName';
+    // Android caches channel settings including sound, so each sound file
+    // has its own channel.
+    final channelId = NotificationChannels.alert(soundFileName);
 
     // Create the notification channel for this specific sound
     if (Platform.isAndroid) {
@@ -495,6 +506,7 @@ class PushNotificationService {
           playSound: true,
           sound: RawResourceAndroidNotificationSound(soundFileName),
           enableVibration: true,
+          showBadge: false,
         );
         await androidPlugin.createNotificationChannel(channel);
       }
@@ -505,6 +517,7 @@ class PushNotificationService {
       'Yuh Blockin Alerts',
       channelDescription: 'Push notifications for parking alerts',
       importance: Importance.max,
+      channelShowBadge: false,
       priority: Priority.max,
       playSound: true,
       sound: RawResourceAndroidNotificationSound(soundFileName),
@@ -517,7 +530,7 @@ class PushNotificationService {
 
     final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
-      presentBadge: true,
+      presentBadge: false,
       presentSound: true,
       sound: iosSoundFileName,
       interruptionLevel: InterruptionLevel.active,
