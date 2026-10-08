@@ -175,31 +175,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           height: 104,
           fit: BoxFit.contain,
         ),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: PaywallStyle.tealSoft,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.workspace_premium_rounded, size: 15, color: PaywallStyle.teal),
-              SizedBox(width: 5),
-              Text(
-                'PREMIUM',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.6,
-                  color: PaywallStyle.teal,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
         const Text(
           'Move without limits',
           textAlign: TextAlign.center,
