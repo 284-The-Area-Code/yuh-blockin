@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,6 +67,13 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   bool get _compact {
     final mq = MediaQuery.of(context);
     return mq.size.height - mq.padding.vertical < 780;
+  }
+
+  /// The shortest phones (e.g. iPhone SE, ~650dp usable) get a smaller logo,
+  /// no subtitle and tighter benefit rows on top of the compact layout.
+  bool get _tight {
+    final mq = MediaQuery.of(context);
+    return mq.size.height - mq.padding.vertical < 700;
   }
 
   @override
@@ -177,12 +186,8 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
   Widget _buildHero() {
     return Column(
       children: [
-        Image.asset(
-          'assets/images/logo_transparent.png',
-          height: _compact ? 88 : 104,
-          fit: BoxFit.contain,
-        ),
-        SizedBox(height: _compact ? 12 : 20),
+        _HeroLogo(height: _tight ? 60 : (_compact ? 88 : 104)),
+        SizedBox(height: _tight ? 8 : (_compact ? 12 : 20)),
         Text(
           'Move without limits',
           textAlign: TextAlign.center,
@@ -194,16 +199,18 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
             height: 1.15,
           ),
         ),
-        SizedBox(height: _compact ? 6 : 8),
-        Text(
-          'Everything Yuh Blockin can do, with no daily cap.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: _compact ? 14 : 15,
-            color: PaywallStyle.inkSecondary,
-            height: 1.4,
+        if (!_tight) ...[
+          SizedBox(height: _compact ? 6 : 8),
+          Text(
+            'Everything Yuh Blockin can do, with no daily cap.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: _compact ? 14 : 15,
+              color: PaywallStyle.inkSecondary,
+              height: 1.4,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -223,12 +230,12 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
         children: [
           for (final benefit in premiumBenefits)
             Padding(
-              padding: EdgeInsets.symmetric(vertical: _compact ? 3 : 5),
+              padding: EdgeInsets.symmetric(vertical: _tight ? 1 : (_compact ? 3 : 5)),
               child: Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: _tight ? 26 : 30,
+                    height: _tight ? 26 : 30,
                     decoration: BoxDecoration(
                       color: PaywallStyle.tealSoft,
                       borderRadius: BorderRadius.circular(9),
@@ -565,6 +572,47 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
+    );
+  }
+}
+
+/// The logo with a soft shadow underneath so it lifts off the background.
+/// Uses logo_paywall.png, a 4x, edge-cleaned render of the logo, so it stays
+/// crisp at hero size on high-density screens.
+class _HeroLogo extends StatelessWidget {
+  const _HeroLogo({required this.height});
+
+  final double height;
+
+  static const String _asset = 'assets/images/logo_paywall.png';
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = Image.asset(
+      _asset,
+      height: height,
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.medium,
+    );
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.translate(
+          offset: const Offset(0, 4),
+          child: ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: ColorFiltered(
+              colorFilter: ColorFilter.mode(
+                PaywallStyle.ink.withValues(alpha: 0.16),
+                BlendMode.srcIn,
+              ),
+              child: logo,
+            ),
+          ),
+        ),
+        logo,
+      ],
     );
   }
 }
