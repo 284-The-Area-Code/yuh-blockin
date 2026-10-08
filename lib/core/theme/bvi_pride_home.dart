@@ -478,7 +478,7 @@ class _BviPrideLiveRingState extends State<BviPrideLiveRing> {
               ),
               child: MediaQuery.withClampedTextScaling(
                 maxScaleFactor: BviPrideHome.heroMaxTextScale,
-                child: Center(child: _buildContent(status, clamped)),
+                child: _buildContent(status, clamped),
               ),
             ),
           ),
@@ -488,60 +488,38 @@ class _BviPrideLiveRingState extends State<BviPrideLiveRing> {
   }
 
   Widget _buildContent(BviLiveStatus status, Duration remaining) {
+    return status.isCountdown
+        ? _buildCountdown(status, remaining)
+        : _buildReply(status);
+  }
+
+  /// Countdown states: one status line above, the timer at the exact centre
+  /// of the ring, and the plate (when known) mirrored below it.
+  Widget _buildCountdown(BviLiveStatus status, Duration remaining) {
     final mm = remaining.inMinutes;
     final ss = (remaining.inSeconds % 60).toString().padLeft(2, '0');
 
-    String? label;
-    IconData? labelIcon;
-    String headline;
-    String caption;
-    IconData? bigIcon;
+    final (IconData icon, String label) = switch (status.kind) {
+      BviLiveKind.waiting => (Icons.send_rounded, 'WAITING FOR REPLY'),
+      BviLiveKind.seen => (Icons.visibility_outlined, 'SEEN · NO REPLY YET'),
+      _ => (Icons.schedule_rounded, 'MOVING IN 5 MIN'),
+    };
 
-    switch (status.kind) {
-      case BviLiveKind.waiting:
-        label = 'SENT · WAITING';
-        labelIcon = Icons.send_rounded;
-        headline = '$mm:$ss';
-        caption = 'Waiting for reply';
-      case BviLiveKind.seen:
-        label = 'SEEN';
-        labelIcon = Icons.visibility_outlined;
-        headline = '$mm:$ss';
-        caption = "They've seen your alert";
-      case BviLiveKind.fiveMinutes:
-        label = '5-MINUTE COUNTDOWN';
-        headline = '$mm:$ss';
-        caption = 'Give them 5 minutes';
-      case BviLiveKind.moving:
-        bigIcon = Icons.check_circle_outline_rounded;
-        headline = "They're moving!";
-        caption = 'Replied just now';
-      case BviLiveKind.cantMove:
-        bigIcon = Icons.do_not_disturb_on_outlined;
-        headline = "Can't move right now";
-        caption = 'Replied just now';
-      case BviLiveKind.wrongCar:
-        bigIcon = Icons.help_outline_rounded;
-        headline = 'Wrong car!';
-        caption = 'Replied just now';
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (label != null)
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Align(
+          alignment: const Alignment(0, -0.42),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
             // Shrinks rather than overflowing the circle at large font sizes.
-            FittedBox(
+            child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (labelIcon != null) ...[
-                    Icon(labelIcon, size: 14, color: BviPrideHome.mutedText),
-                    const SizedBox(width: 6),
-                  ],
+                  Icon(icon, size: 14, color: BviPrideHome.mutedText),
+                  const SizedBox(width: 6),
                   Text(
                     label,
                     style: const TextStyle(
@@ -554,50 +532,98 @@ class _BviPrideLiveRingState extends State<BviPrideLiveRing> {
                 ],
               ),
             ),
-          if (bigIcon != null) Icon(bigIcon, size: 52, color: Colors.white),
-          const SizedBox(height: 6),
-          Text(
-            headline,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: status.isCountdown ? 44 : 21,
-              fontWeight: FontWeight.w700,
-              height: 1.05,
-              color: Colors.white,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            caption,
+        ),
+        Center(
+          child: Text(
+            '$mm:$ss',
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: BviPrideHome.mutedText,
+              fontSize: 48,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+              color: Colors.white,
+              fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
-          if (status.plate != null) ...[
+        ),
+        if (status.plate != null)
+          Align(
+            alignment: const Alignment(0, 0.46),
+            child: _plateChip(status.plate!),
+          ),
+      ],
+    );
+  }
+
+  /// Reply states: icon, headline and caption as one centred group.
+  Widget _buildReply(BviLiveStatus status) {
+    final (IconData icon, String headline) = switch (status.kind) {
+      BviLiveKind.moving => (
+          Icons.check_circle_outline_rounded,
+          "They're moving!"
+        ),
+      BviLiveKind.cantMove => (
+          Icons.do_not_disturb_on_outlined,
+          "Can't move\nright now"
+        ),
+      _ => (Icons.help_outline_rounded, 'Wrong car!'),
+    };
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48, color: Colors.white),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-              ),
-              child: Text(
-                status.plate!,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.3,
-                  color: Colors.white,
-                ),
+            Text(
+              headline,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
+                color: Colors.white,
               ),
             ),
+            const SizedBox(height: 4),
+            const Text(
+              'Replied just now',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: BviPrideHome.mutedText,
+              ),
+            ),
+            if (status.plate != null) ...[
+              const SizedBox(height: 10),
+              _plateChip(status.plate!),
+            ],
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _plateChip(String plate) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Text(
+        plate,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.3,
+          color: Colors.white,
+        ),
       ),
     );
   }
