@@ -5,9 +5,9 @@ import '../../core/services/feedback_service.dart';
 import '../../core/theme/premium_theme.dart';
 import 'feedback_questions.dart';
 
-/// Tap-to-answer feedback: fixed questions (no typing) plus 1-5 star ratings
-/// for each theme. Every question is optional; one answer or rating is
-/// enough to send.
+/// Tap-to-answer feedback: fixed questions plus 1-5 star ratings for each
+/// theme, each with an optional short comment. Everything is optional; one
+/// answer, rating or comment is enough to send.
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
 
@@ -24,10 +24,40 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   /// Theme id -> stars (1-5). A missing key means "not rated".
   final Map<String, int> _ratings = {};
 
+  /// Card id (a question id, or [_themesCommentKey]) -> its comment box.
+  /// A card gets a controller once its "Add a comment" link is tapped.
+  final Map<String, TextEditingController> _comments = {};
+
+  /// Comment key for the theme ratings card.
+  static const String _themesCommentKey = 'themes';
+
+  /// Kept short on purpose (about 30-40 words): enough for a reason, short
+  /// enough that nobody feels they have to write an essay. The server
+  /// enforces the same limit.
+  static const int _commentMaxLength = 200;
+
   bool _sending = false;
   bool _sent = false;
 
-  bool get _hasAnything => _picks.isNotEmpty || _ratings.isNotEmpty;
+  bool get _hasAnything =>
+      _picks.isNotEmpty ||
+      _ratings.isNotEmpty ||
+      _comments.values.any((c) => c.text.trim().isNotEmpty);
+
+  @override
+  void dispose() {
+    for (final controller in _comments.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _openComment(String key) {
+    setState(() {
+      // Rebuild on typing so the Send button enables for a comment alone.
+      _comments[key] = TextEditingController()..addListener(() => setState(() {}));
+    });
+  }
 
   void _togglePick(FeedbackQuestion question, FeedbackOption option) {
     HapticFeedback.selectionClick();
@@ -84,9 +114,16 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               : _picks[question.id]!.first,
     };
 
+    final comments = <String, String>{
+      for (final entry in _comments.entries)
+        if (entry.value.text.trim().isNotEmpty) entry.key: entry.value.text.trim(),
+    };
+
+    FocusScope.of(context).unfocus();
     final result = await _feedbackService.submit(
       answers: answers,
       themeRatings: Map.of(_ratings),
+      comments: comments,
     );
     if (!mounted) return;
 
@@ -151,10 +188,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       children: [
         Expanded(
           child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
             children: [
               Text(
-                'Just tap your answers, no typing needed. Skip anything you like.',
+                'Just tap your answers. Comments are optional, and you can skip anything.',
                 style: TextStyle(
                   fontSize: 14,
                   color: PremiumTheme.secondaryTextColor,
@@ -236,6 +274,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 ),
             ],
           ),
+          _buildComment(question.id),
         ],
       ),
     );
@@ -257,7 +296,66 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               isCurrent: PremiumTheme.currentMode == theme.id,
               onRate: (stars) => _rate(theme, stars),
             ),
+          _buildComment(_themesCommentKey),
         ],
+      ),
+    );
+  }
+
+  Widget _buildComment(String key) {
+    final controller = _comments[key];
+
+    if (controller == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: TextButton.icon(
+          onPressed: () => _openComment(key),
+          style: TextButton.styleFrom(
+            foregroundColor: PremiumTheme.secondaryTextColor,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            visualDensity: VisualDensity.compact,
+          ),
+          icon: const Icon(Icons.add_comment_outlined, size: 18),
+          label: const Text(
+            'Add a comment (optional)',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+        ),
+      );
+    }
+
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: PremiumTheme.dividerColor),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLength: _commentMaxLength,
+        minLines: 1,
+        maxLines: 3,
+        textCapitalization: TextCapitalization.sentences,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => FocusScope.of(context).unfocus(),
+        style: TextStyle(fontSize: 14, color: PremiumTheme.primaryTextColor),
+        cursorColor: PremiumTheme.accentColor,
+        decoration: InputDecoration(
+          hintText: 'Tell us a bit more (optional)',
+          hintStyle: TextStyle(fontSize: 14, color: PremiumTheme.tertiaryTextColor),
+          counterStyle: TextStyle(fontSize: 11, color: PremiumTheme.tertiaryTextColor),
+          isDense: true,
+          filled: true,
+          fillColor: PremiumTheme.backgroundColor.withValues(alpha: 0.5),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border.copyWith(
+            borderSide: BorderSide(color: PremiumTheme.accentColor, width: 1.5),
+          ),
+        ),
       ),
     );
   }

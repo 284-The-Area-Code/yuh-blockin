@@ -14,6 +14,7 @@ class FeedbackService {
   Future<FeedbackSubmitResult> submit({
     required Map<String, Object> answers,
     required Map<String, int> themeRatings,
+    Map<String, String> comments = const {},
   }) async {
     try {
       await Supabase.instance.client.rpc('submit_app_feedback', params: {
@@ -21,10 +22,11 @@ class FeedbackService {
         'p_theme_ratings': themeRatings,
         'p_current_theme': PremiumTheme.currentMode,
         'p_platform': _platform(),
+        'p_comments': comments,
       });
       if (kDebugMode) {
         debugPrint('💬 Feedback sent: ${answers.length} answers, '
-            '${themeRatings.length} theme ratings');
+            '${themeRatings.length} theme ratings, ${comments.length} comments');
       }
       return FeedbackSubmitResult.sent;
     } on PostgrestException catch (e) {
