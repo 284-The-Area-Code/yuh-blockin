@@ -229,6 +229,19 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                             color: PremiumTheme.tertiaryTextColor,
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        // Required by the map's CC BY 4.0 licence.
+                        Text(
+                          'BVI Pride island map adapted from geoBoundaries '
+                          '(gbOpen), licensed CC BY 4.0.\n'
+                          'BVI flag: Wikimedia Commons, public domain.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w400,
+                            color: PremiumTheme.tertiaryTextColor,
+                          ),
+                        ),
                       ],
                     ),
                   ),
