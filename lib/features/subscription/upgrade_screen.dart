@@ -60,6 +60,13 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
   String get _storeName => PremiumTheme.isIOS ? 'App Store' : 'Google Play';
 
+  /// Smaller phones (e.g. Galaxy A04, ~800dp tall) get a tighter layout so
+  /// both plans and the button are visible without scrolling.
+  bool get _compact {
+    final mq = MediaQuery.of(context);
+    return mq.size.height - mq.padding.vertical < 780;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -117,11 +124,11 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
             child: Column(
               children: [
                 _buildHero(),
-                const SizedBox(height: 24),
+                SizedBox(height: _compact ? 12 : 16),
                 _buildBenefits(),
-                const SizedBox(height: 24),
+                SizedBox(height: _compact ? 16 : 20),
                 _buildPlanCard(_Plan.lifetime),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _buildPlanCard(_Plan.monthly),
                 const SizedBox(height: 16),
                 _buildDisclosure(),
@@ -136,7 +143,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+      padding: EdgeInsets.fromLTRB(8, _compact ? 0 : 4, 8, 0),
       child: Row(
         children: [
           IconButton(
@@ -172,37 +179,43 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
       children: [
         Image.asset(
           'assets/images/logo_transparent.png',
-          height: 104,
+          height: _compact ? 88 : 104,
           fit: BoxFit.contain,
         ),
-        const SizedBox(height: 20),
-        const Text(
+        SizedBox(height: _compact ? 12 : 20),
+        Text(
           'Move without limits',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: _compact ? 25 : 28,
             fontWeight: FontWeight.w800,
             color: PaywallStyle.ink,
             letterSpacing: -0.4,
             height: 1.15,
           ),
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Everything Yuh Blockin. can do, with no daily cap.',
+        SizedBox(height: _compact ? 6 : 8),
+        Text(
+          'Everything Yuh Blockin can do, with no daily cap.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: PaywallStyle.inkSecondary, height: 1.4),
+          style: TextStyle(
+            fontSize: _compact ? 14 : 15,
+            color: PaywallStyle.inkSecondary,
+            height: 1.4,
+          ),
         ),
       ],
     );
   }
 
+  /// Compact, one line per benefit, so the hero, the benefits and both plans
+  /// all fit on a phone screen without scrolling.
   Widget _buildBenefits() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: PaywallStyle.card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: PaywallStyle.cardBorder),
         boxShadow: PaywallStyle.cardShadow,
       ),
@@ -210,44 +223,30 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
         children: [
           for (final benefit in premiumBenefits)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: EdgeInsets.symmetric(vertical: _compact ? 3 : 5),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: PaywallStyle.tealSoft,
-                      borderRadius: BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(9),
                     ),
-                    child: Icon(benefit.icon, size: 20, color: PaywallStyle.teal),
+                    child: Icon(benefit.icon, size: 17, color: PaywallStyle.teal),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          benefit.title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: PaywallStyle.ink,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          benefit.detail,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: PaywallStyle.inkSecondary,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      benefit.title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: PaywallStyle.ink,
+                      ),
                     ),
                   ),
+                  const Icon(Icons.check_rounded, size: 18, color: PaywallStyle.teal),
                 ],
               ),
             ),
@@ -265,10 +264,8 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     final price = isLifetime ? _lifetimePrice : _monthlyPrice;
     final period = isLifetime ? 'once' : '/ month';
     final detail = isLifetime
-        ? (months > 0
-            ? 'Pay once, keep it forever. Costs the same as $months months.'
-            : 'Pay once, keep it forever.')
-        : 'Billed monthly. Cancel anytime.';
+        ? (months > 0 ? 'Same as $months months' : 'Pay once, yours forever')
+        : 'Cancel anytime';
 
     return Semantics(
       button: true,
@@ -286,7 +283,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
           children: [
             AnimatedContainer(
               duration: PremiumTheme.fastDuration,
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+              padding: EdgeInsets.fromLTRB(16, _compact ? 11 : 14, 16, _compact ? 10 : 12),
               decoration: BoxDecoration(
                 color: selected ? PaywallStyle.selectedFill : PaywallStyle.card,
                 borderRadius: BorderRadius.circular(18),
@@ -405,7 +402,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
         : 'Subscribe for $_monthlyPrice / month';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+      padding: EdgeInsets.fromLTRB(20, _compact ? 10 : 14, 20, _compact ? 4 : 10),
       decoration: const BoxDecoration(
         color: PaywallStyle.background,
         border: Border(top: BorderSide(color: PaywallStyle.cardBorder)),
@@ -424,9 +421,14 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
             children: [
               const Icon(Icons.lock_rounded, size: 13, color: PaywallStyle.inkTertiary),
               const SizedBox(width: 5),
-              Text(
-                'Secure payment through $_storeName',
-                style: const TextStyle(fontSize: 12, color: PaywallStyle.inkTertiary),
+              Flexible(
+                child: Text(
+                  _selectedPlan == _Plan.lifetime
+                      ? 'One-time payment. No subscription.'
+                      : 'Renews monthly. Cancel anytime in $_storeName.',
+                  style: const TextStyle(fontSize: 12, color: PaywallStyle.inkTertiary),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),

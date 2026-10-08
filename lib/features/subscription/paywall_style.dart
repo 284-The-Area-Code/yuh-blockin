@@ -64,34 +64,17 @@ class PaywallStyle {
 /// the app today (see PaymentConfig and the premium checks in main.dart and
 /// theme_settings_screen.dart); keep it that way.
 class PremiumBenefit {
-  const PremiumBenefit(this.icon, this.title, this.detail);
+  const PremiumBenefit(this.icon, this.title);
 
   final IconData icon;
   final String title;
-  final String detail;
 }
 
 const List<PremiumBenefit> premiumBenefits = [
-  PremiumBenefit(
-    Icons.all_inclusive_rounded,
-    'Unlimited alerts',
-    'No daily cap. The free plan allows ${PaymentConfig.freeDailyAlertLimit} a day.',
-  ),
-  PremiumBenefit(
-    Icons.campaign_rounded,
-    "Tell drivers you're blocking",
-    'Let them know before they have to come find you.',
-  ),
-  PremiumBenefit(
-    Icons.directions_car_filled_rounded,
-    'Up to ${PaymentConfig.premiumMaxPlates} vehicles',
-    'Add the whole household. Free covers ${PaymentConfig.freeMaxPlates}.',
-  ),
-  PremiumBenefit(
-    Icons.palette_rounded,
-    '4 premium themes',
-    'BVI Pride, Island Gold, Cyberpunk and Premium Pink.',
-  ),
+  PremiumBenefit(Icons.all_inclusive_rounded, 'Unlimited alerts'),
+  PremiumBenefit(Icons.campaign_rounded, "Tell drivers you're blocking"),
+  PremiumBenefit(Icons.directions_car_filled_rounded, 'Up to ${PaymentConfig.premiumMaxPlates} vehicles'),
+  PremiumBenefit(Icons.palette_rounded, '4 premium themes'),
 ];
 
 /// Full-width coral gradient button used for the paywall's main actions.
