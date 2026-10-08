@@ -20,6 +20,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   crypto: ^3.0.3
   shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.2.2
   audioplayers: ^6.0.0
   provider: ^6.1.1
   supabase_flutter: ^2.5.6
