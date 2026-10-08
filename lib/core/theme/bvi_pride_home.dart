@@ -78,6 +78,11 @@ class BviPrideHome {
     // SweepGradient starts at 3 o'clock; rotate so red sits at the top.
     transform: GradientRotation(-math.pi / 2),
   );
+
+  /// Largest text scale used inside the fixed-size hero ring. Android lets
+  /// users raise font size to 200%, which would push the ring's text past
+  /// the circle's edge.
+  static const double heroMaxTextScale = 1.3;
 }
 
 /// Faint map of the British Virgin Islands across the top of the home
@@ -91,6 +96,7 @@ class BviPrideWatermark extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final topInset = MediaQuery.of(context).padding.top;
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
     // Proportioned to a 412 dp wide reference screen and capped so tablets
     // don't get an oversized map.
     final w = math.min(size.width, 520.0);
@@ -109,6 +115,8 @@ class BviPrideWatermark extends StatelessWidget {
               child: Image.asset(
                 'assets/images/bvi_map.png',
                 fit: BoxFit.contain,
+                // Decode at display size rather than the full 1356 px.
+                cacheWidth: (mapWidth * pixelRatio).round(),
               ),
             ),
           ),
@@ -129,6 +137,7 @@ class BviPremiumPin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final flagWidth = isTablet ? 42.0 : 36.0;
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
 
     return Semantics(
       label: 'Premium',
@@ -163,6 +172,8 @@ class BviPremiumPin extends StatelessWidget {
                   width: flagWidth,
                   height: flagWidth / 2,
                   fit: BoxFit.cover,
+                  // Decode at display size rather than the full 1200 px.
+                  cacheWidth: (flagWidth * pixelRatio).round(),
                 ),
                 // Soft gloss, like an enamel pin.
                 Positioned.fill(
@@ -271,7 +282,10 @@ class BviPrideHeroRing extends StatelessWidget {
                   stops: const [0.0, 0.32, 0.62, 1.0],
                 ),
               ),
-              child: child,
+              child: MediaQuery.withClampedTextScaling(
+                maxScaleFactor: BviPrideHome.heroMaxTextScale,
+                child: child,
+              ),
             ),
           ),
         ],
@@ -462,7 +476,10 @@ class _BviPrideLiveRingState extends State<BviPrideLiveRing> {
                   stops: const [0.0, 0.32, 0.62, 1.0],
                 ),
               ),
-              child: Center(child: _buildContent(status, clamped)),
+              child: MediaQuery.withClampedTextScaling(
+                maxScaleFactor: BviPrideHome.heroMaxTextScale,
+                child: Center(child: _buildContent(status, clamped)),
+              ),
             ),
           ),
         ],
@@ -515,23 +532,27 @@ class _BviPrideLiveRingState extends State<BviPrideLiveRing> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (label != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (labelIcon != null) ...[
-                  Icon(labelIcon, size: 14, color: BviPrideHome.mutedText),
-                  const SizedBox(width: 6),
-                ],
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: BviPrideHome.mutedText,
+            // Shrinks rather than overflowing the circle at large font sizes.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (labelIcon != null) ...[
+                    Icon(labelIcon, size: 14, color: BviPrideHome.mutedText),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                      color: BviPrideHome.mutedText,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           if (bigIcon != null) Icon(bigIcon, size: 52, color: Colors.white),
           const SizedBox(height: 6),

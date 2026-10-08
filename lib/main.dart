@@ -2407,10 +2407,14 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               BviPrideHome.isActive ? Colors.white : PremiumTheme.accentColor,
               BlendMode.srcIn,
             ),
+            // BVI Pride uses the logo without the tagline: at header size
+            // the tagline is too small to read.
             child: Image.asset(
-              'assets/images/logo_transparent.png',
+              BviPrideHome.isActive
+                  ? 'assets/images/logo_wordmark_transparent.png'
+                  : 'assets/images/logo_transparent.png',
               height: BviPrideHome.isActive
-                  ? (isTablet ? 72 : 60)
+                  ? (isTablet ? 62 : 52)
                   : (isTablet ? 60 : 48),
               fit: BoxFit.contain,
             ),
