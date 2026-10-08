@@ -172,7 +172,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
       children: [
         Image.asset(
           'assets/images/logo_transparent.png',
-          height: 84,
+          height: 104,
           fit: BoxFit.contain,
         ),
         const SizedBox(height: 18),
