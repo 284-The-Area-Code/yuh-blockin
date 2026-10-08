@@ -14,7 +14,8 @@ import 'premium_theme.dart';
 /// Image sources:
 /// - assets/images/bvi_map.png: island outlines from geoBoundaries
 ///   (gbOpen VGB ADM0, CC BY 4.0, traced from 2021 Sentinel-2 imagery).
-///   CC BY 4.0 requires a credit line in the app.
+///   CC BY 4.0 requires a credit line in the app; it is in the Theme
+///   settings footer.
 /// - assets/images/bvi_flag.png: "Flag of the British Virgin Islands.svg"
 ///   from Wikimedia Commons (public domain).
 class BviPrideHome {
@@ -83,6 +84,23 @@ class BviPrideHome {
   /// users raise font size to 200%, which would push the ring's text past
   /// the circle's edge.
   static const double heroMaxTextScale = 1.3;
+
+  // Island map placement, shared by the watermark and the home layout so the
+  // hero button can stay clear of the map. Proportioned to a 412 dp wide
+  // reference screen and capped so tablets don't get an oversized map.
+  static double _mapScale(BuildContext context) =>
+      math.min(MediaQuery.sizeOf(context).width, 520.0) / 412.0;
+
+  static double mapWidth(BuildContext context) => 316 * _mapScale(context);
+
+  /// Top of the map image, in dp from the top of the screen.
+  static double mapTop(BuildContext context) =>
+      MediaQuery.paddingOf(context).top - 14 * _mapScale(context);
+
+  /// Bottom edge of the islands, in dp from the top of the screen. The last
+  /// 5% of the image is transparent glow.
+  static double mapIslandsBottom(BuildContext context) =>
+      mapTop(context) + mapWidth(context) * (1122 / 1356) * 0.95;
 }
 
 /// Faint map of the British Virgin Islands across the top of the home
@@ -95,20 +113,15 @@ class BviPrideWatermark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final topInset = MediaQuery.of(context).padding.top;
     final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-    // Proportioned to a 412 dp wide reference screen and capped so tablets
-    // don't get an oversized map.
-    final w = math.min(size.width, 520.0);
-    final scale = w / 412.0;
-    final mapWidth = 316 * scale;
+    final mapWidth = BviPrideHome.mapWidth(context);
 
     return IgnorePointer(
       child: Stack(
         children: [
           Positioned(
             left: (size.width - mapWidth) / 2,
-            top: topInset - 14 * scale,
+            top: BviPrideHome.mapTop(context),
             width: mapWidth,
             child: Opacity(
               opacity: 0.3,
