@@ -2480,16 +2480,15 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                 _openMenuDestination(value);
               }
             },
-            // Four entries in three groups: your stuff, personalize, help.
-            // The two grouped entries open a short sheet with their options.
+            menuPadding: const EdgeInsets.symmetric(vertical: 8),
+            // Four evenly spaced entries. The last two open a short sheet
+            // with their options.
             itemBuilder: (context) => [
               _menuItem(
                   'vehicles', Icons.directions_car_outlined, 'My Vehicles'),
               _menuItem('keys', Icons.key_outlined, 'Recovery Keys'),
-              const PopupMenuDivider(),
               _menuItem(
                   'personalize', Icons.palette_outlined, 'Appearance & Sound'),
-              const PopupMenuDivider(),
               _menuItem('help', Icons.help_outline_rounded, 'Help & Feedback'),
             ],
           ),
@@ -2501,10 +2500,12 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   PopupMenuItem<String> _menuItem(String value, IconData icon, String label) {
     return PopupMenuItem<String>(
       value: value,
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Icon(icon, color: PremiumTheme.accentColor, size: 20),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Text(
             label,
             style: TextStyle(
