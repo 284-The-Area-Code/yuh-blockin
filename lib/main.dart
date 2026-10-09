@@ -2903,8 +2903,9 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             Text(
               'Alert driver',
               style: TextStyle(
+                fontFamily: 'Nunito',
                 fontSize: isTablet ? 25 : 22,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
                 color: Colors.white,
               ),
             ),
