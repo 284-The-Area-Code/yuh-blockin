@@ -206,10 +206,17 @@ Deno.serve(async (req: Request) => {
         }
       };
 
+      // A blocked-car alert is only useful for a short while. If the receiver is
+      // offline, FCM/APNs hold the push and deliver it on reconnect - but only
+      // within this window, so nobody gets a loud "move your car" hours later.
+      // The alert itself stays in the database and shows in the app's activity list.
+      const ALERT_PUSH_TTL_SECONDS = 3600;
+
       // Add Android-specific config
       if (platform === 'android') {
         fcmMessage.android = {
           priority: 'high',
+          ttl: `${ALERT_PUSH_TTL_SECONDS}s`,
           notification: {
             sound: androidSound,
             channel_id: `yuh_blockin_alert_${androidSound}_v3`,
@@ -222,7 +229,8 @@ Deno.serve(async (req: Request) => {
         fcmMessage.apns = {
           headers: {
             'apns-priority': '10',
-            'apns-push-type': 'alert'
+            'apns-push-type': 'alert',
+            'apns-expiration': String(Math.floor(Date.now() / 1000) + ALERT_PUSH_TTL_SECONDS)
           },
           payload: {
             aps: {

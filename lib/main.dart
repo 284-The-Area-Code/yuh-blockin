@@ -667,6 +667,11 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
       SoundPreferencesService();
   bool _isOffline = false;
   bool _showOfflineBanner = false;
+  // Patchy signal drops for a few seconds at a time; only a sustained outage is
+  // worth telling the user about. Alerts sent meanwhile are queued by FCM and
+  // still arrive on reconnect, so there is no system notification for this.
+  static const Duration _offlineBannerDelay = Duration(seconds: 30);
+  Timer? _offlineBannerTimer;
   bool _isActivityFeedExpanded = true; // Activity feed collapse state
 
   // Track app lifecycle state - only show system notifications when app is in background
@@ -1109,28 +1114,32 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
     // Check initial connection state
     _isOffline = !_connectivityService.isConnected;
-    if (_isOffline && mounted) {
-      setState(() => _showOfflineBanner = true);
+    if (_isOffline) {
+      _scheduleOfflineBanner();
     }
+  }
+
+  /// Show the offline banner only if the connection stays down for
+  /// [_offlineBannerDelay].
+  void _scheduleOfflineBanner() {
+    _offlineBannerTimer?.cancel();
+    _offlineBannerTimer = Timer(_offlineBannerDelay, () {
+      if (mounted && _isOffline) {
+        setState(() => _showOfflineBanner = true);
+      }
+    });
   }
 
   /// Handle connection lost
   void _handleConnectionLost() {
     if (!mounted) return;
-    setState(() {
-      _isOffline = true;
-      _showOfflineBanner = true;
-    });
-
-    // Show a notification if app is in background
-    _notificationService.showWarningNotification(
-      title: 'No Internet Connection',
-      body: 'You won\'t receive alerts until connection is restored.',
-    );
+    _isOffline = true;
+    _scheduleOfflineBanner();
   }
 
   /// Handle connection restored
   void _handleConnectionRestored() {
+    _offlineBannerTimer?.cancel();
     if (!mounted) return;
     setState(() {
       _isOffline = false;
@@ -1314,6 +1323,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     _alertAudioPlayer.dispose();
 
     // Dispose connectivity service
+    _offlineBannerTimer?.cancel();
     _connectivityService.dispose();
 
     // Cancel alert stream subscriptions
@@ -2319,7 +2329,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
-                            'No internet - alerts may be delayed',
+                            'Offline. Alerts will arrive when you reconnect.',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 13,
