@@ -2885,57 +2885,46 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
     );
   }
 
-  /// Icon and labels inside the hero button.
+  /// Icon and action label inside the hero button.
   Widget _buildHeroButtonContent(bool isTablet) {
     final isBvi = BviPrideHome.isActive;
 
-    return Stack(
-      children: [
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Megaphone icon - bold, action-oriented
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 100),
-                transform:
-                    Matrix4.translationValues(0.0, _isPressed ? 4.0 : 0.0, 0.0),
-                child: Icon(
-                  Icons.campaign_rounded,
-                  size: isBvi ? (isTablet ? 60 : 52) : (isTablet ? 56 : 48),
-                  color: _isPressed
-                      ? Colors.white.withValues(alpha: 0.9)
-                      : Colors.white,
-                ),
+    // The header logo already shows the app name, so the button carries a
+    // single action label. Text scaling is capped so the label stays inside
+    // the circle at Android's largest font sizes.
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: BviPrideHome.heroMaxTextScale,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Megaphone icon - bold, action-oriented
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 100),
+              transform:
+                  Matrix4.translationValues(0.0, _isPressed ? 4.0 : 0.0, 0.0),
+              child: Icon(
+                Icons.campaign_rounded,
+                size: isBvi ? (isTablet ? 72 : 64) : (isTablet ? 68 : 60),
+                color: _isPressed
+                    ? Colors.white.withValues(alpha: 0.9)
+                    : Colors.white,
               ),
+            ),
 
-              SizedBox(height: isBvi ? 6 : 8),
+            const SizedBox(height: 8),
 
-              // App name / Brand identity
-              Text(
-                'Yuh Blockin.',
-                style: TextStyle(
-                  fontSize: isBvi ? (isTablet ? 25 : 22) : (isTablet ? 18 : 16),
-                  fontWeight: isBvi ? FontWeight.w700 : FontWeight.w600,
-                  color: Colors.white,
-                ),
+            Text(
+              'Alert driver',
+              style: TextStyle(
+                fontSize: isBvi ? (isTablet ? 25 : 22) : (isTablet ? 22 : 20),
+                fontWeight: isBvi ? FontWeight.w700 : FontWeight.w600,
+                color: Colors.white,
               ),
-              SizedBox(height: isBvi ? 6 : 4),
-              // Subtle tap hint
-              Text(
-                'Tap to alert',
-                style: TextStyle(
-                  fontSize: isBvi ? (isTablet ? 15 : 14) : (isTablet ? 12 : 11),
-                  fontWeight: isBvi ? FontWeight.w500 : FontWeight.w400,
-                  color: isBvi
-                      ? BviPrideHome.mutedText
-                      : Colors.white.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
