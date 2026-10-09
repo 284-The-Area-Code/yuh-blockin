@@ -485,11 +485,19 @@ class _AppInitializerState extends State<AppInitializer>
                                   colorOpacity: 0.35,
                                   enabled: _showShimmer,
                                   direction: const ShimmerDirection.fromLTRB(),
-                                  child: Image.asset(
-                                    'assets/images/app_icon.png',
+                                  // Edge-cleaned logo; app_icon.png shows a
+                                  // white fringe on dark themes.
+                                  child: SizedBox(
                                     width: logoSize,
                                     height: logoSize,
-                                    fit: BoxFit.contain,
+                                    child: Center(
+                                      child: Image.asset(
+                                        'assets/images/logo_paywall.png',
+                                        width: logoSize * 0.76,
+                                        fit: BoxFit.contain,
+                                        filterQuality: FilterQuality.high,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),

@@ -106,7 +106,7 @@ class _OnboardingFlowState extends State<OnboardingFlow>
     // Precache images to prevent glitches during first swipe
     if (!_imagesPreloaded) {
       _imagesPreloaded = true;
-      precacheImage(const AssetImage('assets/images/app_icon.png'), context);
+      precacheImage(const AssetImage('assets/images/logo_paywall.png'), context);
     }
   }
 
@@ -474,13 +474,21 @@ class _WelcomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/images/app_icon.png',
+              // logo_paywall.png is the 4x, edge-cleaned logo. app_icon.png
+              // was cut from a white background and shows a white fringe on
+              // dark themes. Sized to match the old logo's visible width.
+              SizedBox(
                 width: isCompact ? 160 : 220,
                 height: isCompact ? 160 : 220,
-                fit: BoxFit.contain,
-                gaplessPlayback: true,
-                filterQuality: FilterQuality.medium,
+                child: Center(
+                  child: Image.asset(
+                    'assets/images/logo_paywall.png',
+                    width: isCompact ? 122 : 168,
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true,
+                    filterQuality: FilterQuality.high,
+                  ),
+                ),
               ),
               SizedBox(height: isCompact ? 8 : 12),
               Text(
