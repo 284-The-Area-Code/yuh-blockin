@@ -2403,9 +2403,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   }
 
   Widget _buildAppHeader(ThemeData theme, bool isTablet) {
-    // Get the ThemeNotifier to pass to navigated screens
-    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
-
     return Padding(
       padding: EdgeInsets.only(top: isTablet ? 16 : 8),
       child: Row(
@@ -2462,264 +2459,236 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             ),
             color: PremiumTheme.surfaceColor,
             elevation: 8,
-            onSelected: (value) async {
+            onSelected: (value) {
               HapticFeedback.lightImpact();
-              if (value == 'themes') {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        ChangeNotifierProvider.value(
-                      value: themeNotifier,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(-1.0, 0.0),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: animation,
-                          curve: PremiumTheme.standardCurve,
-                        )),
-                        child: const ThemeSettingsScreen(),
-                      ),
-                    ),
-                    transitionDuration: PremiumTheme.mediumDuration,
-                  ),
-                );
-              } else if (value == 'vehicles') {
-                await Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(1.0, 0.0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: PremiumTheme.standardCurve,
-                      )),
-                      child: const PlateRegistrationScreen(),
-                    ),
-                    transitionDuration: PremiumTheme.mediumDuration,
-                  ),
-                );
-                await _refreshAllData();
-              } else if (value == 'sounds') {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(-1.0, 0.0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: PremiumTheme.standardCurve,
-                      )),
-                      child: const AlertSoundSettingsScreen(),
-                    ),
-                    transitionDuration: PremiumTheme.mediumDuration,
-                  ),
-                );
-              } else if (value == 'keys') {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(1.0, 0.0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: PremiumTheme.standardCurve,
-                      )),
-                      child: const ViewMyKeysScreen(),
-                    ),
-                    transitionDuration: PremiumTheme.mediumDuration,
-                  ),
-                );
-              } else if (value == 'replay_tour') {
-                _replayProductTour();
-              } else if (value == 'feedback') {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(-1.0, 0.0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: PremiumTheme.standardCurve,
-                      )),
-                      child: const FeedbackScreen(),
-                    ),
-                    transitionDuration: PremiumTheme.mediumDuration,
-                  ),
-                );
-              } else if (value == 'contact') {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(-1.0, 0.0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: PremiumTheme.standardCurve,
-                      )),
-                      child: const ContactSupportScreen(),
-                    ),
-                    transitionDuration: PremiumTheme.mediumDuration,
-                  ),
-                );
+              if (value == 'personalize') {
+                _showMenuGroupSheet('Appearance & Sound', const [
+                  _MenuGroupEntry('themes', Icons.palette_outlined, 'Theme'),
+                  _MenuGroupEntry(
+                      'sounds', Icons.volume_up_outlined, 'Alert sound'),
+                ]);
+              } else if (value == 'help') {
+                _showMenuGroupSheet('Help & Feedback', const [
+                  _MenuGroupEntry(
+                      'replay_tour', Icons.explore_outlined, 'How it works'),
+                  _MenuGroupEntry(
+                      'feedback', Icons.rate_review_outlined, 'Send feedback'),
+                  _MenuGroupEntry('contact', Icons.support_agent_outlined,
+                      'Contact support'),
+                ]);
+              } else {
+                _openMenuDestination(value);
               }
             },
+            // Four entries in three groups: your stuff, personalize, help.
+            // The two grouped entries open a short sheet with their options.
             itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'vehicles',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.directions_car_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'My Vehicles',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'themes',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.palette_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Themes',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'sounds',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.volume_up_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Alert Sounds',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'keys',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.key_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'My Secret Keys',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'replay_tour',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.explore_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Replay Product Tour',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'feedback',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.rate_review_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Share Feedback',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'contact',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.support_agent_outlined,
-                      color: PremiumTheme.accentColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Contact & Support',
-                      style: TextStyle(
-                        color: PremiumTheme.primaryTextColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _menuItem(
+                  'vehicles', Icons.directions_car_outlined, 'My Vehicles'),
+              _menuItem('keys', Icons.key_outlined, 'Recovery Keys'),
+              const PopupMenuDivider(),
+              _menuItem(
+                  'personalize', Icons.palette_outlined, 'Appearance & Sound'),
+              const PopupMenuDivider(),
+              _menuItem('help', Icons.help_outline_rounded, 'Help & Feedback'),
             ],
           ),
         ],
       ),
     );
+  }
+
+  PopupMenuItem<String> _menuItem(String value, IconData icon, String label) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, color: PremiumTheme.accentColor, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: PremiumTheme.primaryTextColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Bottom sheet listing the options behind a grouped menu entry.
+  void _showMenuGroupSheet(String title, List<_MenuGroupEntry> entries) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: PremiumTheme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: PremiumTheme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: PremiumTheme.primaryTextColor,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              for (final entry in entries)
+                ListTile(
+                  leading: Icon(entry.icon, color: PremiumTheme.accentColor),
+                  title: Text(
+                    entry.label,
+                    style: TextStyle(
+                      color: PremiumTheme.primaryTextColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  trailing: Icon(Icons.chevron_right_rounded,
+                      color: PremiumTheme.secondaryTextColor),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(sheetContext).pop();
+                    _openMenuDestination(entry.value);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openMenuDestination(String value) async {
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: false);
+    if (value == 'themes') {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              ChangeNotifierProvider.value(
+            value: themeNotifier,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(-1.0, 0.0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: PremiumTheme.standardCurve,
+              )),
+              child: const ThemeSettingsScreen(),
+            ),
+          ),
+          transitionDuration: PremiumTheme.mediumDuration,
+        ),
+      );
+    } else if (value == 'vehicles') {
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: PremiumTheme.standardCurve,
+            )),
+            child: const PlateRegistrationScreen(),
+          ),
+          transitionDuration: PremiumTheme.mediumDuration,
+        ),
+      );
+      await _refreshAllData();
+    } else if (value == 'sounds') {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(-1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: PremiumTheme.standardCurve,
+            )),
+            child: const AlertSoundSettingsScreen(),
+          ),
+          transitionDuration: PremiumTheme.mediumDuration,
+        ),
+      );
+    } else if (value == 'keys') {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: PremiumTheme.standardCurve,
+            )),
+            child: const ViewMyKeysScreen(),
+          ),
+          transitionDuration: PremiumTheme.mediumDuration,
+        ),
+      );
+    } else if (value == 'replay_tour') {
+      _replayProductTour();
+    } else if (value == 'feedback') {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(-1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: PremiumTheme.standardCurve,
+            )),
+            child: const FeedbackScreen(),
+          ),
+          transitionDuration: PremiumTheme.mediumDuration,
+        ),
+      );
+    } else if (value == 'contact') {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(-1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: PremiumTheme.standardCurve,
+            )),
+            child: const ContactSupportScreen(),
+          ),
+          transitionDuration: PremiumTheme.mediumDuration,
+        ),
+      );
+    }
   }
 
   /// Hero button gradient colors for the current press state. BVI Pride
@@ -7378,4 +7347,13 @@ class _PremiumToastState extends State<_PremiumToast>
       ),
     );
   }
+}
+
+/// One option inside a grouped home-menu sheet.
+class _MenuGroupEntry {
+  final String value;
+  final IconData icon;
+  final String label;
+
+  const _MenuGroupEntry(this.value, this.icon, this.label);
 }
