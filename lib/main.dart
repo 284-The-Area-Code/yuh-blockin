@@ -2897,8 +2897,6 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
 
   /// Icon and action label inside the hero button.
   Widget _buildHeroButtonContent(bool isTablet) {
-    final isBvi = BviPrideHome.isActive;
-
     // The header logo already shows the app name, so the button carries a
     // single action label. Text scaling is capped so the label stays inside
     // the circle at Android's largest font sizes.
@@ -2915,7 +2913,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
                   Matrix4.translationValues(0.0, _isPressed ? 4.0 : 0.0, 0.0),
               child: Icon(
                 Icons.campaign_rounded,
-                size: isBvi ? (isTablet ? 72 : 64) : (isTablet ? 68 : 60),
+                size: isTablet ? 72 : 64,
                 color: _isPressed
                     ? Colors.white.withValues(alpha: 0.9)
                     : Colors.white,
@@ -2927,8 +2925,8 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             Text(
               'Alert driver',
               style: TextStyle(
-                fontSize: isBvi ? (isTablet ? 25 : 22) : (isTablet ? 22 : 20),
-                fontWeight: isBvi ? FontWeight.w700 : FontWeight.w600,
+                fontSize: isTablet ? 25 : 22,
+                fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
@@ -5542,17 +5540,21 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
   }
 
   /// Build content layout (with Flexible widgets to fit without scrolling)
-  /// BVI Pride: gap above the hero button in the scrolling layout (used
-  /// while recent alerts are listed), so the button sits below the island
-  /// map instead of covering it.
-  double _bviScrollingHeroGap(bool isTablet, bool isCompact) {
+  /// Gap above the hero button in the scrolling layout (used while recent
+  /// alerts are listed). Every theme uses the BVI Pride position, just below
+  /// where the island map sits, so the button lands in the same place
+  /// whichever theme is active.
+  double _scrollingHeroGap(bool isTablet, bool isCompact) {
     final minGap = isCompact ? 12.0 : 24.0;
     // `context` here is the State's own, outside the SafeArea, so its
     // padding still includes the status bar, matching the watermark.
     final contentTop = MediaQuery.paddingOf(context).top +
         (isTablet ? 60.0 : (isCompact ? 16.0 : 40.0));
-    // Header: top padding plus the BVI logo height (see _buildAppHeader).
-    final headerHeight = isTablet ? 16.0 + 62.0 : 8.0 + 52.0;
+    // Header: top padding plus the logo height (see _buildAppHeader).
+    final logoHeight = BviPrideHome.isActive
+        ? (isTablet ? 62.0 : 52.0)
+        : (isTablet ? 60.0 : 48.0);
+    final headerHeight = (isTablet ? 16.0 : 8.0) + logoHeight;
     final gap =
         BviPrideHome.mapIslandsBottom(context) - (contentTop + headerHeight);
     return math.max(minGap, gap + 8);
@@ -5583,9 +5585,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             // Flexible space above - reduced to push content up
             if (isScrollingActive)
               SizedBox(
-                height: BviPrideHome.isActive
-                    ? _bviScrollingHeroGap(isTablet, isCompact)
-                    : (isCompact ? 12 : 24),
+                height: _scrollingHeroGap(isTablet, isCompact),
               )
             else
               Expanded(flex: isCompact ? 1 : 2, child: const SizedBox()),
