@@ -3927,7 +3927,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             _buildAlertTypeOption(
               icon: Icons.block_rounded,
               title: "I'm Blocked",
-              subtitle: 'Alert the driver blocking me',
+              subtitle: 'Alert the driver blocking me.',
               isPremium: false,
               onTap: () async {
                 Navigator.pop(context);
@@ -3949,7 +3949,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
             _buildAlertTypeOption(
               icon: Icons.notifications_active_rounded,
               title: "I'm Blocking",
-              subtitle: 'Alert the driver I blocked them',
+              subtitle: 'Alert the driver I blocked them.',
               isPremium: true,
               onTap: () async {
                 Navigator.pop(context);
@@ -6471,7 +6471,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               Text(
                 isNotifyMode
                     ? 'Let them know that you have blocked them in.'
-                    : 'Politely notify the driver blocking you',
+                    : 'Politely notify the driver blocking you.',
                 style: TextStyle(
                   fontSize: isTablet ? 13 : 12,
                   fontWeight: FontWeight.w400,
