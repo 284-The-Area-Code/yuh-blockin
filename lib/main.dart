@@ -6470,7 +6470,7 @@ class _PremiumHomeScreenState extends State<PremiumHomeScreen>
               const SizedBox(height: 2),
               Text(
                 isNotifyMode
-                    ? 'Let them know that you have blocked them in'
+                    ? 'Let them know that you have blocked them in.'
                     : 'Politely notify the driver blocking you',
                 style: TextStyle(
                   fontSize: isTablet ? 13 : 12,

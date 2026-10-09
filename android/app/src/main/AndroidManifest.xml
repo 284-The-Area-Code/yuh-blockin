@@ -55,6 +55,13 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Status-bar icon for Firebase pushes shown while the app is in the
+             background. Must be a white-on-transparent silhouette; the
+             full-colour launcher icon renders as a blank blob. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_yuh" />
+
         <!-- Background service with proper foregroundServiceType for locked screen alerts -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"

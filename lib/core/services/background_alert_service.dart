@@ -207,7 +207,7 @@ void onStart(ServiceInstance service) async {
       FlutterLocalNotificationsPlugin();
 
   // Initialize notifications
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_yuh');
   const iosSettings = DarwinInitializationSettings(
     requestAlertPermission: false,
     requestBadgePermission: false,

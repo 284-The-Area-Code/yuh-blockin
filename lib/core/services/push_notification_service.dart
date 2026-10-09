@@ -220,7 +220,7 @@ class PushNotificationService {
 
   /// Initialize local notifications for foreground message display
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_yuh');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false, // Already requested via Firebase
       requestBadgePermission: false,

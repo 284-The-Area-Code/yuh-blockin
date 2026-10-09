@@ -44,7 +44,7 @@ class NotificationService {
     _onNotificationTapped = onNotificationTapped;
 
     // Android settings - high importance for alert notifications
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_yuh');
 
     // iOS settings
     const iosSettings = DarwinInitializationSettings(
