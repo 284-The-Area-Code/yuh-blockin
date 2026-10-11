@@ -15,7 +15,8 @@ section at the end of every session; never erase the historical sections below i
   version `1.0.0+35`
 - Newest work on top of it: `combined/feedback-and-paywall`, HEAD `0e64fae`, still
   `1.0.0+35`; it merges every branch from 2026-10-08 and 2026-10-09 (see the branch audit)
-- `master` is 84 commits behind `release/build-35`
+- `master` fast-forwarded to `release/build-35` (`30e9cf4` → `3f107b1`) on 2026-10-11 at the
+  user's request; no merge commit, no history rewritten
 
 ## Active Task
 
@@ -24,7 +25,7 @@ Claude Desktop Cowork, plus a read-only branch audit. No app feature work is in 
 
 ## Completed Work
 
-In `release/build-35` (pushed; not merged into `master`; no pull request):
+In `release/build-35`, now also `master` (pushed; no pull request):
 - Everything from `feature/bvi-pride-theme-redesign`: BVI Pride home screen, live alert
   status in the hero ring, theme persistence, "Yuh Blockin." app name
 - Map and flag credit in the Theme settings footer, under "DezeTingz © 2026"
@@ -107,12 +108,14 @@ the app.
   record with the legacy `SUPABASE_SERVICE_ROLE_KEY` (line ~299, still the case on the
   combined branch). Legacy keys are disabled on this project, so that step may fail. Check
   the function's logs before any change.
-- `master` does not hold the released code; `release/build-35` and the combined branch
-  are unmerged.
+- `combined/feedback-and-paywall` and the three documentation branches are not yet in
+  `master`.
 
 ## Next Approved Action
 
-No code changes are approved. Open for discussion: merge plan from the branch audit,
+Merge plan step 1 is done (`master` = `release/build-35`). No code changes are approved.
+Open for discussion: the remaining merge plan steps (release the combined branch as
+build 36, merge the documentation branches, delete stale branches),
 deploy order for the `_v3` channel change, name spelling in sentences, and the
 `admin-manage-user` legacy-key check.
 
