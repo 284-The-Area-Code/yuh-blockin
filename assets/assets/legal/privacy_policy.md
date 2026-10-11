@@ -2,9 +2,9 @@
 
 **Last Updated: December 10, 2025**
 
-DezeTingz ("we," "our," or "us") operates the Yuh Blockin' mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
+DezeTingz ("we," "our," or "us") operates the Yuh Blockin. mobile application (the "App"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our App.
 
-By using Yuh Blockin', you agree to the collection and use of information in accordance with this Privacy Policy.
+By using Yuh Blockin., you agree to the collection and use of information in accordance with this Privacy Policy.
 
 ---
 
@@ -81,7 +81,7 @@ Upon account deletion:
 
 ## 6. Children's Privacy
 
-Yuh Blockin' is not intended for use by children under the age of 13. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will promptly delete such information from our servers.
+Yuh Blockin. is not intended for use by children under the age of 13. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will promptly delete such information from our servers.
 
 If you are a parent or guardian and believe your child has provided us with personal information, please contact us at dev@dezetingz.ai.
 
