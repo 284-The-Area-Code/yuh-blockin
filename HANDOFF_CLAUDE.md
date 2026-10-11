@@ -10,52 +10,111 @@ section at the end of every session; never erase the historical sections below i
 - Environment: cloud container, fresh clone of the GitHub repository (not the Kali workspace)
 - Repository: https://github.com/284-The-Area-Code/yuh-blockin
 - Shared instructions branch: `ops/instructions`, created from `master` (`30e9cf4`); holds
-  these instruction files only, not the BVI Pride code
-- Latest app work branch: `feature/bvi-pride-theme-redesign`, HEAD `94e7f2f`
-  ("BVI Pride: show the whole island map above the hero button"), version `1.0.0+34`,
-  clean apart from the uncommitted instruction draft
+  these instruction files only, not the app code
+- Latest release branch: `release/build-35`, HEAD `3f107b1` ("Bump build number to 35"),
+  version `1.0.0+35`
+- Newest work on top of it: `combined/feedback-and-paywall`, HEAD `0e64fae`, still
+  `1.0.0+35`; it merges every branch from 2026-10-08 and 2026-10-09 (see the branch audit)
+- `master` is 84 commits behind `release/build-35`
 
 ## Active Task
 
-Setting up shared instructions and handoff for switching between Claude Code (Kali and
-cloud) and Claude Desktop Cowork. No app feature work is in progress.
+Shared instructions and handoff for switching between Claude Code (Kali and cloud) and
+Claude Desktop Cowork, plus a read-only branch audit. No app feature work is in progress.
 
 ## Completed Work
 
-On `feature/bvi-pride-theme-redesign` (pushed; not merged; no pull request):
-- BVI Pride theme for the home screen: island map background, mini BVI flag Premium pin,
-  glass controls, rainbow-rim hero button (`3ac5281`, `60360a1`, `94e7f2f`)
-- Live alert status inside the BVI Pride hero ring (`17996d7`)
-- Selected theme persists across app restarts (`a618012`)
-- App name written as "Yuh Blockin." in user-facing text, Android label, local
-  notification channel names and bundled legal documents (`a678f06`)
+In `release/build-35` (pushed; not merged into `master`; no pull request):
+- Everything from `feature/bvi-pride-theme-redesign`: BVI Pride home screen, live alert
+  status in the hero ring, theme persistence, "Yuh Blockin." app name
+- Map and flag credit in the Theme settings footer, under "DezeTingz © 2026"
+  (`db9e67c`, `lib/features/theme_settings/theme_settings_screen.dart:233-243`):
+  "BVI Pride island map adapted from geoBoundaries (gbOpen), licensed CC BY 4.0. /
+  BVI flag: Wikimedia Commons, public domain." Satisfies the CC BY 4.0 credit.
+  Confirmed on device by the user (2026-10-11).
+- `fix/secure-plate-ownership-key`, `perf/r8-optimization`,
+  `fix/client-ignore-sandbox-entitlement`, and the code of the two RevenueCat fixes below
+
+Server-side, applied by the user (confirmed 2026-10-11):
+- `fix/revenuecat-webhook-sandbox-leak`: the `revenuecat-webhook` fix is deployed.
+- `fix/clear-sandbox-leaked-subscriptions`: the clean-up SQL has been run.
+  **Already applied — never re-run it.**
 
 On `brand/asset-extraction` (pushed; not merged; no pull request):
-- Brand asset pack in `brand-assets/`, updated to build 34 code (`67c4690`)
+- Brand asset pack in `brand-assets/`, from build 34 code (`67c4690`)
 
 iOS notification investigation: closed. TEST B and TEST C passed (Build 23); the
 notification sound fix (Build 24) is confirmed working by the user (2026-10-11).
 
+BVI Pride device test: confirmed OK by the user (2026-10-11).
+
+## Branch audit (2026-10-11, read-only, base `release/build-35` `3f107b1`)
+
+Already contained in `release/build-35` (nothing to merge): `master`, `main`,
+`feature/bvi-pride-theme-redesign`, `release/ios-prod-submission`,
+`fix/secure-plate-ownership-key`, `perf/r8-optimization`,
+`fix/revenuecat-webhook-sandbox-leak`, `fix/clear-sandbox-leaked-subscriptions`,
+`fix/client-ignore-sandbox-entitlement`, `fix/ios-background-audio-mode` (same patch),
+`feature/ugc-safety-compliance`, `feature/onboarding-product-tour`, `feature/payment-system`,
+`feature/ios-notification-actions`, `firebase-production-push`,
+`chore/cleanup-diagnostics-and-tools`, `feature/subscription-links-and-overflow-fix`,
+`fix/project-inconsistencies`, `android-ios-sync`.
+
+Ahead of `release/build-35`, all contained in `combined/feedback-and-paywall`
+(22 new patches): `feature/in-app-feedback`, `feature/paywall-redesign`,
+`fix/remove-app-icon-badge`, `fix/bvi-theme-card-flag`, `feature/hero-alert-driver-label`,
+`fix/offline-alerts-and-warnings`, `fix/hero-consistent-sizing`,
+`feature/simpler-home-menu`, `fix/menu-spacing`, `fix/onboarding-logo-hd`,
+`feature/hero-label-nunito`, `fix/name-punctuation`, `fix/notify-driver-subtitle`,
+`fix/notification-icon`, `fix/subtitle-full-stops`, `fix/notification-car-icon` (same tip as
+the combined branch).
+
+The combined branch changes frozen or server files (not in `release/build-35`;
+approval history not recorded here):
+- `lib/core/services/push_notification_service.dart`: clears the icon badge, Android
+  notification icon `@drawable/ic_stat_yuh`, channels renamed `_v2` → `_v3`, old `_v2`
+  channels deleted, `presentBadge: false`
+- `supabase/functions/alerts-fcm/index.ts`: Android `channel_id` `_v3`, 1-hour TTL /
+  `apns-expiration`, `badge: 0`
+- `supabase/migrations/20261008_create_app_feedback.sql`: new `app_feedback` table and
+  `submit_app_feedback()`
+- `pubspec.yaml`: Nunito ExtraBold font
+
+Release coupling: the app and `alerts-fcm` must change channel suffix together. If
+`alerts-fcm` sends `_v3` while phones run build 35 (only `_v2` channels), Android pushes
+land in a channel that does not exist and lose their custom sound; if the app deletes
+`_v2` while the server still sends `_v2`, the same happens. Plan the deploy order before
+release. Unknown: whether this `alerts-fcm` version or the feedback migration has
+already been deployed.
+
+Not in `release/build-35` or the combined branch, documentation or tooling only:
+`brand/asset-extraction` (3 patches), `audit/android-security-review` (1),
+`feature/ad-campaign-01` (1). `chore/android-build-warnings` (1 patch, Kotlin 2.3.20) is
+in the combined branch.
+
+Stale, do not merge: `feature/push-notifications`, `feature/supabase-push-integration`,
+`test`, `yuhblockin-website`. `gh-pages` is the website and must never be merged into
+the app.
+
 ## Outstanding Work
 
-- BVI Pride device test: confirmed OK by the user (2026-10-11).
-- Map credit "Map outline: geoBoundaries (CC BY 4.0)": user reports OK (2026-10-11), but
-  no credit line was found in the app code on `feature/bvi-pride-theme-redesign` (only a
-  code comment). Record where the credit appears.
-- Name spelling in sentences ("Yuh Blockin" vs "Yuh Blockin."): under discussion; the code
-  currently uses "Yuh Blockin." everywhere.
-- Remaining "Yuh Blockin" spellings are in frozen files (`ios/Runner/Info.plist`,
-  `push_notification_service.dart`, `alerts-fcm` push title). Left unchanged by decision.
+- Name spelling in sentences ("Yuh Blockin" vs "Yuh Blockin."): under discussion.
+  `fix/name-punctuation` (in the combined branch) already drops the full stop before
+  "?" and "!".
+- Remaining "Yuh Blockin" spellings in frozen files (`ios/Runner/Info.plist`,
+  `push_notification_service.dart`, `alerts-fcm` push title): left unchanged by decision.
 - To verify: `supabase/functions/admin-manage-user/index.ts` deletes the `auth.users`
-  record with the legacy `SUPABASE_SERVICE_ROLE_KEY` (lines ~298–307). Legacy keys are
-  disabled on this project, so that step may fail. Check the function's logs before any
-  change.
-- `feature/bvi-pride-theme-redesign` and `brand/asset-extraction` are unmerged.
+  record with the legacy `SUPABASE_SERVICE_ROLE_KEY` (line ~299, still the case on the
+  combined branch). Legacy keys are disabled on this project, so that step may fail. Check
+  the function's logs before any change.
+- `master` does not hold the released code; `release/build-35` and the combined branch
+  are unmerged.
 
 ## Next Approved Action
 
-No code changes are approved. Open for discussion: name spelling in sentences, the
-frozen-file spellings, the `admin-manage-user` legacy-key check, and the unmerged branches.
+No code changes are approved. Open for discussion: merge plan from the branch audit,
+deploy order for the `_v3` channel change, name spelling in sentences, and the
+`admin-manage-user` legacy-key check.
 
 ## Local-Only Dependencies
 
