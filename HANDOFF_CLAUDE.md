@@ -17,6 +17,8 @@ section at the end of every session; never erase the historical sections below i
   `1.0.0+35`; it merges every branch from 2026-10-08 and 2026-10-09 (see the branch audit)
 - `master` fast-forwarded to `release/build-35` (`30e9cf4` → `3f107b1`) on 2026-10-11 at the
   user's request; no merge commit, no history rewritten
+- `master` then received the three documentation branches as merge commits (now `292436b`);
+  no app code changed, so the app `master` builds is still identical to `release/build-35`
 
 ## Active Task
 
@@ -41,8 +43,12 @@ Server-side, applied by the user (confirmed 2026-10-11):
 - `fix/clear-sandbox-leaked-subscriptions`: the clean-up SQL has been run.
   **Already applied — never re-run it.**
 
-On `brand/asset-extraction` (pushed; not merged; no pull request):
-- Brand asset pack in `brand-assets/`, from build 34 code (`67c4690`)
+Merged into `master` on 2026-10-11 (documentation and assets only):
+- `brand/asset-extraction` (`03c09e6`): brand asset pack in `brand-assets/`, from build 34
+  code
+- `audit/android-security-review` (`c9c2193`): `docs/security/` audit
+- `feature/ad-campaign-01` (`292436b`): `advertising/`, `docs/marketing/` and the
+  `.claude/skills/yuhblockin-ad-studio/` skill (loads in Claude Code sessions on `master`)
 
 iOS notification investigation: closed. TEST B and TEST C passed (Build 23); the
 notification sound fix (Build 24) is confirmed working by the user (2026-10-11).
@@ -90,7 +96,8 @@ already been deployed.
 
 Not in `release/build-35` or the combined branch, documentation or tooling only:
 `brand/asset-extraction` (3 patches), `audit/android-security-review` (1),
-`feature/ad-campaign-01` (1). `chore/android-build-warnings` (1 patch, Kotlin 2.3.20) is
+`feature/ad-campaign-01` (1). All three merged into `master` on 2026-10-11.
+`chore/android-build-warnings` (1 patch, Kotlin 2.3.20) is
 in the combined branch.
 
 Stale, do not merge: `feature/push-notifications`, `feature/supabase-push-integration`,
@@ -108,14 +115,13 @@ the app.
   record with the legacy `SUPABASE_SERVICE_ROLE_KEY` (line ~299, still the case on the
   combined branch). Legacy keys are disabled on this project, so that step may fail. Check
   the function's logs before any change.
-- `combined/feedback-and-paywall` and the three documentation branches are not yet in
-  `master`.
+- `combined/feedback-and-paywall` is not yet in `master`.
 
 ## Next Approved Action
 
-Merge plan step 1 is done (`master` = `release/build-35`). No code changes are approved.
-Open for discussion: the remaining merge plan steps (release the combined branch as
-build 36, merge the documentation branches, delete stale branches),
+Merge plan steps 1 and 3 are done (`master` = `release/build-35` plus the documentation
+branches). No code changes are approved. Open for discussion: the remaining merge plan
+steps (release the combined branch as build 36, delete stale branches),
 deploy order for the `_v3` channel change, name spelling in sentences, and the
 `admin-manage-user` legacy-key check.
 
