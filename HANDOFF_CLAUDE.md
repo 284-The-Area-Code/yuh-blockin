@@ -11,10 +11,12 @@ section at the end of every session; never erase the historical sections below i
 - Repository: https://github.com/284-The-Area-Code/yuh-blockin
 - Shared instructions branch: `ops/instructions`, created from `master` (`30e9cf4`); holds
   these instruction files only, not the app code
-- Latest release branch: `release/build-35`, HEAD `3f107b1` ("Bump build number to 35"),
-  version `1.0.0+35`
-- Newest work on top of it: `combined/feedback-and-paywall`, HEAD `0e64fae`, still
-  `1.0.0+35`; it merges every branch from 2026-10-08 and 2026-10-09 (see the branch audit)
+- Release candidate: `release/build-36`, HEAD `9edabaa` ("Bump build number to 36"),
+  version `1.0.0+36` = `combined/feedback-and-paywall` (`0e64fae`) plus the version bump.
+  Created 2026-10-12 at the user's request ("ship and build 36"). `flutter analyze`: 0
+  errors, same 30 warnings/infos as build 35. Not yet built, tested or submitted.
+- Previous release branch: `release/build-35`, HEAD `3f107b1`, version `1.0.0+35`
+- Store build in users' hands (per user): build 34
 - `master` fast-forwarded to `release/build-35` (`30e9cf4` → `3f107b1`) on 2026-10-11 at the
   user's request; no merge commit, no history rewritten
 - `master` then received the three documentation branches as merge commits (now `292436b`);
@@ -22,8 +24,38 @@ section at the end of every session; never erase the historical sections below i
 
 ## Active Task
 
-Shared instructions and handoff for switching between Claude Code (Kali and cloud) and
-Claude Desktop Cowork, plus a read-only branch audit. No app feature work is in progress.
+Ship build 36: the user builds `release/build-36` on Kali and submits it to Google Play and
+App Store Connect. No server change is part of this release.
+
+### Verified production state (2026-10-12, from the user's Supabase dashboard)
+
+- Deployed `alerts-fcm` (deployed ~2026-10-09, "3 days ago" on 2026-10-12) matches commit
+  `76cad8d` ("Remove the app icon notification counter"): Android `channel_id`
+  `yuh_blockin_alert_${androidSound}_v3`, no Android `ttl`; iOS headers only
+  `apns-priority` and `apns-push-type` (no `apns-expiration`); `badge: 0`.
+- So the live server already matches build 36's `_v3` channels. **Do not deploy
+  `alerts-fcm` from `release/build-36`**: that copy also contains the 1-hour expiry
+  (`f565e24`), which was never deployed and has not been chosen for release.
+- Option "revert build 36 to `_v2`" was considered and rejected: it would mismatch the
+  live server.
+- Feedback SQL (`20261008_create_app_feedback.sql`): already run; the user confirms it works.
+- Push trigger on `public.alerts`: exactly one, `on_new_alert_send_push`, enabled (`O`).
+
+### Open question
+
+Build 34 only creates `_v2` channels. Per the FCM reference (AndroidNotification
+`channel_id`), a push naming a channel the app has not created falls back to the manifest
+default; build 34 sets none, so FCM's own default channel is used (default sound) for
+background/locked pushes since ~2026-10-09. The user reports sound works on build 34;
+which device/build/platform that test used is unconfirmed. Check on an Android phone with
+the store build 34: Settings → Apps → Yuh Blockin. → Notifications (a "Miscellaneous" or
+"Other" category means the fallback is in use), and a locked-phone test alert. Releasing
+build 36 resolves it either way.
+
+### Build 36 pre-submit checks (on device)
+
+TEST B (background) and TEST C (locked) on Android and iPhone with the custom urgency
+sound; no app icon counter; feedback submission works.
 
 ## Completed Work
 
@@ -87,12 +119,9 @@ approval history not recorded here):
   `submit_app_feedback()`
 - `pubspec.yaml`: Nunito ExtraBold font
 
-Release coupling: the app and `alerts-fcm` must change channel suffix together. If
-`alerts-fcm` sends `_v3` while phones run build 35 (only `_v2` channels), Android pushes
-land in a channel that does not exist and lose their custom sound; if the app deletes
-`_v2` while the server still sends `_v2`, the same happens. Plan the deploy order before
-release. Unknown: whether this `alerts-fcm` version or the feedback migration has
-already been deployed.
+Release coupling: the app and `alerts-fcm` must use the same channel suffix. Resolved
+2026-10-12: the live `alerts-fcm` already sends `_v3` (see Active Task), matching build 36;
+the feedback migration has been run.
 
 Not in `release/build-35` or the combined branch, documentation or tooling only:
 `brand/asset-extraction` (3 patches), `audit/android-security-review` (1),
@@ -126,10 +155,10 @@ and must never be merged into the app (it moved to `3c1c914` on 2026-10-12).
 
 Merge plan steps 1, 3 and 4 are done (`master` = `release/build-35` plus the
 documentation branches; stale branches archived and deleted). No code changes are
-approved. Open for discussion: the last merge plan step (release the combined branch as
-build 36),
-deploy order for the `_v3` channel change, name spelling in sentences, and the
-`admin-manage-user` legacy-key check.
+approved beyond `release/build-36`. Next: the user builds and submits build 36 (no server
+change). After it is live: fast-forward `master` to `release/build-36` and record the
+release here. Still open: the build 34 sound question above, name spelling in sentences,
+and the `admin-manage-user` legacy-key check.
 
 ## Local-Only Dependencies
 
