@@ -50,7 +50,10 @@ alter table public.app_feedback enable row level security;
 -- question and 20 themes. Comments are trimmed, at most 200 characters each,
 -- and empty ones are dropped. At least one answer, rating or comment is
 -- required.
--- Limit: 3 submissions per user per 24 hours.
+-- Limits: 1 submission per user per 24 hours ('rate_limited'; the app shows
+-- "You've already sent feedback today"), and 200 submissions per hour across
+-- all users ('feedback_busy'; the app shows its generic try-again message) so
+-- a script cycling through accounts can't flood the table.
 drop function if exists public.submit_app_feedback(jsonb, jsonb, text, text);
 
 create or replace function public.submit_app_feedback(
@@ -151,9 +154,18 @@ begin
         p_platform := null;
     end if;
 
-    if (select count(*) from public.app_feedback
-        where user_id = v_uid and created_at > now() - interval '24 hours') >= 3 then
+    -- Serialise each user's submissions so two simultaneous sends can't both
+    -- pass the check below.
+    perform pg_advisory_xact_lock(hashtext('app_feedback:' || v_uid));
+
+    if exists (select 1 from public.app_feedback
+               where user_id = v_uid and created_at > now() - interval '24 hours') then
         raise exception 'rate_limited';
+    end if;
+
+    if (select count(*) from public.app_feedback
+        where created_at > now() - interval '1 hour') >= 200 then
+        raise exception 'feedback_busy';
     end if;
 
     insert into public.app_feedback (user_id, answers, theme_ratings, comments, current_theme, platform)
@@ -201,26 +213,38 @@ from public.app_feedback f,
 group by 1, 2
 order by 1, 3 desc;
 
--- Every written comment, newest first, next to the question it was left on.
-create or replace view public.app_feedback_comments as
+-- app_feedback_comments (one row per comment) was replaced by
+-- app_feedback_summary below; drop it where an earlier run created it.
+drop view if exists public.app_feedback_comments;
+
+-- One row per submission, everything on a single line: picked answers,
+-- theme ratings and comments, each as "key: value" pairs.
+create or replace view public.app_feedback_summary as
 select f.created_at,
-       c.key as question,
-       c.value #>> '{}' as comment,
-       f.answers -> c.key as answer,
+       f.platform,
        f.current_theme,
-       f.platform
-from public.app_feedback f,
-     jsonb_each(f.comments) c
+       (select string_agg(a.key || ': ' ||
+                   case when jsonb_typeof(a.value) = 'array'
+                        then (select string_agg(o #>> '{}', ', ')
+                              from jsonb_array_elements(a.value) o)
+                        else a.value #>> '{}'
+                   end, ' | ' order by a.key)
+        from jsonb_each(f.answers) a) as answers,
+       (select string_agg(r.key || ': ' || (r.value #>> '{}'), ', ' order by r.key)
+        from jsonb_each(f.theme_ratings) r) as theme_ratings,
+       (select string_agg(c.key || ': ' || (c.value #>> '{}'), ' | ' order by c.key)
+        from jsonb_each(f.comments) c) as comments
+from public.app_feedback f
 order by f.created_at desc;
 
-revoke all on public.app_feedback_comments from public, anon, authenticated;
+revoke all on public.app_feedback_summary from public, anon, authenticated;
 revoke all on public.app_feedback_theme_ratings from public, anon, authenticated;
 revoke all on public.app_feedback_answer_counts from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- ROLLBACK
 -- ---------------------------------------------------------------------------
--- drop view if exists public.app_feedback_comments;
+-- drop view if exists public.app_feedback_summary;
 -- drop view if exists public.app_feedback_answer_counts;
 -- drop view if exists public.app_feedback_theme_ratings;
 -- drop function if exists public.submit_app_feedback(jsonb, jsonb, text, text, jsonb);
