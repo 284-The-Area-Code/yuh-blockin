@@ -5,7 +5,7 @@ section at the end of every session; never erase the historical sections below i
 
 ## Current State
 
-- Last updated: 2026-10-11
+- Last updated: 2026-10-12
 - Last working interface: Claude Code cloud session (claude.ai/code)
 - Environment: cloud container, fresh clone of the GitHub repository (not the Kali workspace)
 - Repository: https://github.com/284-The-Area-Code/yuh-blockin
@@ -100,9 +100,14 @@ Not in `release/build-35` or the combined branch, documentation or tooling only:
 `chore/android-build-warnings` (1 patch, Kotlin 2.3.20) is
 in the combined branch.
 
-Stale, do not merge: `feature/push-notifications`, `feature/supabase-push-integration`,
-`test`, `yuhblockin-website`. `gh-pages` is the website and must never be merged into
-the app.
+Stale branches `feature/push-notifications`, `feature/supabase-push-integration`, `test`
+and `yuhblockin-website` were deleted from GitHub on 2026-10-12 (by the user, from Kali).
+Each was first saved as an annotated tag, so nothing is lost:
+`archive/feature/push-notifications` (`df99045`),
+`archive/feature/supabase-push-integration` (`42bd26e`), `archive/test` (`8e7fa55`),
+`archive/yuhblockin-website` (`e045b2e`). Restore one with
+`git push origin archive/<name>:refs/heads/<name>`. `gh-pages` is the website, was kept,
+and must never be merged into the app (it moved to `3c1c914` on 2026-10-12).
 
 ## Outstanding Work
 
@@ -119,9 +124,10 @@ the app.
 
 ## Next Approved Action
 
-Merge plan steps 1 and 3 are done (`master` = `release/build-35` plus the documentation
-branches). No code changes are approved. Open for discussion: the remaining merge plan
-steps (release the combined branch as build 36, delete stale branches),
+Merge plan steps 1, 3 and 4 are done (`master` = `release/build-35` plus the
+documentation branches; stale branches archived and deleted). No code changes are
+approved. Open for discussion: the last merge plan step (release the combined branch as
+build 36),
 deploy order for the `_v3` channel change, name spelling in sentences, and the
 `admin-manage-user` legacy-key check.
 
